@@ -10,11 +10,11 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 16 · Atmosphères</title>
+<title>DECK — Laboratoire 17 · Opale</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
-html,body{margin:0;background:#050505;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+html,body{margin:0;background:#090e16;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
 button,input{font:inherit}
 #stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #stage:active{cursor:grabbing}
@@ -46,9 +46,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 16</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 17</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 16 · Atmosphères</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 17 · Opale</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -57,9 +57,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
   <div class="view active" id="sphereView">
     <div class="rowtitle">Atmosphère · fond du DECK</div>
     <div class="ambience-options" id="ambienceOptions" role="group" aria-label="Choisir l'atmosphère du fond">
-      <button type="button" class="ambience active" data-ambience="original" aria-pressed="true"><span class="ambience-dot" style="background:#050505"></span>Original</button>
+      <button type="button" class="ambience" data-ambience="original" aria-pressed="false"><span class="ambience-dot" style="background:#050505"></span>Original</button>
       <button type="button" class="ambience" data-ambience="charcoal" aria-pressed="false"><span class="ambience-dot" style="background:#171513"></span>Charbon chaud</button>
-      <button type="button" class="ambience" data-ambience="blue" aria-pressed="false"><span class="ambience-dot" style="background:#101722"></span>Bleu fumé</button>
+      <button type="button" class="ambience active" data-ambience="blue" aria-pressed="true"><span class="ambience-dot" style="background:#101722"></span>Bleu fumé</button>
       <button type="button" class="ambience" data-ambience="plum" aria-pressed="false"><span class="ambience-dot" style="background:#1b121c"></span>Prune</button>
       <button type="button" class="ambience" data-ambience="green" aria-pressed="false"><span class="ambience-dot" style="background:#101b19"></span>Vert noir</button>
       <button type="button" class="ambience" data-ambience="taupe" aria-pressed="false"><span class="ambience-dot" style="background:#191712"></span>Taupe fumé</button>
@@ -68,7 +68,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     <div class="rowtitle">Type de matière</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
       <button class="mode active" data-mode="points">Points</button>
-      <button class="mode" data-mode="membrane">Membrane</button>
+      <button class="mode" data-mode="membrane">Opale</button>
     </div>
     <div id="pointPanel">
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
@@ -81,9 +81,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       </div>
     </div>
     <div id="membranePanel" hidden>
-      <div class="rowtitle">Surface continue · soie / bulle d’air</div>
+      <div class="rowtitle">Opale · matière laiteuse et lumière organique</div>
       <div class="controls" id="membraneControls"></div>
-      <div class="hint" style="margin-top:12px">Réglages indépendants de la sphère de points.</div>
+      <div class="hint" style="margin-top:12px">Lumière rose-corail en mouvement dans le cube opalin. Les programmes restent superposés.</div>
     </div>
   </div>
 
@@ -122,7 +122,9 @@ const ambiences={
   green:{base:'#0b1211',centre:'rgba(34,66,56,.28)'},
   taupe:{base:'#12100e',centre:'rgba(73,62,43,.30)'}
 };
-let currentAmbience='original';
+let currentAmbience='blue';
+document.body.style.background=ambiences[currentAmbience].base;
+document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
 document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEventListener('click',()=>{
   currentAmbience=btn.dataset.ambience;
   document.querySelectorAll('#ambienceOptions .ambience').forEach(item=>{
@@ -132,10 +134,10 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
 }));
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
-const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
+const membraneCfg={fluidity:.28,softness:.76,transparency:.66,reflection:.48,edge:.46,folds:.32,breath:.035};
 const programCfg={fanRotate:.22,fanLength:.58,fanDots:8,fanDotWidth:2.70,fanStrokeWidth:1.60,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
 const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
-const membraneParams=[['fluidity','Fluidité',0,1,.01],['softness','Souplesse',0,1,.01],['transparency','Transparence',0,1,.01],['reflection','Reflets',0,1,.01],['edge','Bord',0,1,.01],['folds','Plis',0,1,.01],['breath','Respiration',0,.15,.005]];
+const membraneParams=[['fluidity','Mouvement',0,1,.01],['softness','Diffusion',0,1,.01],['transparency','Opalescence',0,1,.01],['reflection','Lumière',0,1,.01],['edge','Netteté du volume',0,1,.01],['folds','Déformation',0,1,.01],['breath','Respiration',0,.15,.005]];
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
@@ -239,67 +241,67 @@ function noise(x,y,z,t,fluid){
 }
 
 function setupMembrane(){
-  const c=document.createElement('canvas'); c.width=480;c.height=480;
+  // Mode Opale : un champ lumineux organique calculé sur GPU, non actif en mode Points.
+  const c=document.createElement('canvas');c.width=512;c.height=512;
   const gl=c.getContext('webgl',{alpha:true,antialias:false,premultipliedAlpha:false,depth:false,stencil:false,preserveDrawingBuffer:true});
   if(!gl)return null;
-  const vs=`attribute vec2 aPosition; varying vec2 vUv; void main(){vUv=aPosition;gl_Position=vec4(aPosition,0.,1.);}`;
+  const vs=`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
   const fs=`precision highp float;
-  varying vec2 vUv;
-  uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath;
-  uniform vec2 uAngle;
-  float h1(vec3 p){return sin(p.x*3.1+p.y*1.7+sin(p.z*2.3+uTime*.32))*sin(p.z*2.7-p.y*2.1+uTime*.28);} 
-  float h2(vec3 p){return sin(p.x*6.4+p.z*3.8+uTime*.45)*cos(p.y*5.1-p.x*2.6-uTime*.39);} 
-  float h3(vec3 p){return cos(p.y*10.2-p.z*7.5+uTime*.24)*sin(p.x*8.3+p.y*2.4+uTime*.34);} 
-  mat3 rot(float a,float b){float ca=cos(a),sa=sin(a),cb=cos(b),sb=sin(b);return mat3(cb,sa*sb,ca*sb,0.,ca,-sa,-sb,sa*cb,ca*cb);} 
-  float ht(vec3 p){p=rot(uAngle.x*.66,uAngle.y*.66)*p;return (h1(p)*.52+h2(p)*.28+h3(p)*.20);} 
-  void main(){
-    vec2 uv=vUv*1.25;
-    float rho=length(uv);
-    float theta=atan(uv.y,uv.x);
-    float organic=sin(theta*5.0+uTime*.51)*sin(theta*3.0-uTime*.32)*.5 + sin(theta*8.0-uTime*.19)*.22;
-    float border=1.0+organic*(.016+.025*uSoftness)*uFolds + sin(uTime*.5)*uBreath;
-    float r=rho/max(border,.1);
-    float mask=1.0-smoothstep(.992,1.009,r);
-    if(mask<.0001){gl_FragColor=vec4(0.);return;}
-    vec2 p2=uv/max(border,.1);
-    float z=sqrt(max(0.,1.0-dot(p2,p2)));
-    vec3 P=normalize(vec3(p2,z));
-    float epsilon=.007;
-    float fold=ht(P);
-    float dx=(ht(normalize(P+vec3(epsilon,0.,0.)))-fold)/epsilon;
-    float dy=(ht(normalize(P+vec3(0.,epsilon,0.)))-fold)/epsilon;
-    vec3 normal=normalize(vec3(P.xy-vec2(dx,dy)*(.14+.35*uFolds)*uSoftness,P.z));
-    vec3 light=normalize(vec3(-.72,.65,.42));
-    vec3 other=normalize(vec3(.75,-.45,.65));
-    float glint=pow(max(0.,dot(reflect(-light,normal),vec3(0.,0.,1.))),5.0);
-    float glint2=pow(max(0.,dot(reflect(-other,normal),vec3(0.,0.,1.))),10.0);
-    float rim=pow(1.0-max(0.,normal.z),2.1);
-    float edgeGlow=exp(-pow((r-.985)/(.012+.015*uSoftness),2.0));
-    float textile=sin(P.y*27. + P.x*14. + fold*3.0 + uTime*.18)*sin(P.x*21.-P.z*6.+uTime*.11);
-    float highlight=(glint*.60+glint2*.40)*uReflection*(.52+.48*uFolds);
-    highlight+=max(0.,fold*.22+.18)*(.10+.25*uReflection)*uSoftness;
-    float shade=.012 + highlight*.48 + rim*(.09+.35*uEdge) + edgeGlow*(.11+.32*uEdge);
-    shade+=textile*.008*uSoftness;
-    float alpha=clamp(shade*(2.2-1.2*uTransparency),0.,.78)*mask;
-    vec3 tint=vec3(.89,.92,.97);
-    gl_FragColor=vec4(tint,alpha);
-  }`;
-  function compile(type,source){const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.warn('Membrane shader',gl.getShaderInfoLog(sh));return null;}return sh;}
+    varying vec2 vUv;
+    uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath;
+    uniform vec2 uAngle;
+    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+      return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
+    void main(){
+      vec2 p=vUv*2.-1.;
+      float t=uTime*(.23+uFluidity*.55);
+      float drift=sin(t*.51)*.16;
+      vec2 p1=p-vec2(-.12+.26*sin(t*.65),.08+.22*cos(t*.41));
+      vec2 p2=p-vec2(.22+.14*cos(t*.39),-.18+.20*sin(t*.55));
+      float n=noise2(p*2.25+vec2(t*.24,-t*.17))-.5;
+      float warp=(.02+.23*uFolds)*n;
+      p1+=vec2(warp,-warp*.45);
+      p2+=vec2(-warp*.7,warp);
+      float breathing=1.+uBreath*sin(t*1.4)*2.;
+      float r1=length(vec2(p1.x*.92,p1.y*1.13))/breathing;
+      float r2=length(vec2(p2.x*1.25,p2.y*.96));
+      float d1=smoothstep(.80+.38*uSoftness,.09+.15*(1.-uSoftness),r1);
+      float d2=smoothstep(.78+.40*uSoftness,.10+.18*(1.-uSoftness),r2);
+      float colorStrength=(.43+.42*uReflection)*(1.-.32*uTransparency);
+      vec3 milk=mix(vec3(.965,.955,.951),vec3(.91,.895,.893),.16+.21*length(p));
+      vec3 rose=vec3(.99,.45,.54);
+      vec3 peach=vec3(1.,.70,.48);
+      vec3 pink=vec3(.93,.51,.77);
+      float body=clamp(d1*.85+d2*.52,0.,1.);
+      vec3 color=mix(milk,rose,d1*.78*colorStrength);
+      color=mix(color,peach,d2*.50*colorStrength);
+      color=mix(color,pink,body*.14*colorStrength);
+      float bloom=exp(-2.9*dot(p1,p1))*.10*uReflection;
+      color+=vec3(bloom*.35,bloom*.12,bloom*.11);
+      color=mix(color,milk,clamp(uTransparency*.18,0.,.2));
+      gl_FragColor=vec4(clamp(color,0.,1.),1.);
+    }`;
+  function compile(type,source){const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.warn('Opale shader',gl.getShaderInfoLog(sh));return null;}return sh;}
   const v=compile(gl.VERTEX_SHADER,vs),f=compile(gl.FRAGMENT_SHADER,fs);if(!v||!f)return null;
   const program=gl.createProgram();gl.attachShader(program,v);gl.attachShader(program,f);gl.linkProgram(program);
-  if(!gl.getProgramParameter(program,gl.LINK_STATUS)){console.warn(gl.getProgramInfoLog(program));return null;}
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)){console.warn('Opale link',gl.getProgramInfoLog(program));return null;}
   gl.useProgram(program);
-  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const a=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
   const uniform={};['uTime','uFluidity','uSoftness','uTransparency','uReflection','uEdge','uFolds','uBreath','uAngle'].forEach(k=>uniform[k]=gl.getUniformLocation(program,k));
-  gl.viewport(0,0,c.width,c.height);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
+  gl.viewport(0,0,c.width,c.height);gl.disable(gl.DEPTH_TEST);gl.clearColor(.96,.95,.95,1.);
   return {canvas:c,draw:(time,cfg,ax,ay)=>{
     try{
       gl.useProgram(program);gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform1f(uniform.uTime,time);gl.uniform1f(uniform.uFluidity,cfg.fluidity);gl.uniform1f(uniform.uSoftness,cfg.softness);gl.uniform1f(uniform.uTransparency,cfg.transparency);
-      gl.uniform1f(uniform.uReflection,cfg.reflection);gl.uniform1f(uniform.uEdge,cfg.edge);gl.uniform1f(uniform.uFolds,cfg.folds);gl.uniform1f(uniform.uBreath,cfg.breath);
-      gl.uniform2f(uniform.uAngle,ax,ay);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);return true;
-    }catch(e){console.warn('WebGL membrane',e);return false;}
+      gl.uniform1f(uniform.uTime,time);gl.uniform1f(uniform.uFluidity,cfg.fluidity);gl.uniform1f(uniform.uSoftness,cfg.softness);
+      gl.uniform1f(uniform.uTransparency,cfg.transparency);gl.uniform1f(uniform.uReflection,cfg.reflection);
+      gl.uniform1f(uniform.uEdge,cfg.edge);gl.uniform1f(uniform.uFolds,cfg.folds);
+      gl.uniform1f(uniform.uBreath,cfg.breath);gl.uniform2f(uniform.uAngle,ax,ay);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);gl.flush();return true;
+    }catch(e){console.warn('Opale draw',e);return false;}
   }};
 }
 const membraneRenderer=setupMembrane();
@@ -482,14 +484,34 @@ function render(now){
       ctx.restore();
     }
   } else {
-    if(membraneRenderer && membraneRenderer.draw(membraneTime,membraneCfg,angleX,angleY)) {
-      const side=radius*2.50;
-      ctx.drawImage(membraneRenderer.canvas,cx-side/2,cy-side/2,side,side);
-    } else {
-      const fade=ctx.createRadialGradient(cx-radius*.35,cy-radius*.45,radius*.10,cx,cy,radius*1.02);
-      fade.addColorStop(0,'rgba(240,242,247,.005)'); fade.addColorStop(.67,'rgba(240,242,247,.012)'); fade.addColorStop(.91,'rgba(240,242,247,.065)'); fade.addColorStop(.98,'rgba(240,242,247,.30)'); fade.addColorStop(1,'rgba(240,242,247,0)');
-      ctx.fillStyle=fade;ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.fill();
+    // Le cube devient une enveloppe opaline. Le shader n'est dessiné que dans
+    // les trois faces visibles, dans le même repère projeté que les commandes.
+    const opalActive=membraneRenderer&&membraneRenderer.draw(membraneTime,membraneCfg,angleX,angleY);
+    const faceSpecs=[
+      {n:[0,0,1],quad:[[-1.28,-1.28,1.28],[1.28,-1.28,1.28],[1.28,1.28,1.28],[-1.28,1.28,1.28]]},
+      {n:[0,0,-1],quad:[[1.28,-1.28,-1.28],[-1.28,-1.28,-1.28],[-1.28,1.28,-1.28],[1.28,1.28,-1.28]]},
+      {n:[1,0,0],quad:[[1.28,-1.28,1.28],[1.28,-1.28,-1.28],[1.28,1.28,-1.28],[1.28,1.28,1.28]]},
+      {n:[-1,0,0],quad:[[-1.28,-1.28,-1.28],[-1.28,-1.28,1.28],[-1.28,1.28,1.28],[-1.28,1.28,-1.28]]},
+      {n:[0,1,0],quad:[[-1.28,1.28,1.28],[1.28,1.28,1.28],[1.28,1.28,-1.28],[-1.28,1.28,-1.28]]},
+      {n:[0,-1,0],quad:[[-1.28,-1.28,-1.28],[1.28,-1.28,-1.28],[1.28,-1.28,1.28],[-1.28,-1.28,1.28]]}
+    ];
+    const visible=faceSpecs.filter(face=>project(...face.n).z>.005).sort((a,b)=>project(...a.n).z-project(...b.n).z);
+    for(const face of visible){
+      const poly=face.quad.map(q=>project(...q));
+      ctx.save();ctx.beginPath();ctx.moveTo(poly[0].x,poly[0].y);
+      for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);
+      ctx.closePath();ctx.clip();
+      const extent=radius*3.6;
+      if(opalActive)ctx.drawImage(membraneRenderer.canvas,cx-extent/2,cy-extent/2,extent,extent);
+      else{ctx.fillStyle='#eee7e5';ctx.fillRect(0,0,w,h);}
+      ctx.fillStyle='rgba(252,249,246,.16)';ctx.fillRect(0,0,w,h);
+      ctx.restore();
+      ctx.beginPath();ctx.moveTo(poly[0].x,poly[0].y);
+      for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);
+      ctx.closePath();ctx.strokeStyle='rgba(118,108,109,.16)';ctx.lineWidth=.85;ctx.stroke();
     }
+    // Repères du cube redessinés devant la matière plutôt que dessous.
+    drawCube();
   }
 
   for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
