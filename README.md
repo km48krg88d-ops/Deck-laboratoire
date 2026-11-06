@@ -1,10 +1,5 @@
-# DECK — Laboratoire V13 · Ventilateur
+# DECK — Laboratoire V14
 
-- Ventilateur déplacé sur la face supérieure, cube légèrement incliné au démarrage.
-- Clic pour sélectionner, pincement sortant pour décomposer les traits en pointillés, rentrant pour refermer.
-- 5 secondes d’inactivité ferment le programme et libèrent la navigation.
-- Jauge verticale sur l’arête droite : -3 à +3, 0 à l’arrêt ; + = aspiration, - = soufflage.
-- Double tap sur la forme déployée : mode silencieux, points moins opaques.
-- Rotation graphique inversée au repos, luminosité des points augmentée.
+Ventilateur : rotation des pales synchronisée sur les six vitesses (aspiration/soufflage) et arrêt fixe au niveau zéro. Jauge de commande ancrée à l'arête du cube commune à la face supérieure du ventilateur et à la face latérale droite. Le cube conserve sa navigation libre, ainsi que les interactions de sélection, zoom, retour après cinq secondes et mode silencieux de la V13.
 
-Prototype d’interface : aucune commande matérielle n’est encore envoyée au ventilateur.
+Publication GitHub Pages depuis `main` et `/ (root)`.
