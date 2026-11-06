@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 18 · Opale</title>
+<title>DECK — Laboratoire 19 · Gaz opalin</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -50,9 +50,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 18</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 19</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 18 · Opale</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 19 · Gaz opalin</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -85,9 +85,21 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       </div>
     </div>
     <div id="membranePanel" hidden>
-      <div class="rowtitle">Opale · matière laiteuse et lumière organique</div>
+      <div class="rowtitle">Matière · trois comportements</div>
+      <div class="presets" id="opalPresets" style="margin-bottom:15px">
+        <button class="preset" data-opal="opale">Opale</button>
+        <button class="preset active" data-opal="gaz">Gaz</button>
+        <button class="preset" data-opal="brume">Brume</button>
+      </div>
+      <div class="rowtitle">Structure · indépendamment de la matière</div>
+      <div class="presets" id="opalStructure" style="margin-bottom:15px">
+        <button class="preset" data-structure="cube">Cube</button>
+        <button class="preset" data-structure="angles">Angles seuls</button>
+        <button class="preset active" data-structure="none">Sans structure</button>
+      </div>
+      <div class="rowtitle">Réglages de la matière</div>
       <div class="controls" id="membraneControls"></div>
-      <div class="hint" style="margin-top:12px">Lumière rose-corail en mouvement dans le cube opalin. Les programmes restent superposés.</div>
+      <div class="hint" style="margin-top:12px">Forme diffuse sans particules visibles. Les commandes restent actives, même quand les arêtes disparaissent.</div>
     </div>
   </div>
 
@@ -139,7 +151,13 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
-const membraneCfg={fluidity:.34,softness:.80,transparency:.26,reflection:.68,edge:.46,folds:.42,breath:.035};
+const membraneCfg={fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055};
+let opalPreset='gaz', opalStructure='none';
+const opalProfiles={
+  opale:{fluidity:.34,softness:.80,transparency:.26,reflection:.68,edge:.46,folds:.42,breath:.035},
+  gaz:{fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055},
+  brume:{fluidity:.30,softness:1,transparency:.72,reflection:.40,edge:.06,folds:.31,breath:.085}
+};
 const programCfg={fanRotate:.22,fanLength:.58,fanDots:8,fanDotWidth:2.70,fanStrokeWidth:1.60,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
 const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
 const membraneParams=[['fluidity','Mouvement',0,1,.01],['softness','Diffusion',0,1,.01],['transparency','Opalescence',0,1,.01],['reflection','Lumière',0,1,.01],['edge','Netteté du volume',0,1,.01],['folds','Déformation',0,1,.01],['breath','Respiration',0,.15,.005]];
@@ -196,6 +214,18 @@ function setPreset(name){Object.assign(sphereCfg,presets[name]); selectedPreset=
 createControlGrid('sphereControls',sphereCfg,sphereParams,(key)=>{if(key==='density')createParticles(); selectedPreset=null; updatePresetButtons();});
 syncGrain();
 createControlGrid('membraneControls',membraneCfg,membraneParams,()=>{});
+document.querySelectorAll('#opalPresets .preset').forEach(btn=>btn.addEventListener('click',()=>{
+  opalPreset=btn.dataset.opal;Object.assign(membraneCfg,opalProfiles[opalPreset]);
+  membraneParams.forEach(([key])=>{
+    const input=document.getElementById('r-membraneControls-'+key),output=document.getElementById('o-membraneControls-'+key);
+    if(input){input.value=membraneCfg[key];output.textContent=formatValue(key,membraneCfg[key]);}
+  });
+  document.querySelectorAll('#opalPresets .preset').forEach(b=>b.classList.toggle('active',b===btn));
+}));
+document.querySelectorAll('#opalStructure .preset').forEach(btn=>btn.addEventListener('click',()=>{
+  opalStructure=btn.dataset.structure;
+  document.querySelectorAll('#opalStructure .preset').forEach(b=>b.classList.toggle('active',b===btn));
+}));
 createControlGrid('fanControls',programCfg,fanParams,()=>{});
 createControlGrid('lightControls',programCfg,lightParams,()=>{});
 document.querySelectorAll('#spherePresets .preset').forEach(btn=>btn.addEventListener('click',()=>setPreset(btn.dataset.preset)));
@@ -262,7 +292,7 @@ function setupMembrane(){
   const vs=`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
   const fs=`precision highp float;
     varying vec2 vUv;
-    uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath;
+    uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath,uGas;
     uniform vec2 uAngle;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
@@ -274,19 +304,24 @@ function setupMembrane(){
       vec2 p1=p-vec2(-.12+.26*sin(t*.65),.08+.22*cos(t*.41));
       vec2 p2=p-vec2(.22+.14*cos(t*.39),-.18+.20*sin(t*.55));
       float n=noise2(p*2.25+vec2(t*.24,-t*.17))-.5;
+      float vort=noise2(p*1.70+vec2(-t*.13,t*.18))-.5;
+      vec2 advect=vec2(n+vort*.5,vort-n*.35)*uGas*.24;
+      p1+=advect;p2+=advect*.70;
       float warp=(.02+.23*uFolds)*n;
       p1+=vec2(warp,-warp*.45);
       p2+=vec2(-warp*.7,warp);
       float breathing=1.+uBreath*sin(t*1.4)*2.;
       float r1=length(vec2(p1.x*.92,p1.y*1.13))/breathing;
       float r2=length(vec2(p2.x*1.25,p2.y*.96));
-      float d1=1.-smoothstep(.09+.15*(1.-uSoftness),.80+.38*uSoftness,r1);
-      float d2=1.-smoothstep(.10+.18*(1.-uSoftness),.78+.40*uSoftness,r2);
-      float colorStrength=(.78+.28*uReflection)*(1.-.17*uTransparency);
+      float d1=1.-smoothstep(.09+.15*(1.-uSoftness),.80+.38*uSoftness+uGas*.36,r1);
+      float d2=1.-smoothstep(.10+.18*(1.-uSoftness),.78+.40*uSoftness+uGas*.27,r2);
+      float colorStrength=(.78+.28*uReflection)*(1.-.17*uTransparency)*(1.-uGas*.20);
       vec3 milk=mix(vec3(.965,.955,.951),vec3(.91,.895,.893),.16+.21*length(p));
       vec3 rose=vec3(.99,.45,.54);
       vec3 peach=vec3(1.,.70,.48);
       vec3 pink=vec3(.93,.51,.77);
+      float fine=noise2(p*3.1+vec2(t*.09,-t*.10))-.5;
+      d1=clamp(d1+fine*.09*uGas,0.,1.); d2=clamp(d2-fine*.07*uGas,0.,1.);
       float body=clamp(d1*.85+d2*.52,0.,1.);
       vec3 color=mix(milk,rose,d1*.95*colorStrength);
       color=mix(color,peach,d2*.64*colorStrength);
@@ -305,7 +340,7 @@ function setupMembrane(){
   const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const a=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
-  const uniform={};['uTime','uFluidity','uSoftness','uTransparency','uReflection','uEdge','uFolds','uBreath','uAngle'].forEach(k=>uniform[k]=gl.getUniformLocation(program,k));
+  const uniform={};['uTime','uFluidity','uSoftness','uTransparency','uReflection','uEdge','uFolds','uBreath','uGas','uAngle'].forEach(k=>uniform[k]=gl.getUniformLocation(program,k));
   gl.viewport(0,0,c.width,c.height);gl.disable(gl.DEPTH_TEST);gl.clearColor(.96,.95,.95,1.);
   return {canvas:c,draw:(time,cfg,ax,ay)=>{
     try{
@@ -313,12 +348,19 @@ function setupMembrane(){
       gl.uniform1f(uniform.uTime,time);gl.uniform1f(uniform.uFluidity,cfg.fluidity);gl.uniform1f(uniform.uSoftness,cfg.softness);
       gl.uniform1f(uniform.uTransparency,cfg.transparency);gl.uniform1f(uniform.uReflection,cfg.reflection);
       gl.uniform1f(uniform.uEdge,cfg.edge);gl.uniform1f(uniform.uFolds,cfg.folds);
-      gl.uniform1f(uniform.uBreath,cfg.breath);gl.uniform2f(uniform.uAngle,ax,ay);
+      gl.uniform1f(uniform.uBreath,cfg.breath);gl.uniform1f(uniform.uGas,opalPreset==='opale'?0:opalPreset==='gaz'?.7:1);gl.uniform2f(uniform.uAngle,ax,ay);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);gl.flush();return true;
     }catch(e){console.warn('Opale draw',e);return false;}
   }};
 }
 const membraneRenderer=setupMembrane();
+const gasCanvas=document.createElement('canvas');gasCanvas.width=512;gasCanvas.height=512;
+const gasCtx=gasCanvas.getContext('2d',{alpha:true});
+const gasMask=gasCtx.createRadialGradient(256,256,68,256,256,254);
+gasMask.addColorStop(0,'rgba(255,255,255,1)');
+gasMask.addColorStop(.45,'rgba(255,255,255,.98)');
+gasMask.addColorStop(.72,'rgba(255,255,255,.73)');
+gasMask.addColorStop(1,'rgba(255,255,255,0)');
 
 function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
@@ -439,8 +481,7 @@ function render(now){
 
   const orderedFaces=faceDefinitions.map(f=>({f,depth:project(...f.normal).z,opacity:faceVisibility(f)})).sort((a,b)=>a.depth-b.depth);
   for(const {f,opacity} of orderedFaces){ if(opacity<.13) drawFace(f,opacity*.7); }
-  drawCube();
-  if(sphereMode==='points')drawFanGauge();
+  if(sphereMode==='points') {drawCube();drawFanGauge();}
   faceHitRegions=faceDefinitions.filter(f=>faceVisibility(f)>.12).map(f=>({name:f.name,depth:project(...f.normal).z,poly:[[-1.27,-1.27],[1.27,-1.27],[1.27,1.27],[-1.27,1.27]].map(([u,v])=>screen(f.name,u,v))})).sort((a,b)=>b.depth-a.depth);
 
   const totalLight=lights.reduce((sum,l)=>sum+l.level,0);
@@ -510,7 +551,21 @@ function render(now){
       {n:[0,-1,0],quad:[[-1.28,-1.28,-1.28],[1.28,-1.28,-1.28],[1.28,-1.28,1.28],[-1.28,-1.28,1.28]]}
     ];
     const visible=faceSpecs.filter(face=>project(...face.n).z>.005).sort((a,b)=>project(...a.n).z-project(...b.n).z);
-    for(const face of visible){
+    if(opalStructure!=='cube'){
+      // Sans enveloppe : seulement une masse colorée qui flotte dans l'espace clair.
+      // Un masque continu supprime la trame et les limites carrées du shader.
+      if(opalActive && gasCtx){
+        gasCtx.clearRect(0,0,512,512);
+        gasCtx.globalCompositeOperation='source-over';
+        gasCtx.drawImage(membraneRenderer.canvas,0,0,512,512);
+        gasCtx.globalCompositeOperation='destination-in';
+        gasCtx.fillStyle=gasMask;gasCtx.fillRect(0,0,512,512);
+        gasCtx.globalCompositeOperation='source-over';
+        const scale=opalPreset==='opale'?2.75:opalPreset==='gaz'?3.65:4.1;
+        const extent=radius*scale;
+        ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);
+      }
+    } else for(const face of visible){
       const poly=face.quad.map(q=>project(...q));
       ctx.save();ctx.beginPath();ctx.moveTo(poly[0].x,poly[0].y);
       for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);
@@ -524,8 +579,8 @@ function render(now){
       for(let i=1;i<poly.length;i++)ctx.lineTo(poly[i].x,poly[i].y);
       ctx.closePath();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.85;ctx.stroke();
     }
-    // Repères du cube et commande redessinés devant la matière opale.
-    drawCube();
+    // Les repères de commande ne dépendent pas du contour visible.
+    if(opalStructure!=='none')drawCube();
     drawFanGauge();
   }
 
