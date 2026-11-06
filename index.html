@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 13 · Ventilateur</title>
+<title>DECK — Laboratoire 14 · Ventilateur</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -120,7 +120,7 @@ const lights=apartmentLightsRaw.map(p=>({raw:p,level:0}));
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const calculatedGrain=()=>0.5+(4/18)*lights.reduce((sum,lamp)=>sum+lamp.level,0);
 let selectedLamp=null, lastPinchTime=0, pinchDistance=0, gestureWasMulti=false;
-let particles=[],angleX=.47,angleY=-.18,lastFrame=0,clock=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
+let particles=[],angleX=.47,angleY=-.18,lastFrame=0,clock=0,fanAngle=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
 let activeFace=null,faceHitRegions=[],lightHitRegions=[],touchStart=null,gestureMoved=false;
 let fanZoomGesture=false,fanPinchOrigin=0,fanRevealUntil=0,fanReveal=0;
 let fanSelected=false,fanOpen=false,fanSilent=false,fanLevel=0,fanLastAction=0,fanGaugeHit=null,fanGaugeDrag=false,lastFanTap=0;
@@ -276,6 +276,9 @@ function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
   if(selectedLamp!==null && performance.now()-lastPinchTime>=5000) clearLampSelection();
   clock+=dt*sphereCfg.speed; membraneTime+=dt*(.10+membraneCfg.fluidity*.85);
+  // Un moteur arrêté immobilise aussi les pales; le signe commande le sens.
+  // Les trois paliers de vitesse donnent trois cadences visuelles distinctes.
+  if(fanLevel!==0){const speeds=[0,.55,1.12,1.85];fanAngle+=dt*Math.sign(fanLevel)*speeds[Math.abs(fanLevel)]*(programCfg.fanRotate/.22);}
   if(fanSelected && performance.now()-fanLastAction>FAN_TIMEOUT)closeFan();
   fanReveal+=((fanSelected&&fanOpen?1:0)-fanReveal)*Math.min(1,dt*3.3);
   ctx.fillStyle='#050505'; ctx.fillRect(0,0,w,h);
@@ -306,7 +309,7 @@ function render(now){
   function drawFanMorph(alpha,progress){
     // Les huit traits du pictogramme deviennent eux-mêmes les rayons de points.
     // La position des grains migre sans apparition d'une seconde couche indépendante.
-    const f='top',spin=-clock*programCfg.fanRotate*3.5*(fanLevel===0?1:1+Math.abs(fanLevel)*.24);
+    const f='top',spin=fanAngle;
     const ease=progress*progress*(3-2*progress),n=Math.round(programCfg.fanDots);
     for(const [dx,dy,armEnd] of fanArms){
       const rdx=dx*Math.cos(spin)-dy*Math.sin(spin),rdy=dx*Math.sin(spin)+dy*Math.cos(spin);
@@ -350,11 +353,13 @@ function render(now){
   function drawFanGauge(){
     fanGaugeHit=null;
     if(!fanSelected || faceVisibility({normal:[0,1,0]})<.12)return;
-    // Jauge sur l'arête verticale droite du cube : trois crans, zéro, trois crans.
-    const a=project(1.28,-.94,1.28),b=project(1.28,.94,1.28);
+    // Jauge solidaire de l'arête supérieure droite du cube : commune au dessus (ventilateur) et à la face latérale.
+    // Extrémité avant (soufflage -3) vers arrière (aspiration +3).
+    const a=project(1.28,1.28,1.28),b=project(1.28,1.28,-1.28);
     const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
     if(len<18)return;
-    const ux=dx/len,uy=dy/len,nx=uy,ny=-ux;
+    const ux=dx/len,uy=dy/len,nx=-uy,ny=ux;
+    // La jauge reste ancrée dans l'espace 3D, quelle que soit l'orientation du cube.
     fanGaugeHit={a,b,ux,uy,nx,ny,len};
     ctx.save();ctx.lineCap='round';
     for(let i=-3;i<=3;i++){
