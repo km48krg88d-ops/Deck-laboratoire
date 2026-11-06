@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 15 · Navigation</title>
+<title>DECK — Laboratoire 16 · Atmosphères</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -37,19 +37,34 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 .bottomline{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px}.hint{line-height:1.35}.status{font-size:10px;color:#919198;white-space:nowrap}
 .immersive-hint{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 24px);left:0;right:0;text-align:center;color:#656568;font-size:11px;letter-spacing:.04em;pointer-events:none;opacity:0;transition:opacity .25s}.immersive-hint.show{opacity:1}
 @media(max-width:380px){.panel{padding:14px}.controls{gap:10px}.top{left:15px;right:15px}.hint{max-width:220px}}
+.ambience-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:9px 0 10px}
+.ambience{display:flex;align-items:center;gap:8px;min-height:43px;padding:7px 9px;color:#d6d6d7;background:rgba(255,255,255,.025);border:1px solid #37373a;border-radius:10px;text-align:left;font-size:11px;cursor:pointer}
+.ambience.active{border-color:#a4a5a9;background:rgba(255,255,255,.09)}
+.ambience-dot{width:20px;height:20px;flex-shrink:0;border:1px solid #656568;border-radius:50%}
+@media(max-width:360px){.ambience-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 15</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 16</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 15 · Navigation</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 16 · Atmosphères</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
   </div>
 
   <div class="view active" id="sphereView">
+    <div class="rowtitle">Atmosphère · fond du DECK</div>
+    <div class="ambience-options" id="ambienceOptions" role="group" aria-label="Choisir l'atmosphère du fond">
+      <button type="button" class="ambience active" data-ambience="original" aria-pressed="true"><span class="ambience-dot" style="background:#050505"></span>Original</button>
+      <button type="button" class="ambience" data-ambience="charcoal" aria-pressed="false"><span class="ambience-dot" style="background:#171513"></span>Charbon chaud</button>
+      <button type="button" class="ambience" data-ambience="blue" aria-pressed="false"><span class="ambience-dot" style="background:#101722"></span>Bleu fumé</button>
+      <button type="button" class="ambience" data-ambience="plum" aria-pressed="false"><span class="ambience-dot" style="background:#1b121c"></span>Prune</button>
+      <button type="button" class="ambience" data-ambience="green" aria-pressed="false"><span class="ambience-dot" style="background:#101b19"></span>Vert noir</button>
+      <button type="button" class="ambience" data-ambience="taupe" aria-pressed="false"><span class="ambience-dot" style="background:#191712"></span>Taupe fumé</button>
+    </div>
+    <div class="hint" style="margin:0 0 16px">Fonds sombres légèrement nuancés, sans modification de la sphère ni des programmes.</div>
     <div class="rowtitle">Type de matière</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
       <button class="mode active" data-mode="points">Points</button>
@@ -99,6 +114,23 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 (()=>{'use strict';
 const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const panel=document.getElementById('panel'),fps=document.getElementById('fps');
+const ambiences={
+  original:{base:'#050505',centre:'rgba(5,5,5,0)'},
+  charcoal:{base:'#100e0d',centre:'rgba(58,43,35,.32)'},
+  blue:{base:'#090e16',centre:'rgba(34,56,77,.33)'},
+  plum:{base:'#110d13',centre:'rgba(67,36,60,.32)'},
+  green:{base:'#0b1211',centre:'rgba(34,66,56,.28)'},
+  taupe:{base:'#12100e',centre:'rgba(73,62,43,.30)'}
+};
+let currentAmbience='original';
+document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEventListener('click',()=>{
+  currentAmbience=btn.dataset.ambience;
+  document.querySelectorAll('#ambienceOptions .ambience').forEach(item=>{
+    const active=item===btn;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));
+  });
+  document.body.style.background=ambiences[currentAmbience].base;
+  document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
+}));
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
 const programCfg={fanRotate:.22,fanLength:.58,fanDots:8,fanDotWidth:2.70,fanStrokeWidth:1.60,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
@@ -281,7 +313,15 @@ function render(now){
   if(fanLevel!==0){const speeds=[0,.55,1.12,1.85];fanAngle+=dt*Math.sign(fanLevel)*speeds[Math.abs(fanLevel)]*(programCfg.fanRotate/.22);}
   if(fanSelected && performance.now()-fanLastAction>FAN_TIMEOUT)closeFan();
   fanReveal+=((fanSelected&&fanOpen?1:0)-fanReveal)*Math.min(1,dt*3.3);
-  ctx.fillStyle='#050505'; ctx.fillRect(0,0,w,h);
+  const ambience=ambiences[currentAmbience];
+  ctx.fillStyle=ambience.base;ctx.fillRect(0,0,w,h);
+  if(currentAmbience!=='original'){
+    // Brume très discrète, indépendante de la sphère : aucun point supplémentaire.
+    const atmosphere=ctx.createRadialGradient(w*.5,h*.45,0,w*.5,h*.45,Math.max(w,h)*.66);
+    atmosphere.addColorStop(0,ambience.centre);
+    atmosphere.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=atmosphere;ctx.fillRect(0,0,w,h);
+  }
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
   // Le zoom agit sur l'ensemble cube/sphère/jauge, donc les coordonnées de toucher restent cohérentes.
