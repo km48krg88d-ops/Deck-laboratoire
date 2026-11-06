@@ -516,7 +516,7 @@ canvas.addEventListener('pointermove',e=>{
       if(delta>.015){fanOpen=true;fanActivity();}
       if(delta<-.015){fanOpen=false;fanActivity();}
       // Le dézoom referme la sélection et rend la navigation libre.
-      if(!fanOpen && delta<-.035){closeFan();fanZoomGesture=false;}
+      if(!fanOpen && delta<-.035){closeFan(); /* garder le geste réservé au ventilateur jusqu'au relâchement des doigts */}
     }
     if(!fanZoomGesture && selectedLamp!==null && pinchDistance>0 && dist>12){
       const change=Math.log(dist/pinchDistance)*1.45;
