@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 11B</title>
+<title>DECK — Laboratoire 12 · Ventilateur</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -83,6 +83,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     <div class="group">
       <div class="rowtitle">Ventilateur</div>
       <div class="controls" id="fanControls"></div>
+      <div class="hint" style="margin-top:10px">Écarter deux doigts sur la face du ventilateur : les huit traits se décomposent en points. Retour au logo après 5 secondes, sans sélection.</div>
     </div>
     <div class="group">
       <div class="rowtitle">Lumières</div>
@@ -91,19 +92,19 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     </div>
   </div>
 
-  <div class="bottomline"><span class="hint">Glisser : tourner · Toucher une face : ouvrir · Toucher une lampe : sélectionner · Pincer : intensité · 5 s : fin</span><span class="status" id="fps">—</span></div>
+  <div class="bottomline"><span class="hint">Glisser : tourner · Toucher une face : ouvrir · Pincer sur le ventilateur : décomposer · Pincer une lampe : intensité · Retour après 5 s</span><span class="status" id="fps">—</span></div>
 </section>
-<div class="immersive-hint" id="immersiveHint">Toucher une face : ouvrir · Glisser : tourner</div>
+<div class="immersive-hint" id="immersiveHint">Glisser : tourner · Pincer sur le ventilateur : décomposer</div>
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const panel=document.getElementById('panel'),fps=document.getElementById('fps');
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
-const programCfg={fanRotate:.22,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
+const programCfg={fanRotate:.22,fanLength:.88,fanDots:13,fanDotWidth:1.25,fanStrokeWidth:1.45,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
 const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
 const membraneParams=[['fluidity','Fluidité',0,1,.01],['softness','Souplesse',0,1,.01],['transparency','Transparence',0,1,.01],['reflection','Reflets',0,1,.01],['edge','Bord',0,1,.01],['folds','Plis',0,1,.01],['breath','Respiration',0,.15,.005]];
-const fanParams=[['fanRotate','Rotation',0,1.4,.01]];
+const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
   sommeil:{density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0},
@@ -121,6 +122,7 @@ const calculatedGrain=()=>0.5+(4/18)*lights.reduce((sum,lamp)=>sum+lamp.level,0)
 let selectedLamp=null, lastPinchTime=0, pinchDistance=0, gestureWasMulti=false;
 let particles=[],angleX=0,angleY=0,lastFrame=0,clock=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
 let activeFace=null,faceHitRegions=[],lightHitRegions=[],touchStart=null,gestureMoved=false;
+let fanZoomGesture=false,fanPinchOrigin=0,fanRevealUntil=0,fanReveal=0;
 let primaryPointer=null,pointers=new Map(),sphereMode='points',membraneTime=0,selectedPreset='sommeil';
 const reveal={front:0,right:0,left:0};
 function syncGrain(){sphereCfg.size=calculatedGrain(); const slider=document.getElementById('r-sphereControls-size'); const output=document.getElementById('o-sphereControls-size'); if(slider){slider.value=sphereCfg.size;slider.disabled=true;slider.title='Calculé par les six lampes';} if(output)output.textContent=sphereCfg.size.toFixed(3);}
@@ -141,7 +143,7 @@ function createControlGrid(rootId, config, defs, onChange){
     wrapper.append(lab,input); root.append(wrapper); val.textContent=formatValue(key,config[key]);
   });
 }
-function formatValue(k,v){return k==='density'?String(v):v.toFixed(k==='breath'||k==='lightSize'||k==='size'?3:2);}
+function formatValue(k,v){return k==='density'||k==='fanDots'?String(Math.round(v)):v.toFixed(k==='breath'||k==='lightSize'||k==='size'?3:2);}
 function syncSphereControls(){sphereParams.forEach(([key])=>{const i=document.getElementById('r-sphereControls-'+key),o=document.getElementById('o-sphereControls-'+key); if(i){i.value=sphereCfg[key];o.textContent=formatValue(key,sphereCfg[key]);}})}
 function updatePresetButtons(){document.querySelectorAll('#spherePresets .preset').forEach(b=>b.classList.toggle('active',b.dataset.preset===selectedPreset));}
 function updateVisibilityButtons(){document.querySelectorAll('#visibilityModes .preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.visible)===Number(programCfg.alwaysVisible)));}
@@ -268,6 +270,7 @@ function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
   if(selectedLamp!==null && performance.now()-lastPinchTime>=5000) clearLampSelection();
   clock+=dt*sphereCfg.speed; membraneTime+=dt*(.10+membraneCfg.fluidity*.85);
+  fanReveal+=( (performance.now()<fanRevealUntil?1:0)-fanReveal)*Math.min(1,dt*3.3);
   ctx.fillStyle='#050505'; ctx.fillRect(0,0,w,h);
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
@@ -292,17 +295,30 @@ function render(now){
     ctx.save(); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(P.x,P.y,glow,0,Math.PI*2); ctx.fill(); ctx.fillStyle=`rgba(255,255,255,${Math.min(1,.55+strength*.45)})`; ctx.beginPath(); ctx.arc(P.x,P.y,size,0,Math.PI*2); ctx.fill(); ctx.restore();
     if(face==='front' && P.z>0) lightHitRegions.push({index,x:P.x,y:P.y,r:Math.max(14,Math.min(24,glow*.55))});
   }
-  function drawFanCore(alpha){
-    const f='right'; const spin=clock*programCfg.fanRotate*3.5; const arms=[[0,1,.83],[-Math.SQRT1_2,Math.SQRT1_2,.95],[Math.SQRT1_2,Math.SQRT1_2,.95],[-1,0,.85],[1,0,.85],[-Math.SQRT1_2,-Math.SQRT1_2,.93],[0,-1,.83],[Math.SQRT1_2,-Math.SQRT1_2,.93]];
-    for(const arm of arms){let [dx,dy]=arm; const rx=dx*Math.cos(spin)-dy*Math.sin(spin), ry=dx*Math.sin(spin)+dy*Math.cos(spin); faceLine(f,[rx*.055,ry*.055],[rx*.115,ry*.115],alpha*.9,1.45,false);} }
-  function drawFanExpanded(alpha,progress){
-    const f='right'; const spin=clock*programCfg.fanRotate*3.5; const ease=progress*progress*(3-2*progress);
-    const arms=[[0,1,.83],[-Math.SQRT1_2,Math.SQRT1_2,.95],[Math.SQRT1_2,Math.SQRT1_2,.95],[-1,0,.85],[1,0,.85],[-Math.SQRT1_2,-Math.SQRT1_2,.93],[0,-1,.83],[Math.SQRT1_2,-Math.SQRT1_2,.93]];
-    for(let k=0;k<arms.length;k++){
-      let [dx,dy,end]=arms[k]; const rdx=dx*Math.cos(spin)-dy*Math.sin(spin), rdy=dx*Math.sin(spin)+dy*Math.cos(spin); const n=13;
-      for(let i=0;i<n;i++){
-        const t=i/(n-1), compact=.055+t*.055, expanded=.28+t*(end-.28), r=compact+(expanded-compact)*ease, length=.055/n*(1-ease)+.010*ease;
-        faceLine(f,[rdx*r,rdy*r],[rdx*(r+length),rdy*(r+length)],alpha*(.9-.34*ease),1.45-.75*ease,false);
+  const fanArms=[[0,1,.83],[-Math.SQRT1_2,Math.SQRT1_2,.95],[Math.SQRT1_2,Math.SQRT1_2,.95],[-1,0,.85],[1,0,.85],[-Math.SQRT1_2,-Math.SQRT1_2,.93],[0,-1,.83],[Math.SQRT1_2,-Math.SQRT1_2,.93]];
+  function drawFanMorph(alpha,progress){
+    // Les huit traits du pictogramme deviennent eux-mêmes les rayons de points.
+    // La position des grains migre sans apparition d'une seconde couche indépendante.
+    const f='right',spin=clock*programCfg.fanRotate*3.5;
+    const ease=progress*progress*(3-2*progress),n=Math.round(programCfg.fanDots);
+    for(const [dx,dy,armEnd] of fanArms){
+      const rdx=dx*Math.cos(spin)-dy*Math.sin(spin),rdy=dx*Math.sin(spin)+dy*Math.cos(spin);
+      const start=.055,end=.115,rayStart=.23;
+      // Le trait se contracte pour libérer ses grains sans empiler deux images.
+      const strokeEnd=end-(end-start)*ease;
+      if(1-ease>.002)faceLine(f,[rdx*start,rdy*start],[rdx*strokeEnd,rdy*strokeEnd],alpha*.9*(1-ease),programCfg.fanStrokeWidth,false);
+      if(ease>.001){
+        const maxLength=Math.min(1.20,programCfg.fanLength*armEnd/.95);
+        for(let i=0;i<n;i++){
+          const t=n===1?0:i/(n-1);
+          const from=start+(end-start)*t;
+          const to=rayStart+maxLength*t;
+          const rad=from+(to-from)*ease;
+          const P=screen(f,rdx*rad,rdy*rad);
+          const dotR=Math.max(.25,programCfg.fanDotWidth*.5*P.p);
+          ctx.beginPath();ctx.arc(P.x,P.y,dotR,0,Math.PI*2);
+          ctx.fillStyle=`rgba(238,240,244,${alpha*(.9-.25*ease)*ease})`;ctx.fill();
+        }
       }
     }
   }
@@ -315,15 +331,13 @@ function render(now){
     if(f==='front'){
       lights.forEach((lamp,idx)=>drawLightSource(f,...apartmentCoord(...lamp.raw),al,lamp.level,idx));
     }
-    if(f==='right') drawFanCore(al);
+    if(f==='right') drawFanMorph(al,fanReveal);
     if(f==='left'){ const P=screen(f,0,0), r=Math.max(5,Math.min(17,radius*.105)); ctx.save(); ctx.translate(P.x,P.y); ctx.beginPath(); ctx.moveTo(-r*.36,-r*.73); ctx.lineTo(r*.86,0); ctx.lineTo(-r*.36,r*.73); ctx.closePath(); ctx.fillStyle=`rgba(245,245,245,${al*.86})`; ctx.fill(); ctx.restore(); }
     if(progress<.002) return;
     if(f==='front'){
       const poly=apartmentPolyRaw.map(([x,y])=>apartmentCoord(x,y));
       for(let i=0;i<poly.length-1;i++) faceLine(f,poly[i],poly[i+1],al*.5*progress,.65,true);
       apartmentWallsRaw.forEach(([a,b])=>faceLine(f,apartmentCoord(...a),apartmentCoord(...b),al*.5*progress,.65,true));
-    }else if(f==='right'){
-      drawFanExpanded(al,progress);
     }
   }
   function drawCube(){
@@ -417,16 +431,22 @@ function nearestLightAt(x,y){
 function selectFaceAt(x,y){
   clearLampSelection();
   const chosen=faceHitRegions.find(region=>pointInPolygon(x,y,region.poly));
+  // Le ventilateur ne se sélectionne pas : son zoom est un geste direct.
+  if(chosen?.name==='right')return;
   activeFace=chosen?(activeFace===chosen.name?null:chosen.name):null;
 }
 canvas.addEventListener('pointerdown',e=>{
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===1){primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};gestureMoved=false;gestureWasMulti=false;}
+  if(pointers.size===1){primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;}
   if(pointers.size===2){
     gestureWasMulti=true;gestureMoved=true;
     const pair=[...pointers.values()];
     pinchDistance=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
+    fanPinchOrigin=pinchDistance;
+    const midX=(pair[0].x+pair[1].x)/2,midY=(pair[0].y+pair[1].y)/2;
+    // Le geste doit naître sur la face droite, pas sur une lampe ou dans le vide.
+    fanZoomGesture=selectedLamp===null && !!faceHitRegions.find(region=>region.name==='right' && pointInPolygon(midX,midY,region.poly));
   }
 });
 canvas.addEventListener('pointermove',e=>{
@@ -438,7 +458,10 @@ canvas.addEventListener('pointermove',e=>{
     gestureWasMulti=true;gestureMoved=true;
     const pair=[...pointers.values()];
     const dist=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
-    if(selectedLamp!==null && pinchDistance>0 && dist>12){
+    if(fanZoomGesture && fanPinchOrigin>0 && dist>fanPinchOrigin*1.11){
+      fanRevealUntil=performance.now()+5000;
+    }
+    if(!fanZoomGesture && selectedLamp!==null && pinchDistance>0 && dist>12){
       const change=Math.log(dist/pinchDistance)*1.45;
       if(Math.abs(change)>.0005){
         const lamp=lights[selectedLamp];
@@ -472,11 +495,11 @@ function endPointer(e){
   pointers.delete(e.pointerId);
   primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;
   pinchDistance=0;
-  if(!pointers.size){touchStart=null;gestureWasMulti=false;}
+  if(!pointers.size){touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
-document.getElementById('reset').addEventListener('click',()=>{angleX=0; angleY=0; activeFace=null; clearLampSelection();});
+document.getElementById('reset').addEventListener('click',()=>{angleX=0; angleY=0; activeFace=null;fanRevealUntil=0;fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden'); document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
