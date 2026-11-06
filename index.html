@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 20 · Gaz & Nuée</title>
+<title>DECK — Laboratoire 21 · Programmes vivants</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 20</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 21</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 20 · Gaz & Nuée</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 21 · Programmes vivants</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -72,10 +72,10 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     <div class="hint" style="margin:0 0 16px">Fonds sombres légèrement nuancés, sans modification de la sphère ni des programmes.</div>
     <div class="rowtitle">Type de matière</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
-      <button class="mode active" data-mode="points">Points</button>
-      <button class="mode" data-mode="membrane">Gaz / Opale</button><button class="mode" data-mode="nuee">Nuée</button><button class="mode" data-mode="hybride">Hybride</button>
+      <button class="mode" data-mode="points">Points</button>
+      <button class="mode" data-mode="membrane">Gaz / Opale</button><button class="mode" data-mode="nuee">Nuée</button><button class="mode" data-mode="hybride">Hybride</button><button class="mode active" data-mode="vivants">Vivants · V21</button>
     </div>
-    <div id="pointPanel">
+    <div id="pointPanel" hidden>
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
       <div class="controls" id="sphereControls"></div>
       <div class="presets" id="spherePresets">
@@ -85,6 +85,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
         <button class="preset" data-preset="dense">Poussière</button>
       </div>
     </div>
+    <div id="livingPanel"><div class="rowtitle">Lumières · Six nuages mêlés</div><div class="hint" style="margin-bottom:14px">Un cœur par lampe, selon le plan. Les enveloppes se croisent librement.</div><div class="rowtitle">Musique · Onde de soie</div><div class="controls" id="livingControls"></div><div class="hint" style="margin-top:12px">Une nappe horizontale, aux plis définis mais mobiles. Le ventilateur conserve ses commandes ; son influence sur la matière viendra ensuite.</div></div>
     <div id="cloudPanel" hidden><div class="rowtitle">Nuée vivante · déplacement collectif</div><div class="controls" id="cloudControls"></div><div class="hint" style="margin-top:12px">Courants roses et lavande · filaments en trois dimensions. Le mode Hybride associe nuée et gaz.</div></div>
     <div id="membranePanel" hidden>
       <div class="rowtitle">Matière · trois comportements</div>
@@ -131,7 +132,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
-const panel=document.getElementById('panel'),fps=document.getElementById('fps');
+const panel=document.getElementById('panel'),fps=document.getElementById('fps');document.body.classList.add('opal-mode');
 const ambiences={
   original:{base:'#050505',centre:'rgba(5,5,5,0)'},
   charcoal:{base:'#100e0d',centre:'rgba(58,43,35,.32)'},
@@ -153,7 +154,7 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
-const membraneCfg={fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055};const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
+const membraneCfg={fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055};const livingCfg={cloudDeform:.82,cloudBlend:.72,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
 const opalProfiles={
   opale:{fluidity:.34,softness:.80,transparency:.26,reflection:.68,edge:.46,folds:.42,breath:.035},
@@ -188,7 +189,7 @@ function fanActivity(){fanLastAction=performance.now();}
 function closeFan(){fanOpen=false;fanSelected=false;fanRevealUntil=0;activeFace=null;fanGaugeDrag=false;}
 function setFanLevel(v){fanLevel=clamp(Math.round(v),-3,3);fanActivity();}
 
-let primaryPointer=null,pointers=new Map(),sphereMode='points',membraneTime=0,selectedPreset='sommeil';
+let primaryPointer=null,pointers=new Map(),sphereMode='vivants',membraneTime=0,selectedPreset='sommeil';
 const reveal={front:0,right:0,left:0};
 function syncGrain(){sphereCfg.size=calculatedGrain(); const slider=document.getElementById('r-sphereControls-size'); const output=document.getElementById('o-sphereControls-size'); if(slider){slider.value=sphereCfg.size;slider.disabled=true;slider.title='Calculé par les six lampes';} if(output)output.textContent=sphereCfg.size.toFixed(3);}
 function clearLampSelection(){selectedLamp=null;pinchDistance=0;}
@@ -228,7 +229,7 @@ document.querySelectorAll('#opalStructure .preset').forEach(btn=>btn.addEventLis
   opalStructure=btn.dataset.structure;
   document.querySelectorAll('#opalStructure .preset').forEach(b=>b.classList.toggle('active',b===btn));
 }));
-createControlGrid('cloudControls',cloudCfg,cloudParams,()=>{});createControlGrid('fanControls',programCfg,fanParams,()=>{});
+createControlGrid('livingControls',livingCfg,livingParams,()=>{});createControlGrid('cloudControls',cloudCfg,cloudParams,()=>{});createControlGrid('fanControls',programCfg,fanParams,()=>{});
 createControlGrid('lightControls',programCfg,lightParams,()=>{});
 document.querySelectorAll('#spherePresets .preset').forEach(btn=>btn.addEventListener('click',()=>setPreset(btn.dataset.preset)));
 document.querySelectorAll('#sphereModes .mode').forEach(btn=>btn.addEventListener('click',()=>{
@@ -238,7 +239,7 @@ document.querySelectorAll('#sphereModes .mode').forEach(btn=>btn.addEventListene
   document.body.style.background=bg;
   document.querySelector('meta[name="theme-color"]').content=bg;
   document.getElementById('pointPanel').hidden=sphereMode!=='points';
-  document.getElementById('membranePanel').hidden=!(sphereMode==='membrane'||sphereMode==='hybride');document.getElementById('cloudPanel').hidden=!(sphereMode==='nuee'||sphereMode==='hybride');
+  document.getElementById('membranePanel').hidden=!(sphereMode==='membrane'||sphereMode==='hybride');document.getElementById('cloudPanel').hidden=!(sphereMode==='nuee'||sphereMode==='hybride');document.getElementById('livingPanel').hidden=sphereMode!=='vivants';
   document.querySelectorAll('#sphereModes .mode').forEach(b=>b.classList.toggle('active',b===btn));
 }));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===btn)); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===btn.dataset.view));}));
@@ -408,6 +409,96 @@ function drawCloud(radius,project,hybrid){
   ctx.drawImage(cloudSprites[p.tint],v.x-size*.5,v.y-size*.5,size,size);
  }
  ctx.globalAlpha=1;ctx.restore();
+}
+
+
+/* V21 · six corps lumineux en points et une nappe musicale à plis continus.
+   Pas de changement du moteur historique ni des commandes existantes. */
+const livingPalette=['#e7a0ba','#f2b0a3','#c2a8df','#b5b9ec','#e4a9cf','#d9b3ab'];
+const livingCloudDots=Array.from({length:6},(_,lamp)=>Array.from({length:215},(_,i)=>({
+ a:i*2.39996323, r:Math.sqrt((i+.5)/215),
+ d:Math.sin(i*7.193+lamp*1.4), depth:Math.sin(i*3.83+lamp*2.1),
+ seed:(i*71%217)/217
+})));
+const livingSprites=livingPalette.map(color=>{
+ const c=document.createElement('canvas');c.width=c.height=64;
+ const g=c.getContext('2d'),grad=g.createRadialGradient(32,32,1,32,32,32);
+ grad.addColorStop(0,color+'F0');grad.addColorStop(.20,color+'C5');
+ grad.addColorStop(.50,color+'48');grad.addColorStop(1,color+'00');
+ g.fillStyle=grad;g.fillRect(0,0,64,64);return c;
+});
+const silkSprite=(()=>{
+ const c=document.createElement('canvas');c.width=c.height=48;
+ const g=c.getContext('2d'),gr=g.createRadialGradient(24,24,0,24,24,24);
+ gr.addColorStop(0,'rgba(142,145,204,.85)');gr.addColorStop(.36,'rgba(154,156,218,.30)');
+ gr.addColorStop(1,'rgba(154,156,218,0)');g.fillStyle=gr;g.fillRect(0,0,48,48);return c;
+})();
+let livingTime=0;
+function drawLivingMatter(dt,project,radius,cx,cy){
+ livingTime+=Math.min(.04,dt)*(.13+livingCfg.waveFlow*.68);
+ ctx.save();
+ // Les six centres reprennent les coordonnées du plan, mais s'étendent bien au-delà.
+ for(let lamp=0;lamp<6;lamp++){
+  const raw=apartmentLightsRaw[lamp],level=lights[lamp].level;
+  const centerX=(raw[0]-630)/455*1.04,centerY=(570-raw[1])/480*.90;
+  const wander=livingTime*.21+lamp*1.91;
+  const center=project(centerX+Math.sin(wander)*.075,centerY+Math.cos(wander*.77)*.066,-.12+Math.sin(lamp*2.3)*.22);
+  const spread=radius*(.90+livingCfg.cloudBlend*.62)*(1+level*.30);
+  // Une enveloppe elliptique tourmentée, issue de la même logique que la sphère.
+  const dots=livingCloudDots[lamp];
+  for(let i=0;i<dots.length;i++){
+   const q=dots[i],a=q.a+livingTime*.037;
+   const deform=1+livingCfg.cloudDeform*(.48*Math.sin(a*3.4+livingTime*.72+lamp)
+       +.33*Math.sin(a*5.1-livingTime*.38+lamp*1.4)
+       +.20*Math.cos(a*8.1+livingTime*.44));
+   const r=q.r*spread*deform;
+   const x=center.x+Math.cos(a)*r*.82+Math.sin(livingTime*.32+q.seed*8)*radius*.045*q.r;
+   const y=center.y+Math.sin(a)*r*.64+Math.cos(livingTime*.28+q.seed*6)*radius*.036*q.r;
+   const size=radius*(.18+livingCfg.cloudBlend*.18)*( .73+q.seed*.65);
+   const falloff=(1-q.r*.64);
+   ctx.globalAlpha=(.13+level*.32)*falloff*(.68+q.seed*.42);
+   ctx.drawImage(livingSprites[lamp],x-size*.5,y-size*.5,size,size);
+  }
+ }
+ // Une nappe musicale indépendante : cinq plis de soie traversent horizontalement
+ // la moitié du cadre. Les lignes centrales restent distinctes des halos doux.
+ const span=Math.min(w*.54,Math.max(radius*3.9,330));
+ const start=cx-span*.5,baseY=cy+radius*.07;
+ const folds=7,samples=110;
+ function pos(u,j){
+   const x=start+u*span;
+   const envelope=Math.pow(Math.sin(Math.PI*u),.75);
+   const offset=j-(folds-1)/2;
+   const phase=u*Math.PI*3.3-livingTime*(.85+j*.035);
+   const longWave=Math.sin(phase)*(.13+livingCfg.waveRelief*.19);
+   const fine=Math.sin(phase*1.74+j*.42+livingTime*.25)*.045;
+   const y=baseY+offset*radius*.073
+     +radius*(longWave+fine)*envelope
+     +Math.sin(u*Math.PI*1.7+j*.35+livingTime*.31)*radius*.025;
+   return {x,y};
+ }
+ for(let j=0;j<folds;j++){
+  // L'éclat est porté par les plis, pas par une ligne vectorielle dure.
+  ctx.beginPath();
+  for(let i=0;i<=samples;i++){
+   const p=pos(i/samples,j);
+   if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  const alpha=(.10+livingCfg.waveRelief*.24)*(1-Math.abs(j-3)*.095);
+  ctx.globalAlpha=1;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle='rgba(155,153,222,'+(alpha*.34)+')';
+  ctx.lineWidth=radius*(.075+livingCfg.cloudBlend*.024);ctx.stroke();
+  ctx.strokeStyle='rgba(133,133,198,'+alpha+')';
+  ctx.lineWidth=.9+livingCfg.waveRelief*.85;ctx.stroke();
+  // Les noyaux ponctuels apportent une épaisseur lumineuse diffuse à la nappe.
+  for(let i=2;i<samples-2;i+=2){
+    const p=pos(i/samples,j);
+    const size=radius*(.035+livingCfg.cloudBlend*.035);
+    ctx.globalAlpha=.14+livingCfg.waveRelief*.13;
+    ctx.drawImage(silkSprite,p.x-size/2,p.y-size/2,size,size);
+  }
+ }
+ ctx.restore();
 }
 
 function render(now){
@@ -628,6 +719,7 @@ function render(now){
       ctx.closePath();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.85;ctx.stroke();
     }
     if(sphereMode==='nuee'||hybrid)drawCloud(radius,project,hybrid);
+    if(sphereMode==='vivants')drawLivingMatter(dt,project,radius,cx,cy);
     // Les repères de commande ne dépendent pas du contour visible.
     if(opalStructure!=='none')drawCube();
     drawFanGauge();
