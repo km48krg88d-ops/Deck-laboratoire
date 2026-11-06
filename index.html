@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 10</title>
+<title>DECK — Laboratoire 11A</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -41,9 +41,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 10</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 11A</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 10 · Gestes</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 11A · Points doux</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -98,10 +98,10 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 (()=>{'use strict';
 const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const panel=document.getElementById('panel'),fps=document.getElementById('fps');
-const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0};
+const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
 const programCfg={fanRotate:.22,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
-const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,2.5,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01]];
+const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,2.5,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
 const membraneParams=[['fluidity','Fluidité',0,1,.01],['softness','Souplesse',0,1,.01],['transparency','Transparence',0,1,.01],['reflection','Reflets',0,1,.01],['edge','Bord',0,1,.01],['folds','Plis',0,1,.01],['breath','Respiration',0,.15,.005]];
 const fanParams=[['fanRotate','Rotation',0,1.4,.01]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
@@ -168,8 +168,28 @@ function createParticles(){
     particles[i]={x,y,z,seed:seed-Math.floor(seed)};
   }
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2); w=window.innerWidth; h=window.innerHeight; canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr); canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx.setTransform(dpr,0,0,dpr,0,0);}
+function resize(){
+  // Resolution native Retina (sur iPhone, generalement x3), sans redimensionnement CSS parasite.
+  w=window.innerWidth;h=window.innerHeight;
+  dpr=Math.min(window.devicePixelRatio||1,3);
+  const physicalW=Math.round(w*dpr),physicalH=Math.round(h*dpr);
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+  if(canvas.width!==physicalW||canvas.height!==physicalH){canvas.width=physicalW;canvas.height=physicalH;}
+  ctx.setTransform(physicalW/w,0,0,physicalH/h,0,0);
+  ctx.imageSmoothingEnabled=true;
+}
 window.addEventListener('resize',resize); resize(); createParticles();
+// Petite pastille lumineuse precalculee une fois, dessinee sans carre opaque.
+// Pour un test de comparaison immediat, Douceur=0 utilise le rendu V10 original.
+const dotSprite=document.createElement('canvas');dotSprite.width=32;dotSprite.height=32;
+const dotCtx=dotSprite.getContext('2d');
+const dotGradient=dotCtx.createRadialGradient(16,16,0,16,16,15.5);
+dotGradient.addColorStop(0,'rgba(255,255,255,1)');
+dotGradient.addColorStop(.18,'rgba(255,255,255,.98)');
+dotGradient.addColorStop(.45,'rgba(255,255,255,.69)');
+dotGradient.addColorStop(.75,'rgba(255,255,255,.24)');
+dotGradient.addColorStop(1,'rgba(255,255,255,0)');
+dotCtx.fillStyle=dotGradient;dotCtx.fillRect(0,0,32,32);
 function noise(x,y,z,t,fluid){
   const f=1-fluid;
   const low=Math.sin((2.1+f*1.2)*x + (1.6+f*.8)*y + Math.sin((1.4+f*.5)*z+t*.42))*Math.cos((2.0+f*.9)*z-(1.9+f*.5)*y+t*.37);
@@ -342,7 +362,23 @@ function render(now){
       const point={x:px,y:py,a:Math.min(1,baseAlpha*(.68+.32*p.seed)*(1+lightBoost)),size:sphereCfg.size*(.5+.65*depth)*(1+lightEnergy*.08*rim),z:zz};
       (zz<0?rear:front).push(point);
     }
-    function draw(arr,frontSide){ ctx.fillStyle='#fff'; for(const p of arr){ ctx.globalAlpha=Math.min(.98,p.a*(frontSide?1:.52)); ctx.fillRect(p.x,p.y,p.size,p.size);} ctx.globalAlpha=1; }
+    function draw(arr,frontSide){
+      ctx.fillStyle='#fff';
+      const softness=sphereCfg.softness;
+      const minimumDiameter=1.25/dpr;
+      for(const p of arr){
+        ctx.globalAlpha=Math.min(.98,p.a*(frontSide?1:.52));
+        if(softness>.001){
+          // Un noyau assez fin, eclairement progressif et echantillonnage sous-pixel.
+          const core=Math.max(minimumDiameter,p.size);
+          const diameter=core*(1.1+1.45*softness);
+          ctx.drawImage(dotSprite,p.x-diameter*.5,p.y-diameter*.5,diameter,diameter);
+        }else{
+          ctx.fillRect(p.x,p.y,p.size,p.size);
+        }
+      }
+      ctx.globalAlpha=1;
+    }
     draw(rear,false); draw(front,true);
     if(lightEnergy>.01){
       ctx.save(); ctx.globalCompositeOperation='screen';
