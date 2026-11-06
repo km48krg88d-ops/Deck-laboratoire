@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 14 · Ventilateur</title>
+<title>DECK — Laboratoire 15 · Navigation</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -41,9 +41,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 14</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 15</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 14 · Ventilateur</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 15 · Navigation</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -120,7 +120,7 @@ const lights=apartmentLightsRaw.map(p=>({raw:p,level:0}));
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const calculatedGrain=()=>0.5+(4/18)*lights.reduce((sum,lamp)=>sum+lamp.level,0);
 let selectedLamp=null, lastPinchTime=0, pinchDistance=0, gestureWasMulti=false;
-let particles=[],angleX=.47,angleY=-.18,lastFrame=0,clock=0,fanAngle=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
+let particles=[],angleX=.47,angleY=-.18,sceneZoom=.82,lastFrame=0,clock=0,fanAngle=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
 let activeFace=null,faceHitRegions=[],lightHitRegions=[],touchStart=null,gestureMoved=false;
 let fanZoomGesture=false,fanPinchOrigin=0,fanRevealUntil=0,fanReveal=0;
 let fanSelected=false,fanOpen=false,fanSilent=false,fanLevel=0,fanLastAction=0,fanGaugeHit=null,fanGaugeDrag=false,lastFanTap=0;
@@ -284,7 +284,8 @@ function render(now){
   ctx.fillStyle='#050505'; ctx.fillRect(0,0,w,h);
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
-  const radius=Math.min(w*.295,h*(panel.classList.contains('hidden')?.235:.18),184);
+  // Le zoom agit sur l'ensemble cube/sphère/jauge, donc les coordonnées de toucher restent cohérentes.
+  const radius=Math.min(w*.295,h*(panel.classList.contains('hidden')?.235:.18),184)*sceneZoom;
   const breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
   const sy=Math.sin(angleY), cyo=Math.cos(angleY), sx=Math.sin(angleX), cxo=Math.cos(angleX);
   lightHitRegions=[];
@@ -525,6 +526,17 @@ canvas.addEventListener('pointermove',e=>{
         syncGrain();lastPinchTime=performance.now();
       }
     }
+    // Hors des réglages de lumière et de la transformation du ventilateur,
+    // le pincement pilote le zoom libre du cube, même lorsqu'une face est ouverte.
+    if(!fanZoomGesture && !fanSelected && selectedLamp===null && pinchDistance>0 && dist>12){
+      sceneZoom=clamp(sceneZoom*Math.pow(dist/pinchDistance,.85),.55,1.15);
+    }
+    // Si le ventilateur est sélectionné, un pincement hors de sa face règle
+    // quand même l'échelle de la scène sans modifier la forme du ventilateur.
+    if(!fanZoomGesture && fanSelected && selectedLamp===null && pinchDistance>0 && dist>12){
+      sceneZoom=clamp(sceneZoom*Math.pow(dist/pinchDistance,.85),.55,1.15);
+      fanActivity();
+    }
     pinchDistance=dist;return;
   }
   if(fanGaugeDrag){
@@ -563,7 +575,7 @@ function endPointer(e){
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
-document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;closeFan();fanReveal=0;clearLampSelection();});
+document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden'); document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
