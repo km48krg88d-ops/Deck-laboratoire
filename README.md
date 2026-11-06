@@ -1,3 +1,3 @@
-# DECK — Laboratoire V11B
+# DECK — Laboratoire V12 · Ventilateur
 
-Grain maximal réduit d’un tiers sur sa plage dynamique, de 2,500 à 1,833. Minimum inchangé à 0,500. Les six lampes contribuent chacune à hauteur de 0,2222 au maximum. Rendu V11A inchangé.
+Zoom à deux doigts sur la face droite : les huit traits tournants se décomposent en points qui migrent radialement, puis se reforment automatiquement après 5 secondes. Aucun clic de sélection. Réglages : rotation, longueur, nombre de points par rayon, épaisseur des points et des traits. Sphère et lampes inchangées (V11B).
