@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 11A</title>
+<title>DECK — Laboratoire 11B</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -41,9 +41,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 11A</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 11B</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 11A · Points doux</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 11B · Points doux</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -101,7 +101,7 @@ const panel=document.getElementById('panel'),fps=document.getElementById('fps');
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
 const programCfg={fanRotate:.22,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
-const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,2.5,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
+const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
 const membraneParams=[['fluidity','Fluidité',0,1,.01],['softness','Souplesse',0,1,.01],['transparency','Transparence',0,1,.01],['reflection','Reflets',0,1,.01],['edge','Bord',0,1,.01],['folds','Plis',0,1,.01],['breath','Respiration',0,.15,.005]];
 const fanParams=[['fanRotate','Rotation',0,1.4,.01]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
@@ -114,10 +114,10 @@ const presets={
 const apartmentLightsRaw=[[248,160],[291,200],[581,160],[659,447],[1029,447],[624,732]];
 const apartmentPolyRaw=[[179,110],[1092,110],[1092,1076],[580,1076],[580,859],[179,859],[179,110]];
 const apartmentWallsRaw=[[[654,110],[580,859]],[[763,859],[763,1076]],[[920,859],[920,905]],[[763,905],[920,905]]];
-// Chaque lampe contribue a 1/6 de la plage de Grain [0.5, 2.5].
+// Chaque lampe contribue a 1/6 de la plage de Grain [0.5, 1.8333], amplitude reduite de 1/3.
 const lights=apartmentLightsRaw.map(p=>({raw:p,level:0}));
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const calculatedGrain=()=>0.5+(2/6)*lights.reduce((sum,lamp)=>sum+lamp.level,0);
+const calculatedGrain=()=>0.5+(4/18)*lights.reduce((sum,lamp)=>sum+lamp.level,0);
 let selectedLamp=null, lastPinchTime=0, pinchDistance=0, gestureWasMulti=false;
 let particles=[],angleX=0,angleY=0,lastFrame=0,clock=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
 let activeFace=null,faceHitRegions=[],lightHitRegions=[],touchStart=null,gestureMoved=false;
