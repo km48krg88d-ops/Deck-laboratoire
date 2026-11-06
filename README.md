@@ -1,5 +1,10 @@
-# DECK — Laboratoire V14
+# DECK — Laboratoire V17 : Opale
 
-Ventilateur : rotation des pales synchronisée sur les six vitesses (aspiration/soufflage) et arrêt fixe au niveau zéro. Jauge de commande ancrée à l'arête du cube commune à la face supérieure du ventilateur et à la face latérale droite. Le cube conserve sa navigation libre, ainsi que les interactions de sélection, zoom, retour après cinq secondes et mode silencieux de la V13.
+Deux matières dans le même DECK :
 
-Publication GitHub Pages depuis `main` et `/ (root)`.
+- **Points** : sphère de particules conservée, fond bleu nuit fumé par défaut.
+- **Opale** : remplace la bulle/membrane. Le cube devient un volume blanc laiteux, traversé par une lumière organique rose-corail en mouvement. Fond clair, commandes de cube adaptées en gris foncé.
+
+Les réglages du ventilateur, des lampes, le zoom et la navigation restent disponibles. Le mode Opale utilise son propre moteur WebGL et ne s'exécute pas quand le mode Points est actif.
+
+Premier prototype visuel à affiner sur iPhone. Publication via GitHub Pages sur `main` / `(root)`.
