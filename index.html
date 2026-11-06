@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 22 · Nuages de lumière</title>
+<title>DECK — Laboratoire 23 · Six gaz opalins</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 22</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 23</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 22 · Nuages de lumière</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 23 · Six gaz opalins</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -85,7 +85,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
         <button class="preset" data-preset="dense">Poussière</button>
       </div>
     </div>
-    <div id="livingPanel"><div class="rowtitle">Lumières · Six nuages vivants</div><div class="hint" style="margin-bottom:12px">Éteints : six cœurs doux et distincts. Allumés : ils se dilatent et leurs halos se mélangent. Touchez un nuage pour allumer ou éteindre ; pincez pour régler.</div><div class="controls" id="livingLampControls" style="margin-bottom:16px"></div><div class="rowtitle">Musique · Onde de soie</div><div class="controls" id="livingControls"></div><div class="hint" style="margin-top:12px">Une nappe horizontale, aux plis définis mais mobiles. Le ventilateur conserve ses commandes ; son influence sur la matière viendra ensuite.</div></div>
+    <div id="livingPanel"><div class="rowtitle">Lumières · Six nuages vivants</div><div class="hint" style="margin-bottom:12px">Six volumes animés par le moteur Gaz/Opale de la V19. Éteints : présence diffuse ; allumés : expansion et fusion. Touchez pour allumer ; pincez pour régler.</div><div class="controls" id="livingLampControls" style="margin-bottom:16px"></div><div class="rowtitle">Musique · Onde de soie</div><div class="controls" id="livingControls"></div><div class="hint" style="margin-top:12px">Une nappe horizontale, aux plis définis mais mobiles. Le ventilateur conserve ses commandes ; son influence sur la matière viendra ensuite.</div></div>
     <div id="cloudPanel" hidden><div class="rowtitle">Nuée vivante · déplacement collectif</div><div class="controls" id="cloudControls"></div><div class="hint" style="margin-top:12px">Courants roses et lavande · filaments en trois dimensions. Le mode Hybride associe nuée et gaz.</div></div>
     <div id="membranePanel" hidden>
       <div class="rowtitle">Matière · trois comportements</div>
@@ -297,14 +297,15 @@ function setupMembrane(){
   const vs=`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
   const fs=`precision highp float;
     varying vec2 vUv;
-    uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath,uGas;
+    uniform float uTime,uFluidity,uSoftness,uTransparency,uReflection,uEdge,uFolds,uBreath,uGas,uLampMode,uLampSeed;
     uniform vec2 uAngle;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
       return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
     void main(){
       vec2 p=vUv*2.-1.;
-      float t=uTime*(.23+uFluidity*.55);
+      if(uLampMode>.5){p+=vec2(.065*sin(uLampSeed*1.7),.07*cos(uLampSeed*2.2));}
+      float t=uTime*(.23+uFluidity*.55)+(uLampMode>.5?uLampSeed*1.83:0.);
       float drift=sin(t*.51)*.16;
       vec2 p1=p-vec2(-.12+.26*sin(t*.65),.08+.22*cos(t*.41));
       vec2 p2=p-vec2(.22+.14*cos(t*.39),-.18+.20*sin(t*.55));
@@ -334,7 +335,10 @@ function setupMembrane(){
       float bloom=exp(-2.9*dot(p1,p1))*.10*uReflection;
       color+=vec3(bloom*.35,bloom*.12,bloom*.11);
       color=mix(color,milk,clamp(uTransparency*.12,0.,.13));
-      gl_FragColor=vec4(clamp(color,0.,1.),1.);
+      float envelope=1.-smoothstep(.68,1.40,length(p));
+      float lampAlpha=clamp((d1*.71+d2*.45)*envelope,0.,1.);
+      // Gaz d'origine opaque conservé ; pour les lampes, alpha organique véritable.
+      gl_FragColor=vec4(clamp(color,0.,1.),mix(1.,lampAlpha,uLampMode));
     }`;
   function compile(type,source){const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);
     if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.warn('Opale shader',gl.getShaderInfoLog(sh));return null;}return sh;}
@@ -345,15 +349,15 @@ function setupMembrane(){
   const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   const a=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
-  const uniform={};['uTime','uFluidity','uSoftness','uTransparency','uReflection','uEdge','uFolds','uBreath','uGas','uAngle'].forEach(k=>uniform[k]=gl.getUniformLocation(program,k));
+  const uniform={};['uTime','uFluidity','uSoftness','uTransparency','uReflection','uEdge','uFolds','uBreath','uGas','uLampMode','uLampSeed','uAngle'].forEach(k=>uniform[k]=gl.getUniformLocation(program,k));
   gl.viewport(0,0,c.width,c.height);gl.disable(gl.DEPTH_TEST);gl.clearColor(.96,.95,.95,1.);
-  return {canvas:c,draw:(time,cfg,ax,ay)=>{
+  return {canvas:c,draw:(time,cfg,ax,ay,lampMode=0,lampSeed=0)=>{
     try{
       gl.useProgram(program);gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(uniform.uTime,time);gl.uniform1f(uniform.uFluidity,cfg.fluidity);gl.uniform1f(uniform.uSoftness,cfg.softness);
       gl.uniform1f(uniform.uTransparency,cfg.transparency);gl.uniform1f(uniform.uReflection,cfg.reflection);
       gl.uniform1f(uniform.uEdge,cfg.edge);gl.uniform1f(uniform.uFolds,cfg.folds);
-      gl.uniform1f(uniform.uBreath,cfg.breath);gl.uniform1f(uniform.uGas,opalPreset==='opale'?0:opalPreset==='gaz'?.7:1);gl.uniform2f(uniform.uAngle,ax,ay);
+      gl.uniform1f(uniform.uBreath,cfg.breath);gl.uniform1f(uniform.uGas,opalPreset==='opale'?0:opalPreset==='gaz'?.7:1);gl.uniform1f(uniform.uLampMode,lampMode);gl.uniform1f(uniform.uLampSeed,lampSeed);gl.uniform2f(uniform.uAngle,ax,ay);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);gl.flush();return true;
     }catch(e){console.warn('Opale draw',e);return false;}
   }};
@@ -439,45 +443,26 @@ let livingTime=0;
 function drawLivingMatter(dt,project,radius,cx,cy){
  livingTime+=Math.min(.04,dt)*(.13+livingCfg.waveFlow*.68);
  ctx.save();
- // Les centres restent attachés au plan des six lampes.
- // L'extinction conserve un coeur rouge doux ; la lumière épanouit surtout le halo.
+ // Les six lampes utilisent le VRAI shader Gaz/Opale : 6 champs distincts,
+ // un masque alpha organique et un espace commun où leurs halos se superposent.
  livingCloudHits=[];
- for(let lamp=0;lamp<6;lamp++){
-  const raw=apartmentLightsRaw[lamp],level=lights[lamp].level;
-  const ux=-.9+(raw[0]-179)/913*1.8;
-  const uy=.9-(raw[1]-110)/966*1.8-.12;
-  const wander=livingTime*.31+lamp*1.91;
-  const center=project(ux+Math.sin(wander)*.021,uy+Math.cos(wander*.77)*.023,.26);
-  // Le coeur demeure identifiable, même quand les halos se mélangent.
-  const coreRadius=radius*(.20+.10*livingCfg.cloudBlend);
-  const haloRadius=radius*(.33+.18*livingCfg.cloudBlend+level*(.49+.55*livingCfg.cloudBlend));
-  livingCloudHits.push({index:lamp,x:center.x,y:center.y,r:Math.max(24,coreRadius*.9)});
-  const dots=livingCloudDots[lamp];
-  for(let i=0;i<dots.length;i++){
-   const q=dots[i],a=q.a+livingTime*.038;
-   const deformation=1+livingCfg.cloudDeform*(
-       .22*Math.sin(a*3.2+livingTime*.57+lamp)
-      +.16*Math.sin(a*5.1-livingTime*.33+lamp*1.4)
-      +.09*Math.cos(a*7.7+livingTime*.42));
-   // La petite respiration collective reprend notre comportement de sphère.
-   const breath=1+.043*Math.sin(livingTime*.64+lamp*.93);
-   const r=q.r*haloRadius*deformation*breath;
-   const x=center.x+Math.cos(a)*r*.88+Math.sin(livingTime*.53+q.seed*6)*radius*.017*q.r;
-   const y=center.y+Math.sin(a)*r*.79+Math.cos(livingTime*.44+q.seed*5)*radius*.018*q.r;
-   const spriteSize=radius*(.145+.07*livingCfg.cloudBlend+level*.09)*(.75+q.seed*.50);
-   const coreWeight=Math.exp(-q.r*q.r*4.1);
-   const opacity=(.19+level*.25)*(.25+.75*coreWeight)*( .82+.18*Math.sin(livingTime*.7+q.seed*7));
-   ctx.globalAlpha=Math.min(.85,opacity);
-   ctx.drawImage(livingSprites[lamp],x-spriteSize*.5,y-spriteSize*.5,spriteSize,spriteSize);
-  }
-  // Noyau doux et continu : pas de surface ni de bord dessiné.
-  const core=ctx.createRadialGradient(center.x,center.y,0,center.x,center.y,coreRadius*(1+level*.15));
-  core.addColorStop(0,'rgba(213,54,62,'+(.24+level*.11)+')');
-  core.addColorStop(.45,'rgba(224,71,77,'+(.12+level*.07)+')');
-  core.addColorStop(1,'rgba(229,91,95,0)');
-  ctx.globalAlpha=1;ctx.fillStyle=core;ctx.beginPath();
-  ctx.arc(center.x,center.y,coreRadius*(1+level*.15),0,Math.PI*2);ctx.fill();
+ const gasProfile={...membraneCfg,softness:.72+livingCfg.cloudBlend*.26,
+   folds:.48+livingCfg.cloudDeform*.50,fluidity:.38+livingCfg.cloudDeform*.50,
+   transparency:.25,reflection:.72,breath:.035+livingCfg.cloudDeform*.075};
+ for(let lamp=0;lamp<lights.length;lamp++){
+   const raw=apartmentLightsRaw[lamp],level=lights[lamp].level;
+   const ux=-.9+(raw[0]-179)/913*1.8;
+   const uy=.9-(raw[1]-110)/966*1.8-.12;
+   const center=project(ux,uy,.26);
+   const footprint=radius*(.96+livingCfg.cloudBlend*.24);
+   const diameter=footprint*(1+level*(.65+livingCfg.cloudBlend*.95));
+   livingCloudHits.push({index:lamp,x:center.x,y:center.y,r:Math.max(24,footprint*.28)});
+   if(membraneRenderer && membraneRenderer.draw(livingTime*.85,gasProfile,angleX,angleY,1,lamp+1)){
+     ctx.globalAlpha=.61+level*.29;
+     ctx.drawImage(membraneRenderer.canvas,center.x-diameter*.5,center.y-diameter*.5,diameter,diameter);
+   }
  }
+ ctx.globalAlpha=1;
  // Une nappe musicale indépendante : cinq plis de soie traversent horizontalement
  // la moitié du cadre. Les lignes centrales restent distinctes des halos doux.
  const span=Math.min(w*.54,Math.max(radius*3.9,330));
