@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Laboratoire 12 · Ventilateur</title>
+<title>DECK — Laboratoire 13 · Ventilateur</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -41,9 +41,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 12</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 13</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 12 · Ventilateur</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 13 · Ventilateur</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -83,7 +83,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     <div class="group">
       <div class="rowtitle">Ventilateur</div>
       <div class="controls" id="fanControls"></div>
-      <div class="hint" style="margin-top:10px">Écarter deux doigts sur la face du ventilateur : les huit traits se décomposent en points. Retour au logo après 5 secondes, sans sélection.</div>
+      <div class="hint" style="margin-top:10px">Face supérieure : toucher le logo pour sélectionner, écarter deux doigts pour déployer les pales, rapprocher pour les refermer. La jauge sur l’arête droite commande les 3 vitesses dans chaque sens (centre = arrêt). Double toucher sur la forme ouverte : mode silencieux. Retour au logo après 5 s sans action.</div>
     </div>
     <div class="group">
       <div class="rowtitle">Lumières</div>
@@ -92,16 +92,16 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     </div>
   </div>
 
-  <div class="bottomline"><span class="hint">Glisser : tourner · Toucher une face : ouvrir · Pincer sur le ventilateur : décomposer · Pincer une lampe : intensité · Retour après 5 s</span><span class="status" id="fps">—</span></div>
+  <div class="bottomline"><span class="hint">Glisser : naviguer · Ventilateur : toucher puis pincer · Jauge droite : vitesse et sens · Double toucher : silence · Inactivité : 5 s</span><span class="status" id="fps">—</span></div>
 </section>
-<div class="immersive-hint" id="immersiveHint">Glisser : tourner · Pincer sur le ventilateur : décomposer</div>
+<div class="immersive-hint" id="immersiveHint">Toucher le ventilateur · Écarter : ouvrir · Rapprocher : fermer</div>
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const panel=document.getElementById('panel'),fps=document.getElementById('fps');
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.35,softness:.68,transparency:.68,reflection:.63,edge:.56,folds:.48,breath:.035};
-const programCfg={fanRotate:.22,fanLength:.88,fanDots:13,fanDotWidth:1.25,fanStrokeWidth:1.45,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
+const programCfg={fanRotate:.22,fanLength:.58,fanDots:8,fanDotWidth:2.70,fanStrokeWidth:1.60,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
 const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
 const membraneParams=[['fluidity','Fluidité',0,1,.01],['softness','Souplesse',0,1,.01],['transparency','Transparence',0,1,.01],['reflection','Reflets',0,1,.01],['edge','Bord',0,1,.01],['folds','Plis',0,1,.01],['breath','Respiration',0,.15,.005]];
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
@@ -120,9 +120,15 @@ const lights=apartmentLightsRaw.map(p=>({raw:p,level:0}));
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const calculatedGrain=()=>0.5+(4/18)*lights.reduce((sum,lamp)=>sum+lamp.level,0);
 let selectedLamp=null, lastPinchTime=0, pinchDistance=0, gestureWasMulti=false;
-let particles=[],angleX=0,angleY=0,lastFrame=0,clock=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
+let particles=[],angleX=.47,angleY=-.18,lastFrame=0,clock=0,frames=0,frameAcc=0,w=0,h=0,dpr=1;
 let activeFace=null,faceHitRegions=[],lightHitRegions=[],touchStart=null,gestureMoved=false;
 let fanZoomGesture=false,fanPinchOrigin=0,fanRevealUntil=0,fanReveal=0;
+let fanSelected=false,fanOpen=false,fanSilent=false,fanLevel=0,fanLastAction=0,fanGaugeHit=null,fanGaugeDrag=false,lastFanTap=0;
+const FAN_TIMEOUT=5000;
+function fanActivity(){fanLastAction=performance.now();}
+function closeFan(){fanOpen=false;fanSelected=false;fanRevealUntil=0;activeFace=null;fanGaugeDrag=false;}
+function setFanLevel(v){fanLevel=clamp(Math.round(v),-3,3);fanActivity();}
+
 let primaryPointer=null,pointers=new Map(),sphereMode='points',membraneTime=0,selectedPreset='sommeil';
 const reveal={front:0,right:0,left:0};
 function syncGrain(){sphereCfg.size=calculatedGrain(); const slider=document.getElementById('r-sphereControls-size'); const output=document.getElementById('o-sphereControls-size'); if(slider){slider.value=sphereCfg.size;slider.disabled=true;slider.title='Calculé par les six lampes';} if(output)output.textContent=sphereCfg.size.toFixed(3);}
@@ -270,7 +276,8 @@ function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
   if(selectedLamp!==null && performance.now()-lastPinchTime>=5000) clearLampSelection();
   clock+=dt*sphereCfg.speed; membraneTime+=dt*(.10+membraneCfg.fluidity*.85);
-  fanReveal+=( (performance.now()<fanRevealUntil?1:0)-fanReveal)*Math.min(1,dt*3.3);
+  if(fanSelected && performance.now()-fanLastAction>FAN_TIMEOUT)closeFan();
+  fanReveal+=((fanSelected&&fanOpen?1:0)-fanReveal)*Math.min(1,dt*3.3);
   ctx.fillStyle='#050505'; ctx.fillRect(0,0,w,h);
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
@@ -279,7 +286,7 @@ function render(now){
   const sy=Math.sin(angleY), cyo=Math.cos(angleY), sx=Math.sin(angleX), cxo=Math.cos(angleX);
   lightHitRegions=[];
   function project(x,y,z){const xx=x*cyo+z*sy, zz0=z*cyo-x*sy; const yy=y*cxo-zz0*sx, zz=y*sx+zz0*cxo; const perspective=2.9/(2.9-zz*.33); return {x:cx+xx*radius*perspective,y:cy-yy*radius*perspective,z:zz,p:perspective};}
-  function wpoint(face,u,v,depth=1.27){if(face==='front')return [u,v,depth]; if(face==='right')return [depth,v,-u]; return [-depth,v,u];}
+  function wpoint(face,u,v,depth=1.27){if(face==='front')return [u,v,depth]; if(face==='right')return [depth,v,-u]; if(face==='top')return [u,depth,-v]; return [-depth,v,u];}
   function screen(face,u,v){return project(...wpoint(face,u,v));}
   function strokeWorld(a,b,alpha=.28,width=.7,dotted=false){const A=project(...a),B=project(...b); ctx.lineWidth=width; ctx.strokeStyle=`rgba(238,240,244,${alpha})`; ctx.setLineDash(dotted?[1.1,3.4]:[]); ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.setLineDash([]);}
   function faceLine(face,a,b,alpha=.22,width=.65,dotted=true){strokeWorld(wpoint(face,...a),wpoint(face,...b),alpha,width,dotted)}
@@ -299,7 +306,7 @@ function render(now){
   function drawFanMorph(alpha,progress){
     // Les huit traits du pictogramme deviennent eux-mêmes les rayons de points.
     // La position des grains migre sans apparition d'une seconde couche indépendante.
-    const f='right',spin=clock*programCfg.fanRotate*3.5;
+    const f='top',spin=-clock*programCfg.fanRotate*3.5*(fanLevel===0?1:1+Math.abs(fanLevel)*.24);
     const ease=progress*progress*(3-2*progress),n=Math.round(programCfg.fanDots);
     for(const [dx,dy,armEnd] of fanArms){
       const rdx=dx*Math.cos(spin)-dy*Math.sin(spin),rdy=dx*Math.sin(spin)+dy*Math.cos(spin);
@@ -317,12 +324,12 @@ function render(now){
           const P=screen(f,rdx*rad,rdy*rad);
           const dotR=Math.max(.25,programCfg.fanDotWidth*.5*P.p);
           ctx.beginPath();ctx.arc(P.x,P.y,dotR,0,Math.PI*2);
-          ctx.fillStyle=`rgba(238,240,244,${alpha*(.9-.25*ease)*ease})`;ctx.fill();
+          ctx.fillStyle=`rgba(238,240,244,${alpha*(fanSilent?.37:.98)*ease})`;ctx.fill();
         }
       }
     }
   }
-  const faceDefinitions=[{name:'front',normal:[0,0,1]},{name:'right',normal:[1,0,0]},{name:'left',normal:[-1,0,0]}];
+  const faceDefinitions=[{name:'front',normal:[0,0,1]},{name:'top',normal:[0,1,0]},{name:'left',normal:[-1,0,0]}];
   function faceVisibility(face){const P=project(...face.normal); return Math.max(0,Math.min(1,(P.z+.15)/.90));}
   function apartmentCoord(x,y){return [-.9+(x-179)/913*1.8,.9-(y-110)/966*1.8-.12]}
   function drawFace(face,opacity){
@@ -331,7 +338,7 @@ function render(now){
     if(f==='front'){
       lights.forEach((lamp,idx)=>drawLightSource(f,...apartmentCoord(...lamp.raw),al,lamp.level,idx));
     }
-    if(f==='right') drawFanMorph(al,fanReveal);
+    if(f==='top') drawFanMorph(al,fanReveal);
     if(f==='left'){ const P=screen(f,0,0), r=Math.max(5,Math.min(17,radius*.105)); ctx.save(); ctx.translate(P.x,P.y); ctx.beginPath(); ctx.moveTo(-r*.36,-r*.73); ctx.lineTo(r*.86,0); ctx.lineTo(-r*.36,r*.73); ctx.closePath(); ctx.fillStyle=`rgba(245,245,245,${al*.86})`; ctx.fill(); ctx.restore(); }
     if(progress<.002) return;
     if(f==='front'){
@@ -339,6 +346,29 @@ function render(now){
       for(let i=0;i<poly.length-1;i++) faceLine(f,poly[i],poly[i+1],al*.5*progress,.65,true);
       apartmentWallsRaw.forEach(([a,b])=>faceLine(f,apartmentCoord(...a),apartmentCoord(...b),al*.5*progress,.65,true));
     }
+  }
+  function drawFanGauge(){
+    fanGaugeHit=null;
+    if(!fanSelected || faceVisibility({normal:[0,1,0]})<.12)return;
+    // Jauge sur l'arête verticale droite du cube : trois crans, zéro, trois crans.
+    const a=project(1.28,-.94,1.28),b=project(1.28,.94,1.28);
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+    if(len<18)return;
+    const ux=dx/len,uy=dy/len,nx=uy,ny=-ux;
+    fanGaugeHit={a,b,ux,uy,nx,ny,len};
+    ctx.save();ctx.lineCap='round';
+    for(let i=-3;i<=3;i++){
+      const t=(i+3)/6;
+      const x=a.x+dx*t,y=a.y+dy*t;
+      const active=i===fanLevel;
+      const magnitude=i===0?4:6.5;
+      const half=active?magnitude+3.5:magnitude;
+      ctx.beginPath();ctx.moveTo(x+nx*(-half),y+ny*(-half));ctx.lineTo(x+nx*half,y+ny*half);
+      ctx.lineWidth=active?3.3:1.2;
+      ctx.strokeStyle=`rgba(245,245,247,${active?.98:i===0?.45:.38})`;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   function drawCube(){
     const sides=[-1.28,1.28], vertices=[]; for(const x of sides)for(const y of sides)for(const z of sides) vertices.push({x,y,z,p:project(x,y,z)});
@@ -348,6 +378,7 @@ function render(now){
   const orderedFaces=faceDefinitions.map(f=>({f,depth:project(...f.normal).z,opacity:faceVisibility(f)})).sort((a,b)=>a.depth-b.depth);
   for(const {f,opacity} of orderedFaces){ if(opacity<.13) drawFace(f,opacity*.7); }
   drawCube();
+  drawFanGauge();
   faceHitRegions=faceDefinitions.filter(f=>faceVisibility(f)>.12).map(f=>({name:f.name,depth:project(...f.normal).z,poly:[[-1.27,-1.27],[1.27,-1.27],[1.27,1.27],[-1.27,1.27]].map(([u,v])=>screen(f.name,u,v))})).sort((a,b)=>b.depth-a.depth);
 
   const totalLight=lights.reduce((sum,l)=>sum+l.level,0);
@@ -427,26 +458,42 @@ function nearestLightAt(x,y){
   for(const hit of lightHitRegions){const d=Math.hypot(x-hit.x,y-hit.y); if(d<hit.r && (!best || d<best.d)) best={index:hit.index,d};}
   return best;
 }
-// Selection silencieuse. L'intensite ne change qu'au pincement a deux doigts.
+// Navigation, choix des lampes et interaction ventilateur sont indépendants.
+function fanGaugeAt(x,y){
+  if(!fanGaugeHit)return null;
+  const {a,ux,uy,nx,ny,len}=fanGaugeHit;
+  const across=Math.abs((x-a.x)*nx+(y-a.y)*ny);
+  const along=(x-a.x)*ux+(y-a.y)*uy;
+  if(across>23 || along < -20 || along>len+20)return null;
+  return Math.round(clamp(along/len,0,1)*6)-3;
+}
 function selectFaceAt(x,y){
   clearLampSelection();
   const chosen=faceHitRegions.find(region=>pointInPolygon(x,y,region.poly));
-  // Le ventilateur ne se sélectionne pas : son zoom est un geste direct.
-  if(chosen?.name==='right')return;
+  if(chosen?.name==='top'){
+    if(!fanSelected){fanSelected=true;fanOpen=false;activeFace='top';}
+    fanActivity();return;
+  }
+  if(fanSelected)closeFan();
   activeFace=chosen?(activeFace===chosen.name?null:chosen.name):null;
 }
 canvas.addEventListener('pointerdown',e=>{
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===1){primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;}
+  if(pointers.size===1){
+    primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};
+    gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;
+    const gaugeValue=fanGaugeAt(e.clientX,e.clientY);
+    fanGaugeDrag=fanSelected&&gaugeValue!==null;
+    if(fanGaugeDrag)setFanLevel(gaugeValue);
+  }
   if(pointers.size===2){
-    gestureWasMulti=true;gestureMoved=true;
+    gestureWasMulti=true;gestureMoved=true;fanGaugeDrag=false;
     const pair=[...pointers.values()];
     pinchDistance=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
     fanPinchOrigin=pinchDistance;
     const midX=(pair[0].x+pair[1].x)/2,midY=(pair[0].y+pair[1].y)/2;
-    // Le geste doit naître sur la face droite, pas sur une lampe ou dans le vide.
-    fanZoomGesture=selectedLamp===null && !!faceHitRegions.find(region=>region.name==='right' && pointInPolygon(midX,midY,region.poly));
+    fanZoomGesture=fanSelected && !!faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(midX,midY,region.poly));
   }
 });
 canvas.addEventListener('pointermove',e=>{
@@ -458,48 +505,60 @@ canvas.addEventListener('pointermove',e=>{
     gestureWasMulti=true;gestureMoved=true;
     const pair=[...pointers.values()];
     const dist=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
-    if(fanZoomGesture && fanPinchOrigin>0 && dist>fanPinchOrigin*1.11){
-      fanRevealUntil=performance.now()+5000;
+    if(fanZoomGesture && pinchDistance>0){
+      const delta=Math.log(dist/pinchDistance);
+      if(delta>.015){fanOpen=true;fanActivity();}
+      if(delta<-.015){fanOpen=false;fanActivity();}
+      // Le dézoom referme la sélection et rend la navigation libre.
+      if(!fanOpen && delta<-.035){closeFan();fanZoomGesture=false;}
     }
     if(!fanZoomGesture && selectedLamp!==null && pinchDistance>0 && dist>12){
       const change=Math.log(dist/pinchDistance)*1.45;
       if(Math.abs(change)>.0005){
         const lamp=lights[selectedLamp];
         lamp.level=clamp(lamp.level+change,0,1);
-        syncGrain();
-        lastPinchTime=performance.now();
+        syncGrain();lastPinchTime=performance.now();
       }
     }
-    pinchDistance=dist;
-    return; // Pas de zoom general du cube.
+    pinchDistance=dist;return;
+  }
+  if(fanGaugeDrag){
+    const value=fanGaugeAt(e.clientX,e.clientY);
+    if(value!==null)setFanLevel(value);
+    return;
   }
   if(pointers.size===1 && primaryPointer===e.pointerId && !gestureWasMulti){
     const dx=e.clientX-prev.x,dy=e.clientY-prev.y;
-    if(Math.abs(dx)+Math.abs(dy)>0.3){
+    if(fanSelected){if(Math.abs(dx)+Math.abs(dy)>.3)fanActivity();return;}
+    if(Math.abs(dx)+Math.abs(dy)>.3){
       if(selectedLamp!==null && gestureMoved)clearLampSelection();
-      angleY+=dx*.007;
-      angleX=clamp(angleX+dy*.006,-1.4,1.4);
+      angleY+=dx*.007;angleX=clamp(angleX+dy*.006,-1.4,1.4);
     }
   }
 });
 function endPointer(e){
-  if(e.type==='pointerup' && pointers.size===1 && !gestureMoved && !gestureWasMulti && touchStart){
+  if(e.type==='pointerup' && pointers.size===1 && !gestureMoved && !gestureWasMulti && touchStart && !fanGaugeDrag){
     const hitLight=nearestLightAt(e.clientX,e.clientY);
-    // Les six points lumineux sont disponibles aussi si les programmes sont en mode permanent.
-    if(hitLight && (activeFace==='front' || programCfg.alwaysVisible)){
+    const now=performance.now();
+    const topHit=faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(e.clientX,e.clientY,region.poly));
+    if(fanSelected && fanOpen && topHit && now-lastFanTap<340){
+      fanSilent=!fanSilent;fanActivity();lastFanTap=0;
+    }else if(fanSelected && fanOpen && topHit){
+      fanActivity();lastFanTap=now;
+    }else if(hitLight && (activeFace==='front'||programCfg.alwaysVisible)){
       keepLampSelected(hitLight.index);
-    } else {
+    }else{
       selectFaceAt(e.clientX,e.clientY);
     }
   }
   pointers.delete(e.pointerId);
   primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;
   pinchDistance=0;
-  if(!pointers.size){touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;}
+  if(!pointers.size){touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;fanGaugeDrag=false;}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
-document.getElementById('reset').addEventListener('click',()=>{angleX=0; angleY=0; activeFace=null;fanRevealUntil=0;fanReveal=0;clearLampSelection();});
+document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden'); document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
