@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V25 · Points blancs et fond laiteux</title>
+<title>DECK — V26 · Gaz amplifié</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 25</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 26</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 25 · Points blancs</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 26 · Gaz amplifié</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,13 +73,13 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V25 : points blancs, nuages nacrés plus présents, grain diffus et animations conservées.</div>
+    <div class="hint" style="margin:0 0 16px">V26 · Gaz amplifié : valeurs de la capture comme point de départ, curseurs étendus au-delà de 1. Les autres matières restent accessibles.</div>
     <div class="rowtitle">Type de matière</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
-      <button class="mode active" data-mode="points">Points</button>
-      <button class="mode" data-mode="membrane">Gaz / Opale</button><button class="mode" data-mode="nuee">Nuée</button><button class="mode" data-mode="hybride">Hybride</button><button class="mode" data-mode="vivants">Vivants · V21</button>
+      <button class="mode" data-mode="points">Points</button>
+      <button class="mode active" data-mode="membrane">Gaz / Opale</button><button class="mode" data-mode="nuee">Nuée</button><button class="mode" data-mode="hybride">Hybride</button><button class="mode" data-mode="vivants">Vivants · V21</button>
     </div>
-    <div id="pointPanel">
+    <div id="pointPanel" hidden>
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
       <div class="controls" id="sphereControls"></div>
       <div class="presets" id="spherePresets">
@@ -91,7 +91,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     </div>
     <div id="livingPanel" hidden><div class="rowtitle">Lumières · Six nuages vivants</div><div class="hint" style="margin-bottom:12px">Six volumes animés par le moteur Gaz/Opale de la V19. Éteints : présence diffuse ; allumés : expansion et fusion. Touchez pour allumer ; pincez pour régler.</div><div class="controls" id="livingLampControls" style="margin-bottom:16px"></div><div class="rowtitle">Musique · Onde de soie</div><div class="controls" id="livingControls"></div><div class="hint" style="margin-top:12px">Une nappe horizontale, aux plis définis mais mobiles. Le ventilateur conserve ses commandes ; son influence sur la matière viendra ensuite.</div></div>
     <div id="cloudPanel" hidden><div class="rowtitle">Nuée vivante · déplacement collectif</div><div class="controls" id="cloudControls"></div><div class="hint" style="margin-top:12px">Courants roses et lavande · filaments en trois dimensions. Le mode Hybride associe nuée et gaz.</div></div>
-    <div id="membranePanel" hidden>
+    <div id="membranePanel">
       <div class="rowtitle">Matière · trois comportements</div>
       <div class="presets" id="opalPresets" style="margin-bottom:15px">
         <button class="preset" data-opal="opale">Opale</button>
@@ -163,16 +163,16 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
 const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
-const membraneCfg={fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
+const membraneCfg={fluidity:1,softness:1,transparency:0,reflection:0,edge:1,folds:1,breath:.15};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
 const opalProfiles={
   opale:{fluidity:.34,softness:.80,transparency:.26,reflection:.68,edge:.46,folds:.42,breath:.035},
-  gaz:{fluidity:.46,softness:.94,transparency:.46,reflection:.66,edge:.22,folds:.55,breath:.055},
+  gaz:{fluidity:1,softness:1,transparency:0,reflection:0,edge:1,folds:1,breath:.15},
   brume:{fluidity:.30,softness:1,transparency:.72,reflection:.40,edge:.06,folds:.31,breath:.085}
 };
 const programCfg={fanRotate:.22,fanLength:.58,fanDots:8,fanDotWidth:2.70,fanStrokeWidth:1.60,lightSize:.018,lightIntensity:.75,lightDiffusion:.32,alwaysVisible:1};
 const sphereParams=[['density','Densité',15,400,1],['size','Grain · lampes',.5,1.8333333333333333,.001],['deform','Ondulation',0,.42,.01],['fluidity','Fluidité',0,1,.01],['speed','Mouvement',0,1.6,.01],['breath','Respiration',0,.2,.005],['opacity','Éclat',.1,1,.01],['glow','Rayonnement',0,.75,.01],['softness','Douceur des points',0,1,.05]];
-const membraneParams=[['fluidity','Mouvement',0,1,.01],['softness','Diffusion',0,1,.01],['transparency','Opalescence',0,1,.01],['reflection','Lumière',0,1,.01],['edge','Netteté du volume',0,1,.01],['folds','Déformation',0,1,.01],['breath','Respiration',0,.15,.005]];
+const membraneParams=[['fluidity','Mouvement',0,2.5,.01],['softness','Diffusion',0,2.5,.01],['transparency','Opalescence',0,2,.01],['reflection','Lumière',0,2,.01],['edge','Netteté du volume',0,2.5,.01],['folds','Déformation',0,2.5,.01],['breath','Respiration',0,.45,.005]];
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
@@ -198,7 +198,7 @@ function fanActivity(){fanLastAction=performance.now();}
 function closeFan(){fanOpen=false;fanSelected=false;fanRevealUntil=0;activeFace=null;fanGaugeDrag=false;}
 function setFanLevel(v){fanLevel=clamp(Math.round(v),-3,3);fanActivity();}
 
-let primaryPointer=null,pointers=new Map(),sphereMode='points',membraneTime=0,selectedPreset='sommeil';
+let primaryPointer=null,pointers=new Map(),sphereMode='membrane',membraneTime=0,selectedPreset='sommeil';
 const reveal={front:0,right:0,left:0};
 function syncGrain(){sphereCfg.size=calculatedGrain(); const slider=document.getElementById('r-sphereControls-size'); const output=document.getElementById('o-sphereControls-size'); if(slider){slider.value=sphereCfg.size;slider.disabled=true;slider.title='Calculé par les six lampes';} if(output)output.textContent=sphereCfg.size.toFixed(3);}
 function clearLampSelection(){selectedLamp=null;pinchDistance=0;}
@@ -325,15 +325,20 @@ function setupMembrane(){
       float vort=noise2(p*1.70+vec2(-t*.13,t*.18))-.5;
       vec2 advect=vec2(n+vort*.5,vort-n*.35)*uGas*.24;
       p1+=advect;p2+=advect*.70;
-      float warp=(.02+.23*uFolds)*n;
+      float warp=(.02+.23*uFolds)*n + max(0.,uFolds-1.)*.19*vort;
       p1+=vec2(warp,-warp*.45);
       p2+=vec2(-warp*.7,warp);
-      float breathing=1.+uBreath*sin(t*1.4)*2.;
+      float breathing=max(.18,1.+uBreath*sin(t*1.4)*2.);
       float r1=length(vec2(p1.x*.92,p1.y*1.13))/breathing;
       float r2=length(vec2(p2.x*1.25,p2.y*.96));
-      float d1=1.-smoothstep(.09+.15*(1.-uSoftness),.80+.38*uSoftness+uGas*.36,r1);
-      float d2=1.-smoothstep(.10+.18*(1.-uSoftness),.78+.40*uSoftness+uGas*.27,r2);
-      float colorStrength=(.78+.28*uReflection)*(1.-.17*uTransparency)*(1.-uGas*.20);
+      float extraDiff=max(0.,uSoftness-1.);
+      float d1=1.-smoothstep(.09+.15*(1.-min(uSoftness,1.)),.80+.38*uSoftness+uGas*.36+extraDiff*.20,r1);
+      float d2=1.-smoothstep(.10+.18*(1.-min(uSoftness,1.)),.78+.40*uSoftness+uGas*.27+extraDiff*.18,r2);
+      // Netteté V26 : conserve exactement la référence à 1, puis accentue les gradients.
+      float sharpness=max(0.,uEdge-1.);
+      d1=clamp((d1-.5)*(1.+sharpness*1.3)+.5,0.,1.);
+      d2=clamp((d2-.5)*(1.+sharpness*1.3)+.5,0.,1.);
+      float colorStrength=(.78+.28*uReflection)*(1.-.17*min(uTransparency,1.))*(1.-uGas*.20);
       vec3 milk=mix(vec3(.965,.955,.951),vec3(.91,.895,.893),.16+.21*length(p));
       vec3 rose=vec3(.99,.45,.54);
       vec3 peach=vec3(1.,.70,.48);
@@ -346,7 +351,7 @@ function setupMembrane(){
       color=mix(color,pink,body*.14*colorStrength);
       float bloom=exp(-2.9*dot(p1,p1))*.10*uReflection;
       color+=vec3(bloom*.35,bloom*.12,bloom*.11);
-      color=mix(color,milk,clamp(uTransparency*.12,0.,.13));
+      color=mix(color,milk,clamp(uTransparency*.12,0.,.30));
       float envelope=1.-smoothstep(.68,1.40,length(p));
       float lampAlpha=clamp((d1*.71+d2*.45)*envelope,0.,1.);
       // Gaz d'origine opaque conservé ; pour les lampes, alpha organique véritable.
