@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V28 · Matières et halos</title>
+<title>DECK — V29 · Matières et halos</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 28</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 29</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 28 · Matières et halos</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 29 · Matières et halos</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,7 +73,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V28 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Les lampes sont de grands nuages colorés.</div>
+    <div class="hint" style="margin:0 0 16px">V29 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Les lampes sont de grands nuages colorés.</div>
     </details>
     <div class="rowtitle">Matières · indépendantes et cumulables</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
@@ -132,7 +132,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
     <div class="group">
       <div class="rowtitle">Lumières</div>
       <div class="controls" id="lightControls"></div>
-      <div class="hint" style="margin-top:10px">Toucher une lampe pour la sélectionner (sans effet visuel). Écarter / rapprocher deux doigts pour régler son intensité. Après 5 secondes sans pincement : désélection.</div>
+      <div class="hint" style="margin-top:10px">Toucher une lampe pour la sélectionner (sans effet visuel). Écarter / rapprocher deux doigts pour régler son intensité. Après 3 secondes sans action : désélection, intensité conservée.</div>
     </div>
   </div>
 
@@ -210,7 +210,7 @@ function refreshMatterUI(){for(const [id,on,label] of [['togglePoints',showPoint
 
 
 const flightOff={fluidity:.12,softness:1.95,transparency:1.75,reflection:.12,edge:.22,folds:.16,breath:.028};
-const fixedLampPositions=apartmentLightsRaw.map(([x,y])=>({x:.12+(x-179)/913*.76,y:.30+(y-110)/966*.43}));
+const fixedLampPositions=[{x:.153,y:.179},{x:.230,y:.246},{x:.803,y:.175},{x:.332,y:.686},{x:.782,y:.684},{x:.262,y:.907}];
 const spatialHalos=[];
 let haloGesture=null,haloPinchStart=0,haloSelected=null,lastHaloTap=0,lastTappedHalo=null;
 const lampManualLevels=lights.map(l=>l.level);
@@ -229,7 +229,8 @@ function findSpatialHalo(x,y){
  // La poignée centrale seule capture le drag : ailleurs, la caméra tourne.
  for(let i=spatialHalos.length-1;i>=0;i--){
   const halo=spatialHalos[i];
-  if(haloDistance(halo,x,y)<Math.min(36,Math.max(21,halo.radius*.30)))return halo;
+  const d=haloDistance(halo,x,y);
+  if(d<32 || Math.abs(d-halo.radius*.83)<18)return halo;
  }
  return null;
 }
@@ -277,14 +278,14 @@ function drawSpatialLights(back=true){
   }
   for(const halo of spatialHalos){
    const grad=ctx.createRadialGradient(halo.x,halo.y,0,halo.x,halo.y,halo.radius);
-   const active=haloGesture?.halo===halo;
+   const active=haloSelected===halo;
    grad.addColorStop(0,active?'rgba(176,136,231,.20)':'rgba(148,183,224,.12)');
    grad.addColorStop(1,'rgba(147,179,224,0)');
    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius,0,Math.PI*2);ctx.fill();
   }
  }else{
   for(const halo of spatialHalos){
-   ctx.strokeStyle=haloGesture?.halo===halo?'rgba(161,120,212,.60)':'rgba(151,174,207,.40)';
+   ctx.strokeStyle=haloSelected===halo?'rgba(161,120,212,.60)':'rgba(151,174,207,.40)';
    ctx.lineWidth=1;ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius*.83,0,Math.PI*2);ctx.stroke();
    ctx.fillStyle='rgba(157,178,210,.75)';ctx.beginPath();ctx.arc(halo.x,halo.y,4.2,0,Math.PI*2);ctx.fill();
   }
@@ -679,7 +680,7 @@ function drawPearlBackground(){
 
 function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
-  if(selectedLamp!==null && performance.now()-lastPinchTime>=5000) clearLampSelection();
+  if(selectedLamp!==null && performance.now()-lastPinchTime>=3000 && pointers.size===0) clearLampSelection();
   clock+=dt*sphereCfg.speed; const evolvingEnergy=lights.reduce((sum,l)=>sum+l.level,0)/lights.length;membraneTime+=dt*(opalPreset==='gaz'?.12+.88*evolvingEnergy:1)*(.10+membraneCfg.fluidity*.85);
   // Un moteur arrêté immobilise aussi les pales; le signe commande le sens.
   // Les trois paliers de vitesse donnent trois cadences visuelles distinctes.
@@ -953,14 +954,15 @@ canvas.addEventListener('pointerdown',e=>{
   haloGesture=null;
   const lampHit=findFixedLamp(e.clientX,e.clientY);
   const haloHit=lampHit?null:findSpatialHalo(e.clientX,e.clientY);
-  if(lampHit){keepLampSelected(lampHit.index);haloGesture={kind:'lamp',id:e.pointerId,index:lampHit.index};}
-  else if(haloHit){haloSelected=haloHit;haloGesture={kind:'halo',id:e.pointerId,halo:haloHit};}
+  if(lampHit){haloSelected=null;closeFan();keepLampSelected(lampHit.index);haloGesture={kind:'lamp',id:e.pointerId,index:lampHit.index};}
+  else if(haloHit){clearLampSelection();haloSelected=haloHit;haloGesture={kind:'halo',id:e.pointerId,halo:haloHit};}
   const gaugeValue=fanGaugeAt(e.clientX,e.clientY);
   fanGaugeDrag=!haloGesture&&fanSelected&&gaugeValue!==null;
   if(fanGaugeDrag)setFanLevel(gaugeValue);
  }
  if(pointers.size===2){
   gestureWasMulti=true;gestureMoved=true;fanGaugeDrag=false;
+  if(!haloGesture && haloSelected)haloGesture={kind:'halo',halo:haloSelected};
   const pair=[...pointers.values()];
   pinchDistance=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
   fanPinchOrigin=pinchDistance;
@@ -1027,6 +1029,7 @@ canvas.addEventListener('pointermove',e=>{
     if(fanSelected){if(Math.abs(dx)+Math.abs(dy)>.3)fanActivity();return;}
     if(Math.abs(dx)+Math.abs(dy)>.3){
       if(selectedLamp!==null && gestureMoved)clearLampSelection();
+      if(gestureMoved)haloSelected=null;
       angleY+=dx*.007;angleX=clamp(angleX+dy*.006,-1.4,1.4);
     }
   }
@@ -1036,8 +1039,7 @@ function endPointer(e){
  const wasTap=e.type==='pointerup'&&wasSingle&&!gestureMoved&&!gestureWasMulti&&touchStart&&!fanGaugeDrag;
  if(haloGesture){
   if(wasTap&&haloGesture.kind==='lamp'){
-   const i=haloGesture.index;lampManualLevels[i]=lampManualLevels[i]>.01?0:1;
-   recomputeSpatialLamps();keepLampSelected(i);
+   const i=haloGesture.index;keepLampSelected(i);
   }else if(wasTap&&haloGesture.kind==='halo'){
    const hit=haloGesture.halo,now=performance.now();
    if(lastTappedHalo===hit&&now-lastHaloTap<350){
@@ -1047,7 +1049,7 @@ function endPointer(e){
   }
   pointers.delete(e.pointerId);
   primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;pinchDistance=0;
-  if(!pointers.size){haloGesture=null;touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanGaugeDrag=false;}
+  if(!pointers.size){if(selectedLamp!==null)lastPinchTime=performance.now();haloGesture=null;touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanGaugeDrag=false;}
   return;
  }
  if(wasTap){
@@ -1056,6 +1058,7 @@ function endPointer(e){
   if(fanSelected&&fanOpen&&topHit&&now-lastFanTap<340){fanSilent=!fanSilent;fanActivity();lastFanTap=0;}
   else if(fanSelected&&fanOpen&&topHit){fanActivity();lastFanTap=now;}
   else if(spatialHalos.length<3){
+   clearLampSelection();
    const halo={x:e.clientX,y:e.clientY,radius:Math.min(w,h)*.25,power:1};
    spatialHalos.push(halo);haloSelected=halo;recomputeSpatialLamps();
   }
