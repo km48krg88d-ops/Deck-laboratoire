@@ -208,7 +208,7 @@ let primaryPointer=null,pointers=new Map(),sphereMode='membrane',membraneTime=0,
 const flightOff={fluidity:.12,softness:1.95,transparency:1.75,reflection:.12,edge:.22,folds:.16,breath:.028};
 const fixedLampPositions=apartmentLightsRaw.map(([x,y])=>({x:.12+(x-179)/913*.76,y:.30+(y-110)/966*.43}));
 const spatialHalos=[];
-let haloGesture=null,haloPinchStart=0,haloSelected=null;
+let haloGesture=null,haloPinchStart=0,haloSelected=null,lastHaloTap=0,lastTappedHalo=null;
 const lampManualLevels=lights.map(l=>l.level);
 function fixedLampPoint(index){const p=fixedLampPositions[index];return {x:p.x*w,y:p.y*h};}
 function haloDistance(h,x,y){return Math.hypot(h.x-x,h.y-y);}
@@ -876,7 +876,7 @@ function render(now){
         gasCtx.globalCompositeOperation='source-over';
         const scale=opalPreset==='opale'?2.75:opalPreset==='gaz'?3.65:4.1;
         const extent=radius*scale;
-        ctx.save();ctx.globalAlpha=hybrid?cloudCfg.gasMix:gasFlight?.24+.76*gasEnergy:1;ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();
+        ctx.save();ctx.globalAlpha=hybrid?cloudCfg.gasMix:(gasFlight?(.24+.76*gasEnergy):1);ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();
         if(gasFlight){drawLampReflections();drawSpatialLights(false);}
       }
     } else for(const face of visible){
@@ -936,6 +936,22 @@ canvas.addEventListener('pointerdown',e=>{
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===1){
     primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};
+    if(sphereMode==='membrane'&&opalPreset==='gaz'){
+      const lampHit=findFixedLamp(e.clientX,e.clientY);
+      if(lampHit){keepLampSelected(lampHit.index);haloGesture={kind:'lamp',id:e.pointerId};}
+      else{
+        const hit=findSpatialHalo(e.clientX,e.clientY);
+        if(hit){
+          if(lastTappedHalo===hit && performance.now()-lastHaloTap<360){
+            spatialHalos.splice(spatialHalos.indexOf(hit),1);haloGesture={kind:'blocked',id:e.pointerId};lastTappedHalo=null;lastHaloTap=0;recomputeSpatialLamps();
+          }else{haloGesture={kind:'halo',id:e.pointerId,halo:hit};haloSelected=hit;lastTappedHalo=hit;lastHaloTap=performance.now();}
+        }else if(spatialHalos.length<3){
+          // Fond hors de toute lampe: une zone d'influence est créée et conservée.
+          const h={x:e.clientX,y:e.clientY,radius:Math.min(w,h)*.25,power:1};
+          spatialHalos.push(h);haloGesture={kind:'halo',id:e.pointerId,halo:h};haloSelected=h;recomputeSpatialLamps();
+        }else{haloGesture={kind:'blocked',id:e.pointerId};}
+      }
+    }
     gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;
     const gaugeValue=fanGaugeAt(e.clientX,e.clientY);
     fanGaugeDrag=fanSelected&&gaugeValue!==null;
@@ -959,6 +975,11 @@ canvas.addEventListener('pointermove',e=>{
     gestureWasMulti=true;gestureMoved=true;
     const pair=[...pointers.values()];
     const dist=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
+    if(haloGesture?.kind==='halo' && pinchDistance>0){
+      haloGesture.halo.radius=clamp(haloGesture.halo.radius*dist/pinchDistance,18,Math.min(w,h)*.6);
+      recomputeSpatialLamps();pinchDistance=dist;return;
+    }
+    if(haloGesture?.kind==='blocked'){pinchDistance=dist;return;}
     if(fanZoomGesture && pinchDistance>0){
       const delta=Math.log(dist/pinchDistance);
       if(delta>.015){fanOpen=true;fanActivity();}
@@ -970,8 +991,10 @@ canvas.addEventListener('pointermove',e=>{
       const change=Math.log(dist/pinchDistance)*1.45;
       if(Math.abs(change)>.0005){
         const lamp=lights[selectedLamp];
-        lamp.level=clamp(lamp.level+change,0,1);
-        syncGrain();if(sphereMode==='vivants')syncLivingLamps();lastPinchTime=performance.now();
+        if(sphereMode==='membrane'&&opalPreset==='gaz'){
+          lampManualLevels[selectedLamp]=clamp(lampManualLevels[selectedLamp]+change,0,1);recomputeSpatialLamps();
+        }else{lamp.level=clamp(lamp.level+change,0,1);syncGrain();if(sphereMode==='vivants')syncLivingLamps();}
+        lastPinchTime=performance.now();
       }
     }
     // Hors des réglages de lumière et de la transformation du ventilateur,
@@ -987,6 +1010,11 @@ canvas.addEventListener('pointermove',e=>{
     }
     pinchDistance=dist;return;
   }
+  if(haloGesture?.kind==='halo' && pointers.size===1){
+    haloGesture.halo.x=clamp(e.clientX,0,w);haloGesture.halo.y=clamp(e.clientY,0,h);
+    recomputeSpatialLamps();return;
+  }
+  if(haloGesture?.kind==='lamp'||haloGesture?.kind==='blocked')return;
   if(fanGaugeDrag){
     const value=fanGaugeAt(e.clientX,e.clientY);
     if(value!==null)setFanLevel(value);
@@ -1002,6 +1030,12 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
+  if(haloGesture){
+    pointers.delete(e.pointerId);
+    primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;pinchDistance=0;
+    if(!pointers.size){haloGesture=null;touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanGaugeDrag=false;}
+    return;
+  }
   if(e.type==='pointerup' && pointers.size===1 && !gestureMoved && !gestureWasMulti && touchStart && !fanGaugeDrag){
     const livingHit=sphereMode==='vivants'?livingCloudHits.map(hit=>({...hit,d:Math.hypot(e.clientX-hit.x,e.clientY-hit.y)})).filter(hit=>hit.d<hit.r).sort((a,b)=>a.d-b.d)[0]:null;
     const hitLight=nearestLightAt(e.clientX,e.clientY);
