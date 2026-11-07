@@ -947,7 +947,7 @@ canvas.addEventListener('pointerdown',e=>{
           }else{haloGesture={kind:'halo',id:e.pointerId,halo:hit};haloSelected=hit;lastTappedHalo=hit;lastHaloTap=performance.now();}
         }else if(spatialHalos.length<3){
           // Fond hors de toute lampe: une zone d'influence est créée et conservée.
-          const h={x:e.clientX,y:e.clientY,radius:Math.min(w,h)*.25,power:1};
+          const h={x:e.clientX,y:e.clientY,radius:Math.min(w,window.innerHeight)*.25,power:1};
           spatialHalos.push(h);haloGesture={kind:'halo',id:e.pointerId,halo:h};haloSelected=h;recomputeSpatialLamps();
         }else{haloGesture={kind:'blocked',id:e.pointerId};}
       }
