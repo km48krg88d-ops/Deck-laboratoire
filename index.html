@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V27 · Vol d’hirondelle lumineux</title>
+<title>DECK — V28 · Matières et halos</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,16 +51,16 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 27</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 28</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 27 · Vol d’hirondelle</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 28 · Matières et halos</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
   </div>
 
   <div class="view active" id="sphereView">
-    <div class="rowtitle">Atmosphère · fond du DECK</div>
+    <details id="backgroundFold" style="margin-bottom:14px"><summary class="rowtitle" style="cursor:pointer;padding:10px 0">Fonds · afficher / masquer</summary>
     <div class="ambience-options" id="ambienceOptions" role="group" aria-label="Choisir l'atmosphère du fond">
       <button type="button" class="ambience" data-ambience="original" aria-pressed="false"><span class="ambience-dot" style="background:#050505"></span>Original</button>
       <button type="button" class="ambience" data-ambience="charcoal" aria-pressed="false"><span class="ambience-dot" style="background:#171513"></span>Charbon chaud</button>
@@ -73,13 +73,14 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V27 · Vol d’hirondelle : lumière allumée vive et mobile ; éteinte nacrée, calme et diffuse. Trois halos fixes maximum, lampes indépendantes du mouvement de la caméra.</div>
-    <div class="rowtitle">Type de matière</div>
+    <div class="hint" style="margin:0 0 16px">V28 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Les lampes sont de grands nuages colorés.</div>
+    </details>
+    <div class="rowtitle">Matières · indépendantes et cumulables</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
-      <button class="mode" data-mode="points">Points</button>
-      <button class="mode active" data-mode="membrane">Gaz / Opale</button><button class="mode" data-mode="nuee">Nuée</button><button class="mode" data-mode="hybride">Hybride</button><button class="mode" data-mode="vivants">Vivants · V21</button>
+      <button type="button" class="mode" id="togglePoints" aria-pressed="false">Points · éteints</button>
+      <button type="button" class="mode active" id="toggleGaz" aria-pressed="true">Gaz · allumé</button>
     </div>
-    <div id="pointPanel" hidden>
+    <div id="pointPanel">
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
       <div class="controls" id="sphereControls"></div>
       <div class="presets" id="spherePresets">
@@ -159,11 +160,11 @@ document.body.style.background=ambiences[currentAmbience].base;document.body.cla
 document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
 document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEventListener('click',()=>{
   currentAmbience=btn.dataset.ambience;
-  document.body.classList.toggle('opal-mode',sphereMode!=='points'||!!ambiences[currentAmbience].light);
+  document.body.classList.toggle('opal-mode',showGasLayer||!!ambiences[currentAmbience].light);
   document.querySelectorAll('#ambienceOptions .ambience').forEach(item=>{
     const active=item===btn;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));
   });
-  const bg=sphereMode==='points'?ambiences[currentAmbience].base:'#ede8e5';
+  const bg=showGasLayer?'#ede8e5':ambiences[currentAmbience].base;
   document.body.style.background=bg;
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
@@ -204,6 +205,9 @@ function closeFan(){fanOpen=false;fanSelected=false;fanRevealUntil=0;activeFace=
 function setFanLevel(v){fanLevel=clamp(Math.round(v),-3,3);fanActivity();}
 
 let primaryPointer=null,pointers=new Map(),sphereMode='membrane',membraneTime=0,selectedPreset='sommeil';
+let showPoints=false,showGasLayer=true;
+function refreshMatterUI(){for(const [id,on,label] of [['togglePoints',showPoints,'Points'],['toggleGaz',showGasLayer,'Gaz']]){const b=document.getElementById(id);b.classList.toggle('active',on);b.textContent=label+' · '+(on?'allumé':'éteint');b.setAttribute('aria-pressed',String(on));}}
+
 
 const flightOff={fluidity:.12,softness:1.95,transparency:1.75,reflection:.12,edge:.22,folds:.16,breath:.028};
 const fixedLampPositions=apartmentLightsRaw.map(([x,y])=>({x:.12+(x-179)/913*.76,y:.30+(y-110)/966*.43}));
@@ -214,7 +218,7 @@ function fixedLampPoint(index){const p=fixedLampPositions[index];return {x:p.x*w
 function haloDistance(h,x,y){return Math.hypot(h.x-x,h.y-y);}
 function findFixedLamp(x,y){
  let found=null;
- if(sphereMode!=='membrane'||opalPreset!=='gaz')return null;
+ if(opalPreset!=='gaz')return null;
  fixedLampPositions.forEach((p,i)=>{
   const d=Math.hypot(p.x*w-x,p.y*h-y);
   if(d<22&&(!found||d<found.d))found={index:i,d};
@@ -256,34 +260,44 @@ function interpolateFlightCfg(energy){
  return profile;
 }
 function drawSpatialLights(back=true){
- if(sphereMode!=='membrane'||opalPreset!=='gaz')return;
  ctx.save();
- for(const h of spatialHalos){
-  const rad=h.radius,gr=ctx.createRadialGradient(h.x,h.y,0,h.x,h.y,rad);
-  const active=haloGesture&&haloGesture.halo===h;
-  gr.addColorStop(0,active?'rgba(186,146,231,.22)':'rgba(145,188,220,.16)');
-  gr.addColorStop(.75,active?'rgba(198,162,233,.09)':'rgba(173,201,229,.06)');
-  gr.addColorStop(1,'rgba(180,191,221,0)');
-  ctx.fillStyle=gr;ctx.beginPath();ctx.arc(h.x,h.y,rad,0,Math.PI*2);ctx.fill();
-  if(!back){ctx.strokeStyle=active?'rgba(178,135,214,.42)':'rgba(154,187,215,.26)';ctx.lineWidth=.85;ctx.beginPath();ctx.arc(h.x,h.y,rad*.84,0,Math.PI*2);ctx.stroke();}
- }
- for(let i=0;i<lights.length;i++){
-  const p=fixedLampPoint(i),power=lights[i].level;
-  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,19+power*47);
-  g.addColorStop(0,'rgba(236,128,150,'+(.16+power*.56)+')');
-  g.addColorStop(.32,'rgba(239,160,174,'+(.08+power*.25)+')');
-  g.addColorStop(1,'rgba(245,199,207,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,19+power*47,0,Math.PI*2);ctx.fill();
-  if(!back){
-   ctx.fillStyle=selectedLamp===i?'#FFFFFF':'rgba(223,147,169,.82)';
-   ctx.beginPath();ctx.arc(p.x,p.y,selectedLamp===i?5:3.3,0,Math.PI*2);ctx.fill();
-   if(selectedLamp===i){ctx.strokeStyle='rgba(220,144,167,.9)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,11,0,Math.PI*2);ctx.stroke();}
+ // The large colored volumes always stay fixed to the apartment, regardless of rotation.
+ if(back){
+  for(let i=0;i<lights.length;i++){
+   const p=fixedLampPoint(i),power=lights[i].level;
+   const radius=Math.max(85,Math.min(w*.50,h*.31))*(.90+power*.4);
+   const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,radius);
+   const alpha=.105+power*.26;
+   grad.addColorStop(0,'rgba(229,125,151,'+alpha+')');
+   grad.addColorStop(.28,'rgba(234,157,183,'+(alpha*.76)+')');
+   grad.addColorStop(.67,'rgba(239,190,205,'+(alpha*.27)+')');
+   grad.addColorStop(1,'rgba(239,193,213,0)');
+   ctx.fillStyle=grad;ctx.fillRect(p.x-radius,p.y-radius,2*radius,2*radius);
   }
+  for(const halo of spatialHalos){
+   const grad=ctx.createRadialGradient(halo.x,halo.y,0,halo.x,halo.y,halo.radius);
+   const active=haloGesture?.halo===halo;
+   grad.addColorStop(0,active?'rgba(176,136,231,.20)':'rgba(148,183,224,.12)');
+   grad.addColorStop(1,'rgba(147,179,224,0)');
+   ctx.fillStyle=grad;ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius,0,Math.PI*2);ctx.fill();
+  }
+ }else{
+  for(const halo of spatialHalos){
+   ctx.strokeStyle=haloGesture?.halo===halo?'rgba(161,120,212,.60)':'rgba(151,174,207,.40)';
+   ctx.lineWidth=1;ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius*.83,0,Math.PI*2);ctx.stroke();
+   ctx.fillStyle='rgba(157,178,210,.75)';ctx.beginPath();ctx.arc(halo.x,halo.y,4.2,0,Math.PI*2);ctx.fill();
+  }
+  lights.forEach((lamp,i)=>{
+   const p=fixedLampPoint(i);
+   ctx.fillStyle=selectedLamp===i?'#FFFFFF':'rgba(209,113,155,.83)';
+   ctx.beginPath();ctx.arc(p.x,p.y,selectedLamp===i?5:3.4,0,Math.PI*2);ctx.fill();
+   if(selectedLamp===i){ctx.strokeStyle='rgba(202,107,159,.8)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,11,0,Math.PI*2);ctx.stroke();}
+  });
  }
  ctx.restore();
 }
 function drawLampReflections(){
- if(sphereMode!=='membrane'||opalPreset!=='gaz')return;
+ if(opalPreset!=='gaz')return;
  ctx.save();
  // Color gently illuminates the gas from each fixed lamp location.
  ctx.globalCompositeOperation='soft-light';
@@ -349,16 +363,9 @@ document.getElementById('clearHalos').addEventListener('click',()=>{spatialHalos
 const lampGrid=document.getElementById('livingLampControls');for(let i=0;i<lights.length;i++){const wrap=document.createElement('div');wrap.className='control';const lab=document.createElement('label');lab.htmlFor='livingLamp'+i;lab.innerHTML='<span>Lampe '+(i+1)+'</span><output id="livingLampValue'+i+'">0 %</output>';const input=document.createElement('input');input.type='range';input.min=0;input.max=1;input.step=.01;input.id='livingLamp'+i;input.value=lights[i].level;input.addEventListener('input',()=>{lampManualLevels[i]=Number(input.value);recomputeSpatialLamps();});wrap.append(lab,input);lampGrid.append(wrap);}createControlGrid('cloudControls',cloudCfg,cloudParams,()=>{});createControlGrid('fanControls',programCfg,fanParams,()=>{});
 createControlGrid('lightControls',programCfg,lightParams,()=>{});
 document.querySelectorAll('#spherePresets .preset').forEach(btn=>btn.addEventListener('click',()=>setPreset(btn.dataset.preset)));
-document.querySelectorAll('#sphereModes .mode').forEach(btn=>btn.addEventListener('click',()=>{
-  sphereMode=btn.dataset.mode;
-  document.body.classList.toggle('opal-mode',sphereMode!=='points'||!!ambiences[currentAmbience].light);
-  const bg=sphereMode==='points'?ambiences[currentAmbience].base:'#ede8e5';
-  document.body.style.background=bg;
-  document.querySelector('meta[name="theme-color"]').content=bg;
-  document.getElementById('pointPanel').hidden=sphereMode!=='points';
-  document.getElementById('membranePanel').hidden=!(sphereMode==='membrane'||sphereMode==='hybride');document.getElementById('cloudPanel').hidden=!(sphereMode==='nuee'||sphereMode==='hybride');document.getElementById('livingPanel').hidden=sphereMode!=='vivants';
-  document.querySelectorAll('#sphereModes .mode').forEach(b=>b.classList.toggle('active',b===btn));
-}));
+document.getElementById('togglePoints').addEventListener('click',()=>{showPoints=!showPoints;refreshMatterUI();});
+document.getElementById('toggleGaz').addEventListener('click',()=>{showGasLayer=!showGasLayer;refreshMatterUI();});
+refreshMatterUI();
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===btn)); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===btn.dataset.view));}));
 document.querySelectorAll('#visibilityModes .preset').forEach(btn=>btn.addEventListener('click',()=>{programCfg.alwaysVisible=Number(btn.dataset.visible); updateVisibilityButtons();}));
 updateVisibilityButtons();
@@ -672,7 +679,7 @@ function drawPearlBackground(){
 function render(now){
   const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
   if(selectedLamp!==null && performance.now()-lastPinchTime>=5000) clearLampSelection();
-  clock+=dt*sphereCfg.speed; const evolvingEnergy=lights.reduce((sum,l)=>sum+l.level,0)/lights.length;membraneTime+=dt*(sphereMode==='membrane'&&opalPreset==='gaz'?.12+.88*evolvingEnergy:1)*(.10+membraneCfg.fluidity*.85);if(sphereMode==='nuee'||sphereMode==='hybride')updateCloud(dt);
+  clock+=dt*sphereCfg.speed; const evolvingEnergy=lights.reduce((sum,l)=>sum+l.level,0)/lights.length;membraneTime+=dt*(opalPreset==='gaz'?.12+.88*evolvingEnergy:1)*(.10+membraneCfg.fluidity*.85);
   // Un moteur arrêté immobilise aussi les pales; le signe commande le sens.
   // Les trois paliers de vitesse donnent trois cadences visuelles distinctes.
   if(fanLevel!==0){const speeds=[0,.55,1.12,1.85];fanAngle+=dt*Math.sign(fanLevel)*speeds[Math.abs(fanLevel)]*(programCfg.fanRotate/.22);}
@@ -680,16 +687,16 @@ function render(now){
   fanReveal+=((fanSelected&&fanOpen?1:0)-fanReveal)*Math.min(1,dt*3.3);
   const gasEnergy=lights.reduce((a,l)=>a+l.level,0)/lights.length;
   const ambience=ambiences[currentAmbience];
-  ctx.fillStyle=sphereMode==='points'?ambience.base:'#ede8e5';ctx.fillRect(0,0,w,h);
-  if(sphereMode==='points' && ambience.light)drawPearlBackground();
-  if(sphereMode==='points' && currentAmbience!=='original'){
+  ctx.fillStyle=showGasLayer?'#ede8e5':ambience.base;ctx.fillRect(0,0,w,h);
+  if(showPoints && !showGasLayer && ambience.light)drawPearlBackground();
+  if(showPoints && !showGasLayer && currentAmbience!=='original'){
     // Brume très discrète, indépendante de la sphère : aucun point supplémentaire.
     const atmosphere=ctx.createRadialGradient(w*.5,h*.45,0,w*.5,h*.45,Math.max(w,h)*.66);
     atmosphere.addColorStop(0,ambience.centre);
     atmosphere.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=atmosphere;ctx.fillRect(0,0,w,h);
   }
-  if(sphereMode==='membrane'&&opalPreset==='gaz')drawSpatialLights(true);
+  drawSpatialLights(true);
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
   // Le zoom agit sur l'ensemble cube/sphère/jauge, donc les coordonnées de toucher restent cohérentes.
@@ -791,7 +798,7 @@ function render(now){
 
   const orderedFaces=faceDefinitions.map(f=>({f,depth:project(...f.normal).z,opacity:faceVisibility(f)})).sort((a,b)=>a.depth-b.depth);
   for(const {f,opacity} of orderedFaces){ if(opacity<.13) drawFace(f,opacity*.7); }
-  if(sphereMode==='points') {drawCube();drawFanGauge();}
+  if(showPoints && !showGasLayer) {drawCube();drawFanGauge();}
   faceHitRegions=faceDefinitions.filter(f=>faceVisibility(f)>.12).map(f=>({name:f.name,depth:project(...f.normal).z,poly:[[-1.27,-1.27],[1.27,-1.27],[1.27,1.27],[-1.27,1.27]].map(([u,v])=>screen(f.name,u,v))})).sort((a,b)=>b.depth-a.depth);
 
   const totalLight=lights.reduce((sum,l)=>sum+l.level,0);
@@ -806,7 +813,7 @@ function render(now){
     ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,radius*1.15,0,2*Math.PI); ctx.fill(); ctx.restore();
   }
 
-  if(sphereMode==='points'){
+  if(showPoints){
     const rear=[],front=[];
     for(const p of particles){
       const wave=noise(p.x,p.y,p.z,clock,sphereCfg.fluidity), radial=1+sphereCfg.deform*wave;
@@ -849,10 +856,11 @@ function render(now){
       ctx.fillStyle=rim; ctx.beginPath(); ctx.arc(cx,cy,radius*1.02,0,2*Math.PI); ctx.fill();
       ctx.restore();
     }
-  } else {
+  }
+  if(showGasLayer){
     // Le cube devient une enveloppe opaline. Le shader n'est dessiné que dans
     // les trois faces visibles, dans le même repère projeté que les commandes.
-    const hybrid=sphereMode==='hybride',showGas=sphereMode==='membrane'||hybrid;const gasFlight=sphereMode==='membrane'&&opalPreset==='gaz';
+    const hybrid=false,showGas=true;const gasFlight=opalPreset==='gaz';
     const activeGasCfg=gasFlight?interpolateFlightCfg(gasEnergy):membraneCfg;
     const opalActive=showGas&&membraneRenderer&&membraneRenderer.draw(membraneTime,activeGasCfg,angleX,angleY,0,0,gasFlight?gasEnergy:1);
     const faceSpecs=[
@@ -877,7 +885,7 @@ function render(now){
         const scale=opalPreset==='opale'?2.75:opalPreset==='gaz'?3.65:4.1;
         const extent=radius*scale;
         ctx.save();ctx.globalAlpha=hybrid?cloudCfg.gasMix:(gasFlight?(.24+.76*gasEnergy):1);ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();
-        if(gasFlight){drawLampReflections();drawSpatialLights(false);}
+        if(gasFlight)drawLampReflections();
       }
     } else for(const face of visible){
       const poly=face.quad.map(q=>project(...q));
@@ -900,7 +908,8 @@ function render(now){
     drawFanGauge();
   }
 
-  for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
+  if(showGasLayer)for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
+  drawSpatialLights(false);
   frames++; frameAcc+=dt; if(frameAcc>1.7){ fps.textContent=Math.round(frames/frameAcc)+' i/s'; frames=0; frameAcc=0; }
   requestAnimationFrame(render);
 }
