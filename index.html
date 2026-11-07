@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V35 · Matières et halos</title>
+<title>DECK — V36 · Placement des lampes</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -46,14 +46,19 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 .opal-mode .top .mark span{color:#fff!important}
 .opal-mode .topright .chip{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.76);text-shadow:0 1px 5px rgba(100,75,80,.55)}
 .opal-mode .topright .chip:active{background:rgba(255,255,255,.28)}
+#lampPlacementBar{position:fixed;z-index:10;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 20px);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:10px;border-radius:16px;background:rgba(22,22,24,.90);color:#fff;font-size:12px;backdrop-filter:blur(18px);box-shadow:0 8px 30px rgba(0,0,0,.14)}
+#lampPlacementBar[hidden]{display:none!important}
+#lampPlacementBar button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.46);border-radius:22px;padding:9px 14px}
+body.placing-lamps #stage{cursor:move}
+body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </style>
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 35</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 36</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 35 · Matières et halos</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 36 · Placement des lampes</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -109,7 +114,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       </div>
       <div class="rowtitle">Réglages de la matière</div>
       <div class="controls" id="membraneControls"></div>
-      <div class="rowtitle" style="margin-top:20px">Lumières · six positions fixes</div>
+      <div class="rowtitle" style="margin-top:20px">Lumières · positions personnalisables</div>
+      <div class="hint" style="margin-bottom:10px">Utilisez « Placer » en haut de l’écran, puis faites glisser les pastilles numérotées. Enregistrez pour conserver la disposition.</div>
+      <div class="presets" style="margin-bottom:12px"><button class="preset" id="editLampPositions" type="button">Placer les lampes</button><button class="preset" id="resetLampPositions" type="button">Positions d’origine</button></div>
       <div class="hint" style="margin-bottom:10px">Touchez un point pour sélectionner une lampe, puis pincez pour régler son intensité. Touchez le fond pour poser un halo ; déplacez-le ou pincez pour changer sa taille. Maximum trois halos. Double-touchez un halo pour le supprimer.</div>
       <div class="controls" id="gazLampControls"></div>
       <div class="rowtitle" style="margin-top:14px">Halos persistants <span id="haloCount">0 / 3</span></div>
@@ -140,6 +147,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 
   <div class="bottomline"><span class="hint">Glisser : naviguer · Ventilateur : toucher puis pincer · Jauge droite : vitesse et sens · Double toucher : silence · Inactivité : 5 s</span><span class="status" id="fps">—</span></div>
 </section>
+<div id="lampPlacementBar" hidden><span id="lampPlacementStatus">Déplacez les six lampes</span><button type="button" id="saveLampPositions">Enregistrer</button><button type="button" id="cancelLampPositions">Annuler</button></div>
 <div class="immersive-hint" id="immersiveHint">Toucher le ventilateur · Écarter : ouvrir · Rapprocher : fermer</div>
 <script>
 (()=>{'use strict';
@@ -212,7 +220,53 @@ function refreshMatterUI(){for(const [id,on,label] of [['togglePoints',showPoint
 
 
 const flightOff={fluidity:.12,softness:1.95,transparency:1.75,reflection:.12,edge:.22,folds:.16,breath:.028};
-const fixedLampPositions=[{x:.153,y:.179},{x:.230,y:.246},{x:.803,y:.175},{x:.332,y:.686},{x:.782,y:.684},{x:.262,y:.907}];
+const defaultLampPositions=[{x:.153,y:.179},{x:.230,y:.246},{x:.803,y:.175},{x:.332,y:.686},{x:.782,y:.684},{x:.262,y:.907}];
+const lampPositionStorage='deck-lamp-positions-v1';
+function storedLampPositions(){try{const a=JSON.parse(localStorage.getItem(lampPositionStorage));if(Array.isArray(a)&&a.length===6&&a.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1))return a.map(p=>({x:p.x,y:p.y}));}catch(_){}return defaultLampPositions.map(p=>({...p}));}
+const fixedLampPositions=storedLampPositions();
+let placingLamps=false,draggingLamp=null,lampPositionBackup=null;
+function renderPlacementMarkers(){
+ if(!placingLamps)return;
+ ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='600 14px -apple-system,Arial,sans-serif';
+ fixedLampPositions.forEach((p,i)=>{
+  const x=p.x*w,y=p.y*h;
+  ctx.beginPath();ctx.arc(x,y,25,0,2*Math.PI);
+  ctx.fillStyle=draggingLamp===i?'rgba(45,65,130,.92)':'rgba(26,30,45,.80)';ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.90)';ctx.stroke();
+  ctx.fillStyle='#fff';ctx.fillText(String(i+1),x,y+1);
+ });
+ ctx.restore();
+}
+function beginPlaceLamps(){
+ if(placingLamps)return;
+ lampPositionBackup=fixedLampPositions.map(p=>({...p}));
+ placingLamps=true;draggingLamp=null;
+ document.body.classList.add('placing-lamps');
+ document.getElementById('lampPlacementBar').hidden=false;
+ document.getElementById('placeLamps').textContent='Placement actif';
+ document.getElementById('placeLamps').setAttribute('aria-pressed','true');
+ document.getElementById('editLampPositions').textContent='Placement actif';
+ panel.classList.add('hidden');
+ document.getElementById('toggle').textContent='Réglages';
+ document.getElementById('toggle').setAttribute('aria-expanded','false');
+}
+function finishPlaceLamps(save){
+ if(save){try{localStorage.setItem(lampPositionStorage,JSON.stringify(fixedLampPositions));}catch(err){document.getElementById('lampPlacementStatus').textContent='Stockage indisponible';return;}}
+ else if(lampPositionBackup)fixedLampPositions.forEach((p,i)=>Object.assign(p,lampPositionBackup[i]));
+ placingLamps=false;draggingLamp=null;lampPositionBackup=null;
+ document.body.classList.remove('placing-lamps');
+ document.getElementById('lampPlacementBar').hidden=true;
+ document.getElementById('placeLamps').textContent='Placer';
+ document.getElementById('placeLamps').setAttribute('aria-pressed','false');
+ document.getElementById('editLampPositions').textContent='Placer les lampes';
+ recomputeSpatialLamps();
+}
+document.getElementById('placeLamps').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);else beginPlaceLamps();});
+document.getElementById('editLampPositions').addEventListener('click',beginPlaceLamps);
+document.getElementById('saveLampPositions').addEventListener('click',()=>finishPlaceLamps(true));
+document.getElementById('cancelLampPositions').addEventListener('click',()=>finishPlaceLamps(false));
+document.getElementById('resetLampPositions').addEventListener('click',()=>{fixedLampPositions.forEach((p,i)=>Object.assign(p,defaultLampPositions[i]));try{localStorage.removeItem(lampPositionStorage);}catch(_){}recomputeSpatialLamps();});
+
 const spatialHalos=[];
 let haloGesture=null,haloPinchStart=0,haloSelected=null,lastHaloTap=0,lastTappedHalo=null;
 const lampManualLevels=lights.map(l=>l.level);
@@ -1044,6 +1098,7 @@ function render(now){
   }
   if(showGasLayer)for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
   drawSpatialLights(false);
+  renderPlacementMarkers();
   frames++; frameAcc+=elapsed; if(frameAcc>1.7){ fps.textContent=Math.round(frames/frameAcc)+' i/s'; frames=0; frameAcc=0; }
   requestAnimationFrame(render);
 }
@@ -1076,6 +1131,11 @@ function selectFaceAt(x,y){
 }
 canvas.addEventListener('pointerdown',e=>{
  canvas.setPointerCapture(e.pointerId);
+ if(placingLamps){
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){let best=Infinity;draggingLamp=null;fixedLampPositions.forEach((p,i)=>{const d=Math.hypot(p.x*w-e.clientX,p.y*h-e.clientY);if(d<Math.max(46,lampDiscRadius()*1.1)&&d<best){best=d;draggingLamp=i;}});}
+  return;
+ }
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(pointers.size===1){
   primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};
@@ -1100,6 +1160,11 @@ canvas.addEventListener('pointerdown',e=>{
  }
 });
 canvas.addEventListener('pointermove',e=>{
+  if(placingLamps){
+   if(!pointers.has(e.pointerId))return;
+   if(draggingLamp!==null&&pointers.size===1){const p=fixedLampPositions[draggingLamp];p.x=clamp(e.clientX/w,.04,.96);p.y=clamp(e.clientY/h,.09,.92);recomputeSpatialLamps();}
+   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});return;
+  }
   if(!pointers.has(e.pointerId))return;
   const prev=pointers.get(e.pointerId);
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -1165,6 +1230,7 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
+ if(placingLamps){pointers.delete(e.pointerId);if(!pointers.size)draggingLamp=null;return;}
  const wasSingle=pointers.size===1;
  const wasTap=e.type==='pointerup'&&wasSingle&&!gestureMoved&&!gestureWasMulti&&touchStart&&!fanGaugeDrag;
  if(haloGesture){
@@ -1200,7 +1266,7 @@ function endPointer(e){
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
-document.getElementById('toggle').addEventListener('click',()=>{panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden'); document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
+document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden'); document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
