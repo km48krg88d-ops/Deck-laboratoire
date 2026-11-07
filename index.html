@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V34 · Matières et halos</title>
+<title>DECK — V35 · Matières et halos</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 34</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 35</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 34 · Matières et halos</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 35 · Matières et halos</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,7 +73,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V34 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Lampes animées : disques rétroéclairés jaunes ou mélange de couleurs. Un halo éclaire uniquement la partie du disque qu’il couvre.</div>
+    <div class="hint" style="margin:0 0 16px">V35 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Lampes animées : disques rétroéclairés jaunes ou mélange de couleurs. Un halo éclaire uniquement la partie du disque qu’il couvre.</div>
     </details>
     <div class="rowtitle">Matières · indépendantes et cumulables</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
@@ -288,51 +288,60 @@ function paintLampGradient(g,x,y,r,power,index){
 const backlightSprite=(()=>{
  const c=document.createElement('canvas');c.width=c.height=256;
  const g=c.getContext('2d'),r=128;
- const gradient=g.createRadialGradient(r,r,r*.40,r,r,r);
- gradient.addColorStop(0,'rgba(255,221,115,0)');
- gradient.addColorStop(.10,'rgba(255,220,103,.96)');
- gradient.addColorStop(.24,'rgba(255,224,133,.78)');
- gradient.addColorStop(.49,'rgba(255,230,159,.34)');
- gradient.addColorStop(1,'rgba(255,232,175,0)');
+ const gradient=g.createRadialGradient(r,r,0,r,r,r);
+ gradient.addColorStop(0,'rgba(255,228,153,.54)');
+ gradient.addColorStop(.28,'rgba(255,228,153,.52)');
+ gradient.addColorStop(.43,'rgba(255,231,164,.40)');
+ gradient.addColorStop(.64,'rgba(255,234,178,.19)');
+ gradient.addColorStop(.84,'rgba(255,237,192,.055)');
+ gradient.addColorStop(1,'rgba(255,239,202,0)');
  g.fillStyle=gradient;g.fillRect(0,0,256,256);return c;
 })();
+const softLampCache=[];
 function drawBacklitLamps(){
- const time=performance.now()/1000,r=lampDiscRadius();
+ const time=performance.now()/1000,r=lampDiscRadius(),extent=r*3.15;
  for(let i=0;i<lights.length;i++){
   const p=fixedLampPoint(i),manual=lampManualLevels[i];
-  const pulse=1+.035*Math.sin(time*.85+i*1.47);
-  const extent=r*(2.25+.12*Math.sin(time*.56+i))*pulse;
-  const paint=(power)=>{
-   if(power<=0)return;
-   ctx.globalAlpha=clamp(power,0,1)*(.94+.06*Math.sin(time*.9+i));
-   ctx.drawImage(backlightSprite,p.x-extent,p.y-extent,extent*2,extent*2);
-  };
-  ctx.save();paint(manual);ctx.restore();
-  // Clip halo-controlled light to the covered portion: no whole-lamp activation.
-  for(const halo of spatialHalos){
-   if(haloDistance(halo,p.x,p.y)>=halo.radius+r)continue;
-   ctx.save();
-   if(haloDistance(halo,p.x,p.y)+r>halo.radius){ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius,0,Math.PI*2);ctx.clip();}
-   paint(halo.power*(1-manual));ctx.restore();
+  const key=JSON.stringify([p.x,p.y,r,manual,spatialHalos]);
+  let cached=softLampCache[i];
+  if(!cached||cached.key!==key){
+   const c=document.createElement('canvas');c.width=c.height=256;
+   const g=c.getContext('2d'),scale=256/(extent*2);
+   g.globalAlpha=manual;g.drawImage(backlightSprite,0,0);g.globalAlpha=1;
+   for(const halo of spatialHalos){
+    const feather=Math.max(r*.85,halo.radius*.16);
+    if(haloDistance(halo,p.x,p.y)>halo.radius+extent+feather)continue;
+    const layer=document.createElement('canvas');layer.width=layer.height=256;
+    const lg=layer.getContext('2d');
+    lg.globalAlpha=clamp(halo.power*(1-manual),0,1);lg.drawImage(backlightSprite,0,0);lg.globalAlpha=1;
+    const x=128+(halo.x-p.x)*scale,y=128+(halo.y-p.y)*scale;
+    const mask=lg.createRadialGradient(x,y,Math.max(0,halo.radius-feather)*scale,x,y,(halo.radius+feather)*scale);
+    mask.addColorStop(0,'rgba(0,0,0,1)');
+    mask.addColorStop(.25,'rgba(0,0,0,.90)');mask.addColorStop(.5,'rgba(0,0,0,.5)');
+    mask.addColorStop(.75,'rgba(0,0,0,.10)');mask.addColorStop(1,'rgba(0,0,0,0)');
+    lg.globalCompositeOperation='destination-in';lg.fillStyle=mask;lg.fillRect(0,0,256,256);
+    g.drawImage(layer,0,0);
+   }
+   cached=softLampCache[i]={key,canvas:c};
   }
-  // The quiet opaque face hides the light source, like the reference wall lamp.
-  ctx.save();const face=ctx.createLinearGradient(p.x-r,p.y-r,p.x+r,p.y+r);
-  face.addColorStop(0,'#e0dfdc');face.addColorStop(.55,'#d6d5d2');face.addColorStop(1,'#cececb');
-  ctx.fillStyle=face;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.save();ctx.globalAlpha=.95+.05*Math.sin(time*.85+i*1.47);
+  ctx.drawImage(cached.canvas,p.x-extent,p.y-extent,extent*2,extent*2);ctx.restore();
+  // A narrow soft edge keeps the matte disc readable without a hard outline.
+  const face=ctx.createRadialGradient(p.x-r*.15,p.y-r*.18,0,p.x,p.y,r);
+  face.addColorStop(0,'rgba(224,223,220,1)');face.addColorStop(.65,'rgba(216,215,212,1)');
+  face.addColorStop(.94,'rgba(210,210,207,1)');face.addColorStop(1,'rgba(210,210,207,0)');
+  ctx.fillStyle=face;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
  }
 }
 function drawSpatialLights(back=true){
  ctx.save();
- if(back&&lampStyle==='backlit'){
-  drawBacklitLamps();
- }else if(back){
-  // Rebuild only when intensity or viewport changes, never with animation time.
+ if(back&&lampStyle==='backlit')drawBacklitLamps();
+ else if(back){
   const tick=Math.floor(performance.now()/66);
   const key=[w,h,tick,...lights.map(l=>l.level)].join('|');
   if(key!==lampColorKey){
    lampColorKey=key;lampColorLayer.width=Math.ceil(w);lampColorLayer.height=Math.ceil(h);
-   const g=lampColorLayer.getContext('2d');
-   g.globalCompositeOperation='multiply';
+   const g=lampColorLayer.getContext('2d');g.globalCompositeOperation='multiply';
    lights.forEach((lamp,i)=>{
     const p=fixedLampPoint(i),radius=Math.max(85,Math.min(w*.50,h*.31))*(.60+lamp.level*.70)*(1+.035*Math.sin(tick*.066*.85+i*1.47));
     paintLampGradient(g,p.x,p.y,radius,lamp.level,i);
@@ -341,8 +350,7 @@ function drawSpatialLights(back=true){
   ctx.drawImage(lampColorLayer,0,0,w,h);
   for(const halo of spatialHalos){
    const grad=ctx.createRadialGradient(halo.x,halo.y,0,halo.x,halo.y,halo.radius);
-   const active=haloSelected===halo;
-   grad.addColorStop(0,active?'rgba(176,136,231,.20)':'rgba(148,183,224,.12)');
+   grad.addColorStop(0,haloSelected===halo?'rgba(176,136,231,.20)':'rgba(148,183,224,.12)');
    grad.addColorStop(1,'rgba(147,179,224,0)');
    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(halo.x,halo.y,halo.radius,0,Math.PI*2);ctx.fill();
   }
@@ -350,12 +358,6 @@ function drawSpatialLights(back=true){
   for(const halo of spatialHalos){
    ctx.fillStyle='rgba(157,178,210,.75)';ctx.beginPath();ctx.arc(halo.x,halo.y,4.2,0,Math.PI*2);ctx.fill();
   }
-  lights.forEach((lamp,i)=>{
-   const p=fixedLampPoint(i);
-   ctx.fillStyle=selectedLamp===i?'#FFFFFF':'rgba(209,113,155,.83)';
-   ctx.beginPath();ctx.arc(p.x,p.y,selectedLamp===i?5:3.4,0,Math.PI*2);ctx.fill();
-   if(selectedLamp===i){ctx.strokeStyle='rgba(202,107,159,.8)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,11,0,Math.PI*2);ctx.stroke();}
-  });
  }
  ctx.restore();
 }
