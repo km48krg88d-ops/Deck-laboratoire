@@ -226,9 +226,10 @@ function findFixedLamp(x,y){
  return found;
 }
 function findSpatialHalo(x,y){
+ // La poignée centrale seule capture le drag : ailleurs, la caméra tourne.
  for(let i=spatialHalos.length-1;i>=0;i--){
   const halo=spatialHalos[i];
-  if(haloDistance(halo,x,y)<Math.max(22,halo.radius*.78))return halo;
+  if(haloDistance(halo,x,y)<Math.min(36,Math.max(21,halo.radius*.30)))return halo;
  }
  return null;
 }
@@ -755,7 +756,7 @@ function render(now){
     if(opacity<.025) return;
     const f=face.name, al=opacity, progress=programCfg.alwaysVisible?1:reveal[f];
     if(f==='front'){
-      lights.forEach((lamp,idx)=>drawLightSource(f,...apartmentCoord(...lamp.raw),al,lamp.level,idx));
+      // Lampes fixes du fond : pas de projection sur la face tournante.
     }
     if(f==='top') drawFanMorph(al,fanReveal);
     if(f==='left'){ const P=screen(f,0,0), r=Math.max(5,Math.min(17,radius*.105)); ctx.save(); ctx.translate(P.x,P.y); ctx.beginPath(); ctx.moveTo(-r*.36,-r*.73); ctx.lineTo(r*.86,0); ctx.lineTo(-r*.36,r*.73); ctx.closePath(); ctx.fillStyle=`rgba(255,255,255,${al*.86})`; ctx.fill(); ctx.restore(); }
@@ -813,50 +814,6 @@ function render(now){
     ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,radius*1.15,0,2*Math.PI); ctx.fill(); ctx.restore();
   }
 
-  if(showPoints){
-    const rear=[],front=[];
-    for(const p of particles){
-      const wave=noise(p.x,p.y,p.z,clock,sphereCfg.fluidity), radial=1+sphereCfg.deform*wave;
-      let x=p.x*radial,y=p.y*radial,z=p.z*radial;
-      let xx=x*cyo+z*sy, zz=z*cyo-x*sy; let yy=y*cxo-zz*sx; zz=y*sx+zz*cxo;
-      const perspective=2.9/(2.9-zz*.33), px=cx+xx*radius*breathe*perspective, py=cy-yy*radius*breathe*perspective;
-      const depth=(zz+1.45)/2.9, baseAlpha=Math.max(.04,Math.min(1,(depth*.66+.18)*sphereCfg.opacity));
-      const rim=Math.exp(-Math.pow(zz*1.55,2));
-      const scint=.72+.28*Math.sin(clock*.65+p.seed*7.0+(p.x-p.y+p.z)*2.3);
-      const lightBoost=lightEnergy*(.18+1.55*rim)*scint;
-      const point={x:px,y:py,a:Math.min(1,baseAlpha*(.68+.32*p.seed)*(1+lightBoost)),size:sphereCfg.size*(.5+.65*depth)*(1+lightEnergy*.08*rim),z:zz};
-      (zz<0?rear:front).push(point);
-    }
-    function draw(arr,frontSide){
-      // Les particules restent blanches sur fonds clairs et sombres.
-      ctx.fillStyle='#fff';
-      const softness=sphereCfg.softness;
-      const minimumDiameter=1.25/dpr;
-      for(const p of arr){
-        ctx.globalAlpha=Math.min(.98,p.a*(frontSide?1:.52));
-        if(softness>.001){
-          // Un noyau assez fin, eclairement progressif et echantillonnage sous-pixel.
-          const core=Math.max(minimumDiameter,p.size);
-          const diameter=core*(1.1+1.45*softness);
-          ctx.drawImage(dotSprite,p.x-diameter*.5,p.y-diameter*.5,diameter,diameter);
-        }else{
-          ctx.fillRect(p.x,p.y,p.size,p.size);
-        }
-      }
-      ctx.globalAlpha=1;
-    }
-    draw(rear,false); draw(front,true);
-    if(lightEnergy>.01){
-      ctx.save(); ctx.globalCompositeOperation='screen';
-      const rim=ctx.createRadialGradient(cx,cy,radius*.78,cx,cy,radius*1.01);
-      rim.addColorStop(0,'rgba(255,255,255,0)');
-      rim.addColorStop(.55,'rgba(255,255,255,0)');
-      rim.addColorStop(.88,`rgba(255,255,255,${lightEnergy*.09})`);
-      rim.addColorStop(1,`rgba(255,255,255,${lightEnergy*.24})`);
-      ctx.fillStyle=rim; ctx.beginPath(); ctx.arc(cx,cy,radius*1.02,0,2*Math.PI); ctx.fill();
-      ctx.restore();
-    }
-  }
   if(showGasLayer){
     // Le cube devient une enveloppe opaline. Le shader n'est dessiné que dans
     // les trois faces visibles, dans le même repère projeté que les commandes.
@@ -908,6 +865,53 @@ function render(now){
     drawFanGauge();
   }
 
+  // Les nuages fixes repassent en transparence sur le Gaz ;
+  // les points sont ensuite tracés au premier plan.
+  ctx.save();ctx.globalAlpha=.52;drawSpatialLights(true);ctx.restore();
+  if(showPoints){
+    const rear=[],front=[];
+    for(const p of particles){
+      const wave=noise(p.x,p.y,p.z,clock,sphereCfg.fluidity), radial=1+sphereCfg.deform*wave;
+      let x=p.x*radial,y=p.y*radial,z=p.z*radial;
+      let xx=x*cyo+z*sy, zz=z*cyo-x*sy; let yy=y*cxo-zz*sx; zz=y*sx+zz*cxo;
+      const perspective=2.9/(2.9-zz*.33), px=cx+xx*radius*breathe*perspective, py=cy-yy*radius*breathe*perspective;
+      const depth=(zz+1.45)/2.9, baseAlpha=Math.max(.04,Math.min(1,(depth*.66+.18)*sphereCfg.opacity));
+      const rim=Math.exp(-Math.pow(zz*1.55,2));
+      const scint=.72+.28*Math.sin(clock*.65+p.seed*7.0+(p.x-p.y+p.z)*2.3);
+      const lightBoost=lightEnergy*(.18+1.55*rim)*scint;
+      const point={x:px,y:py,a:Math.min(1,baseAlpha*(.68+.32*p.seed)*(1+lightBoost)),size:sphereCfg.size*(.5+.65*depth)*(1+lightEnergy*.08*rim),z:zz};
+      (zz<0?rear:front).push(point);
+    }
+    function draw(arr,frontSide){
+      // Les particules restent blanches sur fonds clairs et sombres.
+      ctx.fillStyle='#fff';
+      const softness=sphereCfg.softness;
+      const minimumDiameter=1.25/dpr;
+      for(const p of arr){
+        ctx.globalAlpha=Math.min(.98,p.a*(frontSide?1:.52));
+        if(softness>.001){
+          // Un noyau assez fin, eclairement progressif et echantillonnage sous-pixel.
+          const core=Math.max(minimumDiameter,p.size);
+          const diameter=core*(1.1+1.45*softness);
+          ctx.drawImage(dotSprite,p.x-diameter*.5,p.y-diameter*.5,diameter,diameter);
+        }else{
+          ctx.fillRect(p.x,p.y,p.size,p.size);
+        }
+      }
+      ctx.globalAlpha=1;
+    }
+    draw(rear,false); draw(front,true);
+    if(lightEnergy>.01){
+      ctx.save(); ctx.globalCompositeOperation='screen';
+      const rim=ctx.createRadialGradient(cx,cy,radius*.78,cx,cy,radius*1.01);
+      rim.addColorStop(0,'rgba(255,255,255,0)');
+      rim.addColorStop(.55,'rgba(255,255,255,0)');
+      rim.addColorStop(.88,`rgba(255,255,255,${lightEnergy*.09})`);
+      rim.addColorStop(1,`rgba(255,255,255,${lightEnergy*.24})`);
+      ctx.fillStyle=rim; ctx.beginPath(); ctx.arc(cx,cy,radius*1.02,0,2*Math.PI); ctx.fill();
+      ctx.restore();
+    }
+  }
   if(showGasLayer)for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
   drawSpatialLights(false);
   frames++; frameAcc+=dt; if(frameAcc>1.7){ fps.textContent=Math.round(frames/frameAcc)+' i/s'; frames=0; frameAcc=0; }
@@ -941,39 +945,28 @@ function selectFaceAt(x,y){
   activeFace=chosen?(activeFace===chosen.name?null:chosen.name):null;
 }
 canvas.addEventListener('pointerdown',e=>{
-  canvas.setPointerCapture(e.pointerId);
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===1){
-    primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};
-    if(sphereMode==='membrane'&&opalPreset==='gaz'){
-      const lampHit=findFixedLamp(e.clientX,e.clientY);
-      if(lampHit){keepLampSelected(lampHit.index);haloGesture={kind:'lamp',id:e.pointerId};}
-      else{
-        const hit=findSpatialHalo(e.clientX,e.clientY);
-        if(hit){
-          if(lastTappedHalo===hit && performance.now()-lastHaloTap<360){
-            spatialHalos.splice(spatialHalos.indexOf(hit),1);haloGesture={kind:'blocked',id:e.pointerId};lastTappedHalo=null;lastHaloTap=0;recomputeSpatialLamps();
-          }else{haloGesture={kind:'halo',id:e.pointerId,halo:hit};haloSelected=hit;lastTappedHalo=hit;lastHaloTap=performance.now();}
-        }else if(spatialHalos.length<3){
-          // Fond hors de toute lampe: une zone d'influence est créée et conservée.
-          const h={x:e.clientX,y:e.clientY,radius:Math.min(w,window.innerHeight)*.25,power:1};
-          spatialHalos.push(h);haloGesture={kind:'halo',id:e.pointerId,halo:h};haloSelected=h;recomputeSpatialLamps();
-        }else{haloGesture={kind:'blocked',id:e.pointerId};}
-      }
-    }
-    gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;
-    const gaugeValue=fanGaugeAt(e.clientX,e.clientY);
-    fanGaugeDrag=fanSelected&&gaugeValue!==null;
-    if(fanGaugeDrag)setFanLevel(gaugeValue);
-  }
-  if(pointers.size===2){
-    gestureWasMulti=true;gestureMoved=true;fanGaugeDrag=false;
-    const pair=[...pointers.values()];
-    pinchDistance=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
-    fanPinchOrigin=pinchDistance;
-    const midX=(pair[0].x+pair[1].x)/2,midY=(pair[0].y+pair[1].y)/2;
-    fanZoomGesture=fanSelected && !!faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(midX,midY,region.poly));
-  }
+ canvas.setPointerCapture(e.pointerId);
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pointers.size===1){
+  primaryPointer=e.pointerId;touchStart={x:e.clientX,y:e.clientY};
+  gestureMoved=false;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;
+  haloGesture=null;
+  const lampHit=findFixedLamp(e.clientX,e.clientY);
+  const haloHit=lampHit?null:findSpatialHalo(e.clientX,e.clientY);
+  if(lampHit){keepLampSelected(lampHit.index);haloGesture={kind:'lamp',id:e.pointerId,index:lampHit.index};}
+  else if(haloHit){haloSelected=haloHit;haloGesture={kind:'halo',id:e.pointerId,halo:haloHit};}
+  const gaugeValue=fanGaugeAt(e.clientX,e.clientY);
+  fanGaugeDrag=!haloGesture&&fanSelected&&gaugeValue!==null;
+  if(fanGaugeDrag)setFanLevel(gaugeValue);
+ }
+ if(pointers.size===2){
+  gestureWasMulti=true;gestureMoved=true;fanGaugeDrag=false;
+  const pair=[...pointers.values()];
+  pinchDistance=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
+  fanPinchOrigin=pinchDistance;
+  const midX=(pair[0].x+pair[1].x)/2,midY=(pair[0].y+pair[1].y)/2;
+  fanZoomGesture=!haloGesture&&fanSelected&&!!faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(midX,midY,region.poly));
+ }
 });
 canvas.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId))return;
@@ -1039,34 +1032,37 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
-  if(haloGesture){
-    pointers.delete(e.pointerId);
-    primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;pinchDistance=0;
-    if(!pointers.size){haloGesture=null;touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanGaugeDrag=false;}
-    return;
-  }
-  if(e.type==='pointerup' && pointers.size===1 && !gestureMoved && !gestureWasMulti && touchStart && !fanGaugeDrag){
-    const livingHit=sphereMode==='vivants'?livingCloudHits.map(hit=>({...hit,d:Math.hypot(e.clientX-hit.x,e.clientY-hit.y)})).filter(hit=>hit.d<hit.r).sort((a,b)=>a.d-b.d)[0]:null;
-    const hitLight=nearestLightAt(e.clientX,e.clientY);
-    const now=performance.now();
-    const topHit=faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(e.clientX,e.clientY,region.poly));
-    if(fanSelected && fanOpen && topHit && now-lastFanTap<340){
-      fanSilent=!fanSilent;fanActivity();lastFanTap=0;
-    }else if(fanSelected && fanOpen && topHit){
-      fanActivity();lastFanTap=now;
-    }else if(livingHit){
-      const lamp=lights[livingHit.index];lamp.level=lamp.level>.02?0:1;
-      keepLampSelected(livingHit.index);syncGrain();syncLivingLamps();
-    }else if(hitLight && (activeFace==='front'||programCfg.alwaysVisible)){
-      keepLampSelected(hitLight.index);
-    }else{
-      selectFaceAt(e.clientX,e.clientY);
-    }
+ const wasSingle=pointers.size===1;
+ const wasTap=e.type==='pointerup'&&wasSingle&&!gestureMoved&&!gestureWasMulti&&touchStart&&!fanGaugeDrag;
+ if(haloGesture){
+  if(wasTap&&haloGesture.kind==='lamp'){
+   const i=haloGesture.index;lampManualLevels[i]=lampManualLevels[i]>.01?0:1;
+   recomputeSpatialLamps();keepLampSelected(i);
+  }else if(wasTap&&haloGesture.kind==='halo'){
+   const hit=haloGesture.halo,now=performance.now();
+   if(lastTappedHalo===hit&&now-lastHaloTap<350){
+    spatialHalos.splice(spatialHalos.indexOf(hit),1);haloSelected=null;
+    lastTappedHalo=null;lastHaloTap=0;recomputeSpatialLamps();
+   }else{lastTappedHalo=hit;lastHaloTap=now;}
   }
   pointers.delete(e.pointerId);
-  primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;
-  pinchDistance=0;
-  if(!pointers.size){touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;fanGaugeDrag=false;}
+  primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;pinchDistance=0;
+  if(!pointers.size){haloGesture=null;touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanGaugeDrag=false;}
+  return;
+ }
+ if(wasTap){
+  const now=performance.now();
+  const topHit=faceHitRegions.find(region=>region.name==='top'&&pointInPolygon(e.clientX,e.clientY,region.poly));
+  if(fanSelected&&fanOpen&&topHit&&now-lastFanTap<340){fanSilent=!fanSilent;fanActivity();lastFanTap=0;}
+  else if(fanSelected&&fanOpen&&topHit){fanActivity();lastFanTap=now;}
+  else if(spatialHalos.length<3){
+   const halo={x:e.clientX,y:e.clientY,radius:Math.min(w,h)*.25,power:1};
+   spatialHalos.push(halo);haloSelected=halo;recomputeSpatialLamps();
+  }
+ }
+ pointers.delete(e.pointerId);
+ primaryPointer=pointers.size===1?[...pointers.keys()][0]:null;pinchDistance=0;
+ if(!pointers.size){touchStart=null;gestureWasMulti=false;fanZoomGesture=false;fanPinchOrigin=0;fanGaugeDrag=false;}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
