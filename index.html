@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V24 · Brume nacrée</title>
+<title>DECK — V25 · Points blancs et fond laiteux</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 24</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 25</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 24 · Brume nacrée</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 25 · Points blancs</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,7 +73,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V24 : fonds nacrés, flous et légèrement granuleux, sans changement des mouvements.</div>
+    <div class="hint" style="margin:0 0 16px">V25 : points blancs, nuages nacrés plus présents, grain diffus et animations conservées.</div>
     <div class="rowtitle">Type de matière</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
       <button class="mode active" data-mode="points">Points</button>
@@ -533,20 +533,28 @@ for(let i=0;i<grainPixels.data.length;i+=4){
 pg.putImageData(grainPixels,0,0);
 const pearlGrainPattern=ctx.createPattern(pearlGrain,'repeat');
 function drawPearlBackground(){
- const fields=[
-  [.12,.18,.68,'rgba(226,194,208,.27)'],
-  [.84,.30,.67,'rgba(219,216,238,.28)'],
-  [.40,.76,.72,'rgba(231,204,218,.19)'],
-  [1.02,.91,.58,'rgba(240,217,200,.25)'],
-  [.52,.48,.54,'rgba(255,255,255,.25)']
- ];
+ // Grands volumes flous superposés. La légère ombre nacrée au centre
+ // donne du relief aux vrais points BLANCS, sans modifier leur couleur.
  const R=Math.max(w,h);
- for(const [x,y,r,c] of fields){
+ const fields=[
+  [.08,.08,.51,'rgba(194,174,192,.31)'],
+  [.98,.19,.52,'rgba(177,187,216,.35)'],
+  [.22,.66,.50,'rgba(206,184,203,.35)'],
+  [.87,.86,.57,'rgba(216,192,207,.36)'],
+  [.56,.48,.38,'rgba(154,141,172,.27)'],
+  [.48,.02,.34,'rgba(255,255,255,.54)'],
+  [.68,.78,.39,'rgba(255,255,255,.42)']
+ ];
+ for(const [x,y,r,color] of fields){
   const g=ctx.createRadialGradient(w*x,h*y,0,w*x,h*y,R*r);
-  g.addColorStop(0,c);g.addColorStop(1,'rgba(255,255,255,0)');
+  g.addColorStop(0,color);
+  g.addColorStop(.50,color.replace(/,[.0-9]+\)$/,',.11)'));
+  g.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
  }
- ctx.save();ctx.globalAlpha=.55;ctx.fillStyle=pearlGrainPattern;ctx.fillRect(0,0,w,h);ctx.restore();
+ // Motif fixe de grain photographique très fin, non scintillant.
+ ctx.save();ctx.globalAlpha=.9;ctx.fillStyle=pearlGrainPattern;
+ ctx.fillRect(0,0,w,h);ctx.restore();
 }
 
 function render(now){
@@ -699,8 +707,8 @@ function render(now){
       (zz<0?rear:front).push(point);
     }
     function draw(arr,frontSide){
-      const lightPoints=!!ambiences[currentAmbience].light;
-      ctx.fillStyle=lightPoints?'#9A8398':'#fff';
+      // Les particules restent blanches sur fonds clairs et sombres.
+      ctx.fillStyle='#fff';
       const softness=sphereCfg.softness;
       const minimumDiameter=1.25/dpr;
       for(const p of arr){
@@ -709,7 +717,7 @@ function render(now){
           // Un noyau assez fin, eclairement progressif et echantillonnage sous-pixel.
           const core=Math.max(minimumDiameter,p.size);
           const diameter=core*(1.1+1.45*softness);
-          ctx.drawImage(lightPoints?lightPointSprite:dotSprite,p.x-diameter*.5,p.y-diameter*.5,diameter,diameter);
+          ctx.drawImage(dotSprite,p.x-diameter*.5,p.y-diameter*.5,diameter,diameter);
         }else{
           ctx.fillRect(p.x,p.y,p.size,p.size);
         }
