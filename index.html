@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V29 · Matières et halos</title>
+<title>DECK — V30 · Matières et halos</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 29</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 30</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 29 · Matières et halos</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 30 · Matières et halos</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,7 +73,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V29 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Les lampes sont de grands nuages colorés.</div>
+    <div class="hint" style="margin:0 0 16px">V30 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Lampes fixes : mélange de couleurs, contraste renforcé à pleine intensité.</div>
     </details>
     <div class="rowtitle">Matières · indépendantes et cumulables</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
@@ -261,21 +261,36 @@ function interpolateFlightCfg(energy){
  for(const key of Object.keys(flightOff))profile[key]=flightOff[key]+(membraneCfg[key]-flightOff[key])*ease;
  return profile;
 }
+const lampColors=[[247,48,65],[244,91,139],[240,151,44],[149,88,219],[74,139,228],[215,46,107]];
+const lampColorLayer=document.createElement('canvas');
+let lampColorKey='';
+function paintLampGradient(g,x,y,r,power,index){
+ if(power<=0)return;
+ const color=lampColors[index],dense=color.map(v=>Math.round(v*(1-.68*power*power)));
+ const rgba=(rgb,a)=>'rgba('+rgb.join(',')+','+a+')';
+ const grad=g.createRadialGradient(x,y,0,x,y,r);
+ grad.addColorStop(0,rgba(dense,.35+.65*power));
+ grad.addColorStop(.18,rgba(color,.22+.73*power));
+ grad.addColorStop(.43,rgba(color,.10+.52*power));
+ grad.addColorStop(.72,rgba(color,.025+.15*power));
+ grad.addColorStop(1,rgba(color,0));
+ g.fillStyle=grad;g.fillRect(x-r,y-r,r*2,r*2);
+}
 function drawSpatialLights(back=true){
  ctx.save();
- // The large colored volumes always stay fixed to the apartment, regardless of rotation.
  if(back){
-  for(let i=0;i<lights.length;i++){
-   const p=fixedLampPoint(i),power=lights[i].level;
-   const radius=Math.max(85,Math.min(w*.50,h*.31))*(.90+power*.4);
-   const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,radius);
-   const alpha=.105+power*.26;
-   grad.addColorStop(0,'rgba(229,125,151,'+alpha+')');
-   grad.addColorStop(.28,'rgba(234,157,183,'+(alpha*.76)+')');
-   grad.addColorStop(.67,'rgba(239,190,205,'+(alpha*.27)+')');
-   grad.addColorStop(1,'rgba(239,193,213,0)');
-   ctx.fillStyle=grad;ctx.fillRect(p.x-radius,p.y-radius,2*radius,2*radius);
+  // Rebuild only when intensity or viewport changes, never with animation time.
+  const key=[w,h,...lights.map(l=>l.level)].join('|');
+  if(key!==lampColorKey){
+   lampColorKey=key;lampColorLayer.width=Math.ceil(w);lampColorLayer.height=Math.ceil(h);
+   const g=lampColorLayer.getContext('2d');
+   g.globalCompositeOperation='multiply';
+   lights.forEach((lamp,i)=>{
+    const p=fixedLampPoint(i),radius=Math.max(85,Math.min(w*.50,h*.31))*(.60+lamp.level*.70);
+    paintLampGradient(g,p.x,p.y,radius,lamp.level,i);
+   });
   }
+  ctx.drawImage(lampColorLayer,0,0,w,h);
   for(const halo of spatialHalos){
    const grad=ctx.createRadialGradient(halo.x,halo.y,0,halo.x,halo.y,halo.radius);
    const active=haloSelected===halo;
@@ -576,24 +591,14 @@ let livingTime=0;
 function drawLivingMatter(dt,project,radius,cx,cy){
  livingTime+=Math.min(.04,dt)*(.13+livingCfg.waveFlow*.68);
  ctx.save();
- // Les six lampes utilisent le VRAI shader Gaz/Opale : 6 champs distincts,
- // un masque alpha organique et un espace commun où leurs halos se superposent.
+ // Fixed color gradients replace six animated shader renders.
  livingCloudHits=[];
- const gasProfile={...membraneCfg,softness:.72+livingCfg.cloudBlend*.26,
-   folds:.48+livingCfg.cloudDeform*.50,fluidity:.38+livingCfg.cloudDeform*.50,
-   transparency:.25,reflection:.72,breath:.035+livingCfg.cloudDeform*.075};
  for(let lamp=0;lamp<lights.length;lamp++){
-   const raw=apartmentLightsRaw[lamp],level=lights[lamp].level;
-   const ux=-.9+(raw[0]-179)/913*1.8;
-   const uy=.9-(raw[1]-110)/966*1.8-.12;
-   const center=project(ux,uy,.26);
-   const footprint=radius*(.96+livingCfg.cloudBlend*.24);
-   const diameter=footprint*(1+level*(.65+livingCfg.cloudBlend*.95));
-   livingCloudHits.push({index:lamp,x:center.x,y:center.y,r:Math.max(24,footprint*.28)});
-   if(membraneRenderer && membraneRenderer.draw(livingTime*.85,gasProfile,angleX,angleY,1,lamp+1)){
-     ctx.globalAlpha=.61+level*.29;
-     ctx.drawImage(membraneRenderer.canvas,center.x-diameter*.5,center.y-diameter*.5,diameter,diameter);
-   }
+  const raw=apartmentLightsRaw[lamp],level=lights[lamp].level;
+  const center=project(-.9+(raw[0]-179)/913*1.8,.9-(raw[1]-110)/966*1.8-.12,.26);
+  const footprint=radius*(.70+level*.8);
+  livingCloudHits.push({index:lamp,x:center.x,y:center.y,r:24});
+  paintLampGradient(ctx,center.x,center.y,footprint,level,lamp);
  }
  ctx.globalAlpha=1;
  // Une nappe musicale indépendante : cinq plis de soie traversent horizontalement
@@ -868,7 +873,7 @@ function render(now){
 
   // Les nuages fixes repassent en transparence sur le Gaz ;
   // les points sont ensuite tracés au premier plan.
-  ctx.save();ctx.globalAlpha=.52;drawSpatialLights(true);ctx.restore();
+  // Lamp colors are composited once behind the scene.
   if(showPoints){
     const rear=[],front=[];
     for(const p of particles){
