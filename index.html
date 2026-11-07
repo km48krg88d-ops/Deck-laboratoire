@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V31 · Matières et halos</title>
+<title>DECK — V32 · Matières et halos</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -51,9 +51,9 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 31</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 32</span></div><div class="topright"><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 31 · Matières et halos</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 32 · Matières et halos</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -73,7 +73,7 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
       <button type="button" class="ambience" data-ambience="dawn" aria-pressed="false"><span class="ambience-dot" style="background:#DFE7F4"></span>Bleu brume</button>
       <button type="button" class="ambience" data-ambience="sand" aria-pressed="false"><span class="ambience-dot" style="background:#F5E9DD"></span>Sable clair</button>
     </div>
-    <div class="hint" style="margin:0 0 16px">V31 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Lampes fixes : mélange de couleurs, contraste renforcé à pleine intensité.</div>
+    <div class="hint" style="margin:0 0 16px">V32 : Points et Gaz cumulables. Appuyer sur le fond pour poser un halo ; glisser pour naviguer. Lampes fixes : mélange de couleurs, contraste renforcé à pleine intensité.</div>
     </details>
     <div class="rowtitle">Matières · indépendantes et cumulables</div>
     <div class="modes" id="sphereModes" style="margin:0 0 14px">
@@ -230,7 +230,7 @@ function findSpatialHalo(x,y){
  for(let i=spatialHalos.length-1;i>=0;i--){
   const halo=spatialHalos[i];
   const d=haloDistance(halo,x,y);
-  if(d<32 || Math.abs(d-halo.radius*.83)<18)return halo;
+  if(d<22)return halo;
  }
  return null;
 }
@@ -509,6 +509,7 @@ function setupMembrane(){
   }};
 }
 const membraneRenderer=setupMembrane();
+let gasRenderStamp=-Infinity,gasRenderKey='',gasRenderReady=false,gasFrameChanged=false;
 const gasCanvas=document.createElement('canvas');gasCanvas.width=512;gasCanvas.height=512;
 const gasCtx=gasCanvas.getContext('2d',{alpha:true});
 const gasMask=gasCtx.createRadialGradient(256,256,68,256,256,254);
@@ -682,7 +683,8 @@ function drawPearlBackground(){
 }
 
 function render(now){
-  const dt=lastFrame?Math.min(.06,(now-lastFrame)/1000):.016; lastFrame=now;
+  const elapsed=lastFrame?(now-lastFrame)/1000:0;
+  const dt=lastFrame?Math.min(.06,elapsed):.016; lastFrame=now;
   if(selectedLamp!==null && performance.now()-lastPinchTime>=3000 && pointers.size===0) clearLampSelection();
   clock+=dt*sphereCfg.speed; const evolvingEnergy=lights.reduce((sum,l)=>sum+l.level,0)/lights.length;membraneTime+=dt*(opalPreset==='gaz'?.12+.88*evolvingEnergy:1)*(.10+membraneCfg.fluidity*.85);
   // Un moteur arrêté immobilise aussi les pales; le signe commande le sens.
@@ -823,7 +825,13 @@ function render(now){
     // les trois faces visibles, dans le même repère projeté que les commandes.
     const hybrid=false,showGas=true;const gasFlight=opalPreset==='gaz';
     const activeGasCfg=gasFlight?interpolateFlightCfg(gasEnergy):membraneCfg;
-    const opalActive=showGas&&membraneRenderer&&membraneRenderer.draw(membraneTime,activeGasCfg,angleX,angleY,0,0,gasFlight?gasEnergy:1);
+    const gasKey=JSON.stringify([activeGasCfg,angleX,angleY,opalPreset,gasEnergy]);
+    gasFrameChanged=false;
+    if(showGas&&membraneRenderer&&(now-gasRenderStamp>=1000/30||gasKey!==gasRenderKey)){
+      gasRenderReady=membraneRenderer.draw(membraneTime,activeGasCfg,angleX,angleY,0,0,gasFlight?gasEnergy:1);
+      gasRenderStamp=now;gasRenderKey=gasKey;gasFrameChanged=true;
+    }
+    const opalActive=showGas&&gasRenderReady;
     const faceSpecs=[
       {n:[0,0,1],quad:[[-1.28,-1.28,1.28],[1.28,-1.28,1.28],[1.28,1.28,1.28],[-1.28,1.28,1.28]]},
       {n:[0,0,-1],quad:[[1.28,-1.28,-1.28],[-1.28,-1.28,-1.28],[-1.28,1.28,-1.28],[1.28,1.28,-1.28]]},
@@ -837,12 +845,14 @@ function render(now){
       // Sans enveloppe : seulement une masse colorée qui flotte dans l'espace clair.
       // Un masque continu supprime la trame et les limites carrées du shader.
       if(opalActive && gasCtx){
+        if(gasFrameChanged){
         gasCtx.clearRect(0,0,512,512);
         gasCtx.globalCompositeOperation='source-over';
         gasCtx.drawImage(membraneRenderer.canvas,0,0,512,512);
         gasCtx.globalCompositeOperation='destination-in';
         gasCtx.fillStyle=gasMask;gasCtx.fillRect(0,0,512,512);
         gasCtx.globalCompositeOperation='source-over';
+        }
         const scale=opalPreset==='opale'?2.75:opalPreset==='gaz'?3.65:4.1;
         const extent=radius*scale;
         ctx.save();ctx.globalAlpha=hybrid?cloudCfg.gasMix:(gasFlight?(.24+.76*gasEnergy):1);ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();
@@ -918,7 +928,7 @@ function render(now){
   }
   if(showGasLayer)for(const {f,opacity} of orderedFaces){ if(opacity>=.13) drawFace(f,opacity*.82); }
   drawSpatialLights(false);
-  frames++; frameAcc+=dt; if(frameAcc>1.7){ fps.textContent=Math.round(frames/frameAcc)+' i/s'; frames=0; frameAcc=0; }
+  frames++; frameAcc+=elapsed; if(frameAcc>1.7){ fps.textContent=Math.round(frames/frameAcc)+' i/s'; frames=0; frameAcc=0; }
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
