@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V41 · Profils lumineux géométriques</title>
+<title>DECK — V42 · Radiants rouges monochromes</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -56,9 +56,9 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 41</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 42</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 41 · Profils lumineux géométriques</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 42 · Radiants rouges monochromes</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -233,9 +233,27 @@ function refreshMatterUI(){for(const [id,on,label] of [['togglePoints',showPoint
 
 
 const flightOff={fluidity:.12,softness:1.95,transparency:1.75,reflection:.12,edge:.22,folds:.16,breath:.028};
-const defaultLampPositions=[{x:.153,y:.179},{x:.230,y:.246},{x:.803,y:.175},{x:.332,y:.686},{x:.782,y:.684},{x:.262,y:.907}];
+// Emplacements d'après la planche des six luminaires : 2 Nesso en haut à droite,
+// 3 Arcs à gauche sous Apex, 4 H&M en bas à gauche, 6 lampadaire sous H&M.
+const defaultLampPositions=[
+ {x:.153,y:.179},{x:.803,y:.175},{x:.230,y:.246},
+ {x:.145,y:.686},{x:.782,y:.684},{x:.145,y:.907}
+];
+const priorDefaultLampPositions=[
+ {x:.153,y:.179},{x:.230,y:.246},{x:.803,y:.175},
+ {x:.332,y:.686},{x:.782,y:.684},{x:.262,y:.907}
+];
 const lampPositionStorage='deck-lamp-positions-v1';
-function storedLampPositions(){try{const a=JSON.parse(localStorage.getItem(lampPositionStorage));if(Array.isArray(a)&&a.length===6&&a.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1))return a.map(p=>({x:p.x,y:p.y,scale:Number.isFinite(p.scale)?Math.max(.4,Math.min(2.5,p.scale)):1}));}catch(_){}return defaultLampPositions.map(p=>({...p,scale:1}));}
+function storedLampPositions(){try{const a=JSON.parse(localStorage.getItem(lampPositionStorage));if(Array.isArray(a)&&a.length===6&&a.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1)){
+   // Preserve user-edited coordinates, correcting only positions still matching
+   // the old default slots. Also swap the old 2/3 default spatial order.
+   return a.map((p,i)=>{
+    const old=priorDefaultLampPositions[i];
+    const unchanged=Math.abs(p.x-old.x)<.003&&Math.abs(p.y-old.y)<.003;
+    const source=unchanged?defaultLampPositions[i]:p;
+    return {x:source.x,y:source.y,scale:Number.isFinite(p.scale)?Math.max(.4,Math.min(2.5,p.scale)):1};
+   });
+  }}catch(_){}return defaultLampPositions.map(p=>({...p,scale:1}));}
 const fixedLampPositions=storedLampPositions();
 let placingLamps=false,draggingLamp=null,lampPositionBackup=null,placementPinchDistance=0;
 function renderPlacementMarkers(){
@@ -463,8 +481,8 @@ setupSignatureControls();
 // V39: regular five-column matrix. Each cell is taller than its width.
 const labelData=[
  ['JOHN TREE','Hay Apex'],
- ['MULLER VAN SEVEREN','Hay Arcs'],
  ['GIANCARLO MATTIOLI','Artemide Nesso'],
+ ['MULLER VAN SEVEREN','Hay Arcs'],
  ['H&M',''],
  ['TORD BJÖRKLUND','Ikea Prologue'],
  ['LAMPADAIRE MÉTAL','']
@@ -594,9 +612,13 @@ function makeGeometricLampSprite(i){
   const glow=outer*shape,core=hot*shape*outer;
   const alpha=Math.min(1,glow*.49+core*.76);
   const ratio=Math.min(1,core*1.2),n=(py*size+px)*4;
-  a[n]=Math.round(246*(1-ratio)+174*ratio);
-  a[n+1]=Math.round(180*(1-ratio)+10*ratio);
-  a[n+2]=Math.round(65*(1-ratio)+40*ratio);
+  // Monochrome red: pale rose at the diffusion edge, vivid red in the body,
+  // deep carmine in the energetic core (the diagram's yellow is not a color).
+  const saturated=Math.max(0,Math.min(1,glow*.76+core*.22));
+  const deep=Math.max(0,Math.min(1,core*1.48));
+  a[n]=Math.round(251-38*saturated-83*deep);
+  a[n+1]=Math.round(174-120*saturated-53*deep);
+  a[n+2]=Math.round(185-119*saturated-39*deep);
   a[n+3]=Math.round(alpha*255);
  }
  g.putImageData(img,0,0);
