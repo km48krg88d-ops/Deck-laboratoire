@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V38 · Signatures lumineuses</title>
+<title>DECK — V39 · Trame et halos rouges</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -56,9 +56,9 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 38</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 39</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 38 · Signatures lumineuses</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 39 · Trame et halos rouges</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -86,7 +86,7 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
       <button type="button" class="mode" id="togglePointsGPU" aria-pressed="false">Points GPU · éteints</button>
       <button type="button" class="mode active" id="toggleGaz" aria-pressed="true">Gaz · allumé</button>
     </div>
-    <div class="rowtitle">Lampes · matière</div><div class="presets" style="margin-bottom:14px"><button type="button" class="preset active" id="lampBacklit">Disques · jaune</button><button type="button" class="preset" id="lampColors">Mélange de couleurs</button><button type="button" class="preset" id="lampSignatures">Signatures lumineuses</button></div>
+    <div class="rowtitle">Lampes · matière</div><div class="presets" style="margin-bottom:14px"><button type="button" class="preset active" id="lampBacklit">Disques · jaune</button><button type="button" class="preset" id="lampColors">Mélange de couleurs</button><button type="button" class="preset" id="lampSignatures">Signatures lumineuses</button><button type="button" class="preset active" id="lampRedGrid">Ronds rouges · trame</button></div>
     <div id="pointPanel">
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
       <div class="controls" id="sphereControls"></div>
@@ -178,7 +178,7 @@ const ambiences={
   dawn:{base:'#DFE7F4',centre:'rgba(236,216,242,.27)',light:true},
   sand:{base:'#F5E9DD',centre:'rgba(230,185,148,.24)',light:true}
 };
-let currentAmbience='ivory';
+let currentAmbience='dawn';
 document.body.style.background=ambiences[currentAmbience].base;document.body.classList.add('opal-mode');
 document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
 document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEventListener('click',()=>{
@@ -303,7 +303,7 @@ document.getElementById('resetLampPositions').addEventListener('click',()=>{fixe
 const spatialHalos=[];
 let haloGesture=null,haloPinchStart=0,haloSelected=null,lastHaloTap=0,lastTappedHalo=null;
 const lampManualLevels=lights.map(l=>l.level);
-let lampStyle='backlit';
+let lampStyle='redgrid';
 function lampDiscRadius(index){return Math.max(22,Math.min(w*.080,h*.048))*(index===undefined?1:(fixedLampPositions[index].scale||1));}
 function haloLampInfluence(halo,p,r){
  const distance=haloDistance(halo,p.x,p.y);
@@ -454,13 +454,69 @@ function setupSignatureControls(){
 }
 function setLampStyle(style){
  lampStyle=style;
- for(const [id,key] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature']]){
+ for(const [id,key] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature'],['lampRedGrid','redgrid']]){
   const b=document.getElementById(id);b.classList.toggle('active',style===key);b.setAttribute('aria-pressed',String(style===key));
  }
  recomputeSpatialLamps();
 }
 setupSignatureControls();
-
+// V39: regular five-column matrix. Each cell is taller than its width.
+const labelData=[
+ ['JOHN TREE','Hay Apex'],
+ ['MULLER VAN SEVEREN','Hay Arcs'],
+ ['GIANCARLO MATTIOLI','Artemide Nesso'],
+ ['H&M',''],
+ ['TORD BJÖRKLUND','Ikea Prologue'],
+ ['LAM PADAIRE MÉTAL','']
+];
+labelData[5][0]='LAMPADAIRE MÉTAL';
+function drawLampGrid(){
+ if(lampStyle!=='redgrid')return;
+ const cellW=w/5,cellH=cellW*1.55,rows=Math.ceil(h/cellH);
+ ctx.save();
+ ctx.strokeStyle='rgba(47,57,84,.32)';
+ ctx.lineWidth=.65;
+ ctx.beginPath();
+ for(let j=1;j<5;j++){const x=Math.round(j*cellW)+.5;ctx.moveTo(x,0);ctx.lineTo(x,h);}
+ for(let j=1;j<rows;j++){const y=Math.round(j*cellH)+.5;ctx.moveTo(0,y);ctx.lineTo(w,y);}
+ ctx.stroke();ctx.restore();
+}
+function drawLampLabels(){
+ if(lampStyle!=='redgrid'||placingLamps)return;
+ const cellW=w/5,cellH=cellW*1.55;
+ ctx.save();ctx.textBaseline='alphabetic';
+ fixedLampPositions.forEach((pos,i)=>{
+  // Place each label at the lower left corner of its lamp's grid cell.
+  const col=Math.min(4,Math.floor(pos.x*5)),row=Math.max(0,Math.floor(pos.y*h/cellH));
+  const x=col*cellW+4,y=Math.min(h-6,(row+1)*cellH-19);
+  ctx.fillStyle='rgba(34,39,57,.83)';
+  ctx.font='600 8px Georgia,serif';ctx.fillText(labelData[i][0],x,y,cellW-8);
+  ctx.font='italic 8px Georgia,serif';ctx.fillText(labelData[i][1],x,y+11,cellW-8);
+ });
+ ctx.restore();
+}
+// One shared texture for all red circular sources: no per-lamp shader.
+const redGridSprite=(()=>{
+ const c=document.createElement('canvas');c.width=c.height=256;
+ const g=c.getContext('2d'),grad=g.createRadialGradient(128,128,0,128,128,126);
+ grad.addColorStop(0,'rgba(155,3,31,.98)');
+ grad.addColorStop(.17,'rgba(221,10,42,.95)');
+ grad.addColorStop(.39,'rgba(247,61,83,.76)');
+ grad.addColorStop(.63,'rgba(249,101,119,.43)');
+ grad.addColorStop(.84,'rgba(251,146,160,.12)');
+ grad.addColorStop(1,'rgba(255,171,183,0)');
+ g.fillStyle=grad;g.fillRect(0,0,256,256);return c;
+})();
+function drawRedGridLamps(){
+ for(let i=0;i<lights.length;i++){
+  const p=fixedLampPoint(i),radius=lampDiscRadius(i)*2.15;
+  // Still visible as a quiet fingerprint when off; strong when illuminated.
+  const alpha=.18+.82*lights[i].level;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.drawImage(redGridSprite,p.x-radius,p.y-radius,radius*2,radius*2);
+  ctx.restore();
+ }
+}
 const lampColors=[[247,48,65],[244,91,139],[240,151,44],[149,88,219],[74,139,228],[215,46,107]];
 const lampColorLayer=document.createElement('canvas');
 let lampColorKey='';
@@ -530,6 +586,7 @@ function drawSpatialLights(back=true){
  ctx.save();
  if(back&&lampStyle==='backlit')drawBacklitLamps();
  else if(back&&lampStyle==='signature')drawSignatureLamps();
+ else if(back&&lampStyle==='redgrid')drawRedGridLamps();
  else if(back){
   const tick=Math.floor(performance.now()/66);
   const key=[w,h,tick,...lights.map(l=>l.level)].join('|');
@@ -622,7 +679,7 @@ document.getElementById('clearHalos').addEventListener('click',()=>{spatialHalos
 const lampGrid=document.getElementById('livingLampControls');for(let i=0;i<lights.length;i++){const wrap=document.createElement('div');wrap.className='control';const lab=document.createElement('label');lab.htmlFor='livingLamp'+i;lab.innerHTML='<span>Lampe '+(i+1)+'</span><output id="livingLampValue'+i+'">0 %</output>';const input=document.createElement('input');input.type='range';input.min=0;input.max=1;input.step=.01;input.id='livingLamp'+i;input.value=lights[i].level;input.addEventListener('input',()=>{lampManualLevels[i]=Number(input.value);recomputeSpatialLamps();});wrap.append(lab,input);lampGrid.append(wrap);}createControlGrid('cloudControls',cloudCfg,cloudParams,()=>{});createControlGrid('fanControls',programCfg,fanParams,()=>{});
 createControlGrid('lightControls',programCfg,lightParams,()=>{});
 document.querySelectorAll('#spherePresets .preset').forEach(btn=>btn.addEventListener('click',()=>setPreset(btn.dataset.preset)));
-for(const [id,style] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature']])document.getElementById(id).addEventListener('click',()=>setLampStyle(style));
+for(const [id,style] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature'],['lampRedGrid','redgrid']])document.getElementById(id).addEventListener('click',()=>setLampStyle(style));
 document.getElementById('togglePoints').addEventListener('click',()=>{showPoints=usePointsGPU||!showPoints;usePointsGPU=false;refreshMatterUI();});
 document.getElementById('togglePointsGPU').addEventListener('click',()=>{showPoints=!usePointsGPU||!showPoints;usePointsGPU=true;refreshMatterUI();});
 document.getElementById('toggleGaz').addEventListener('click',()=>{showGasLayer=!showGasLayer;refreshMatterUI();});
@@ -1001,7 +1058,8 @@ function render(now){
   fanReveal+=((fanSelected&&fanOpen?1:0)-fanReveal)*Math.min(1,dt*3.3);
   const gasEnergy=lights.reduce((a,l)=>a+l.level,0)/lights.length;
   const ambience=ambiences[currentAmbience];
-  ctx.fillStyle=lampStyle==='backlit'?'#d4d3d0':showGasLayer?'#ede8e5':ambience.base;ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=lampStyle==='redgrid'?'#DCE5F4':lampStyle==='backlit'?'#d4d3d0':showGasLayer?'#ede8e5':ambience.base;ctx.fillRect(0,0,w,h);
+  drawLampGrid();
   if(lampStyle!=='backlit' && showPoints && !showGasLayer && ambience.light)drawPearlBackground();
   if(lampStyle!=='backlit' && showPoints && !showGasLayer && currentAmbience!=='original'){
     // Brume très discrète, indépendante de la sphère : aucun point supplémentaire.
@@ -1011,6 +1069,7 @@ function render(now){
     ctx.fillStyle=atmosphere;ctx.fillRect(0,0,w,h);
   }
   drawSpatialLights(true);
+  drawLampLabels();
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
   const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
   // Le zoom agit sur l'ensemble cube/sphère/jauge, donc les coordonnées de toucher restent cohérentes.
