@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V37 · Placement et dimensions des lampes</title>
+<title>DECK — V38 · Signatures lumineuses</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -56,9 +56,9 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 37</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 38</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 37 · Placement et dimensions des lampes</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 38 · Signatures lumineuses</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -86,7 +86,7 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
       <button type="button" class="mode" id="togglePointsGPU" aria-pressed="false">Points GPU · éteints</button>
       <button type="button" class="mode active" id="toggleGaz" aria-pressed="true">Gaz · allumé</button>
     </div>
-    <div class="rowtitle">Lampes · matière</div><div class="presets" style="margin-bottom:14px"><button type="button" class="preset active" id="lampBacklit">Disques · jaune</button><button type="button" class="preset" id="lampColors">Mélange de couleurs</button></div>
+    <div class="rowtitle">Lampes · matière</div><div class="presets" style="margin-bottom:14px"><button type="button" class="preset active" id="lampBacklit">Disques · jaune</button><button type="button" class="preset" id="lampColors">Mélange de couleurs</button><button type="button" class="preset" id="lampSignatures">Signatures lumineuses</button></div>
     <div id="pointPanel">
       <div class="rowtitle">Sphère de points · Grain calculé par les lampes</div>
       <div class="controls" id="sphereControls"></div>
@@ -119,6 +119,19 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
       <div class="presets" style="margin-bottom:12px"><button class="preset" id="editLampPositions" type="button">Placer les lampes</button><button class="preset" id="resetLampPositions" type="button">Positions d’origine</button></div>
       <div class="hint" style="margin-bottom:10px">Touchez un point pour sélectionner une lampe, puis pincez pour régler son intensité. Touchez le fond pour poser un halo ; déplacez-le ou pincez pour changer sa taille. Maximum trois halos. Double-touchez un halo pour le supprimer.</div>
       <div class="controls" id="gazLampControls"></div>
+      <details id="signaturePanel" style="margin:16px 0 12px" open>
+        <summary class="rowtitle" style="cursor:pointer;padding:8px 0">Identité lumineuse · six lampes</summary>
+        <div class="hint" style="margin:6px 0 12px">Six interprétations graphiques inspirées de tes luminaires, modifiables indépendamment. Activer « Signatures lumineuses » pour les afficher. Les valeurs sont des propositions, pas des mesures photométriques.</div>
+        <label class="rowtitle" for="signatureSelect">Lampe à modifier</label>
+        <select id="signatureSelect" style="width:100%;margin:8px 0 14px;background:#242426;color:#eee;border:1px solid #555;border-radius:9px;padding:11px;font-size:13px"></select>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+          <label for="signatureColor" style="font-size:12px">Couleur graphique</label>
+          <input type="color" id="signatureColor" style="width:54px;height:38px;border:0;background:transparent">
+          <span class="hint" id="signatureColorCode"></span>
+        </div>
+        <div class="controls" id="signatureControls"></div>
+        <div class="presets" style="margin-top:12px"><button type="button" class="preset" id="resetSignature">Réinitialiser cette lampe</button><button type="button" class="preset" id="previewSignatures">Afficher les signatures</button></div>
+      </details>
       <div class="rowtitle" style="margin-top:14px">Halos persistants <span id="haloCount">0 / 3</span></div>
       <div class="presets" style="margin-bottom:10px"><button class="preset" id="clearHalos" type="button">Supprimer tous les halos</button></div>
       <div class="hint" style="margin-top:12px">Forme diffuse sans particules visibles. Les commandes restent actives, même quand les arêtes disparaissent.</div>
@@ -343,6 +356,111 @@ function interpolateFlightCfg(energy){
  for(const key of Object.keys(flightOff))profile[key]=flightOff[key]+(membraneCfg[key]-flightOff[key])*ease;
  return profile;
 }
+
+const defaultSignatures=[
+ {name:'01 · HAY Apex · John Tree',color:'#4051d9',brightness:.90,diffusion:.82,core:.72,stretch:1.90,direction:-38},
+ {name:'02 · Artemide Nesso · Mattioli',color:'#d50e36',brightness:.90,diffusion:1.30,core:.74,stretch:1.00,direction:0},
+ {name:'03 · HAY Arcs · Muller Van Severen',color:'#f35f6c',brightness:.77,diffusion:1.06,core:.45,stretch:1.18,direction:24},
+ {name:'04 · H&M Home',color:'#f16a78',brightness:.68,diffusion:1.52,core:.32,stretch:1.24,direction:-15},
+ {name:'05 · IKEA Prologue · Tord Björklund',color:'#ed405e',brightness:.82,diffusion:.93,core:.63,stretch:.82,direction:12},
+ {name:'06 · Lampadaire métal',color:'#ec7784',brightness:.70,diffusion:1.18,core:.48,stretch:.70,direction:80}
+];
+const signatureStorage='deck-lamp-signatures-v1';
+const signatureKeys=['brightness','diffusion','core','stretch','direction'];
+function loadSignatures(){
+ try{
+  const data=JSON.parse(localStorage.getItem(signatureStorage));
+  if(Array.isArray(data)&&data.length===6)return defaultSignatures.map((base,i)=>{
+   const input=data[i]||{},result={...base};
+   if(/^#[0-9a-f]{6}$/i.test(input.color))result.color=input.color;
+   for(const k of signatureKeys)if(Number.isFinite(input[k]))result[k]=input[k];
+   return result;
+  });
+ }catch(_){}
+ return defaultSignatures.map(p=>({...p}));
+}
+const lampSignatures=loadSignatures();
+let activeSignature=0;
+const signatureSpriteCache=new Array(6);
+function saveSignatures(){try{localStorage.setItem(signatureStorage,JSON.stringify(lampSignatures));}catch(_){}}
+function rgbHex(hex){return [1,3,5].map(n=>parseInt(hex.slice(n,n+2),16));}
+function makeSignatureSprite(index){
+ const sig=lampSignatures[index],c=document.createElement('canvas');
+ c.width=c.height=256;
+ const g=c.getContext('2d'),rgb=rgbHex(sig.color);
+ const a=(n)=>'rgba('+rgb.join(',')+','+n+')';
+ const core=clamp(sig.core,0,1),grad=g.createRadialGradient(128,128,0,128,128,127);
+ grad.addColorStop(0,a(.36+core*.59));
+ grad.addColorStop(.10,a(.32+core*.45));
+ grad.addColorStop(clamp(.22+(.55-core)*.25,.15,.40),a(.19+core*.23));
+ grad.addColorStop(.56,a(.07+core*.07));
+ grad.addColorStop(.83,a(.018));
+ grad.addColorStop(1,a(0));
+ g.fillStyle=grad;g.fillRect(0,0,256,256);
+ return c;
+}
+function drawSignatureLamps(){
+ for(let i=0;i<6;i++){
+  const sig=lampSignatures[i],p=fixedLampPoint(i),level=lights[i].level;
+  const signatureKey=[sig.color,sig.core].join('|');
+  if(!signatureSpriteCache[i]||signatureSpriteCache[i].key!==signatureKey)
+   signatureSpriteCache[i]={key:signatureKey,canvas:makeSignatureSprite(i)};
+  // Optical footprint: wide, pastel, with only a faint trace when unlit.
+  const radius=lampDiscRadius(i)*(1.55+sig.diffusion*2.3);
+  const elongation=Math.max(.5,Math.min(2.5,sig.stretch));
+  const alpha=clamp((.025+level*.84)*sig.brightness,0,1);
+  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(sig.direction*Math.PI/180);
+  ctx.globalAlpha=alpha;
+  ctx.drawImage(signatureSpriteCache[i].canvas,-radius*elongation,-radius/elongation,2*radius*elongation,2*radius/elongation);
+  ctx.restore();
+ }
+}
+function updateSignatureControls(){
+ const p=lampSignatures[activeSignature];
+ document.getElementById('signatureSelect').value=String(activeSignature);
+ document.getElementById('signatureColor').value=p.color;
+ document.getElementById('signatureColorCode').textContent=p.color.toUpperCase();
+ for(const k of signatureKeys){
+  const input=document.getElementById('signature-'+k);
+  input.value=p[k];
+  document.getElementById('signature-value-'+k).textContent=k==='direction'?Math.round(p[k])+'°':p[k].toFixed(2);
+ }
+}
+function setupSignatureControls(){
+ const select=document.getElementById('signatureSelect'),root=document.getElementById('signatureControls');
+ defaultSignatures.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;select.appendChild(o);});
+ select.addEventListener('change',()=>{activeSignature=Number(select.value);updateSignatureControls();});
+ const defs=[
+  ['brightness','Puissance visuelle',0,1.5,.01],
+  ['diffusion','Diffusion',.3,2,.01],
+  ['core','Concentration du noyau',0,1,.01],
+  ['stretch','Élongation / forme',.5,2.5,.01],
+  ['direction','Direction (degrés)',-180,180,1]
+ ];
+ for(const [key,label,min,max,step] of defs){
+  const wrap=document.createElement('div');wrap.className='control';
+  const lab=document.createElement('label');lab.htmlFor='signature-'+key;
+  const caption=document.createElement('span');caption.textContent=label;
+  const out=document.createElement('output');out.id='signature-value-'+key;
+  lab.append(caption,out);
+  const input=document.createElement('input');input.type='range';input.min=min;input.max=max;input.step=step;input.id='signature-'+key;
+  input.addEventListener('input',()=>{lampSignatures[activeSignature][key]=Number(input.value);out.textContent=key==='direction'?Math.round(Number(input.value))+'°':Number(input.value).toFixed(2);saveSignatures();});
+  wrap.append(lab,input);root.append(wrap);
+ }
+ document.getElementById('signatureColor').addEventListener('input',e=>{lampSignatures[activeSignature].color=e.target.value;document.getElementById('signatureColorCode').textContent=e.target.value.toUpperCase();saveSignatures();});
+ document.getElementById('resetSignature').addEventListener('click',()=>{lampSignatures[activeSignature]={...defaultSignatures[activeSignature]};signatureSpriteCache[activeSignature]=null;saveSignatures();updateSignatureControls();});
+ document.getElementById('previewSignatures').addEventListener('click',()=>setLampStyle('signature'));
+ updateSignatureControls();
+}
+function setLampStyle(style){
+ lampStyle=style;
+ for(const [id,key] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature']]){
+  const b=document.getElementById(id);b.classList.toggle('active',style===key);b.setAttribute('aria-pressed',String(style===key));
+ }
+ recomputeSpatialLamps();
+}
+setupSignatureControls();
+
 const lampColors=[[247,48,65],[244,91,139],[240,151,44],[149,88,219],[74,139,228],[215,46,107]];
 const lampColorLayer=document.createElement('canvas');
 let lampColorKey='';
@@ -411,6 +529,7 @@ function drawBacklitLamps(){
 function drawSpatialLights(back=true){
  ctx.save();
  if(back&&lampStyle==='backlit')drawBacklitLamps();
+ else if(back&&lampStyle==='signature')drawSignatureLamps();
  else if(back){
   const tick=Math.floor(performance.now()/66);
   const key=[w,h,tick,...lights.map(l=>l.level)].join('|');
@@ -503,7 +622,7 @@ document.getElementById('clearHalos').addEventListener('click',()=>{spatialHalos
 const lampGrid=document.getElementById('livingLampControls');for(let i=0;i<lights.length;i++){const wrap=document.createElement('div');wrap.className='control';const lab=document.createElement('label');lab.htmlFor='livingLamp'+i;lab.innerHTML='<span>Lampe '+(i+1)+'</span><output id="livingLampValue'+i+'">0 %</output>';const input=document.createElement('input');input.type='range';input.min=0;input.max=1;input.step=.01;input.id='livingLamp'+i;input.value=lights[i].level;input.addEventListener('input',()=>{lampManualLevels[i]=Number(input.value);recomputeSpatialLamps();});wrap.append(lab,input);lampGrid.append(wrap);}createControlGrid('cloudControls',cloudCfg,cloudParams,()=>{});createControlGrid('fanControls',programCfg,fanParams,()=>{});
 createControlGrid('lightControls',programCfg,lightParams,()=>{});
 document.querySelectorAll('#spherePresets .preset').forEach(btn=>btn.addEventListener('click',()=>setPreset(btn.dataset.preset)));
-for(const [id,style] of [['lampBacklit','backlit'],['lampColors','colors']])document.getElementById(id).addEventListener('click',()=>{lampStyle=style;document.getElementById('lampBacklit').classList.toggle('active',style==='backlit');document.getElementById('lampColors').classList.toggle('active',style==='colors');recomputeSpatialLamps();});
+for(const [id,style] of [['lampBacklit','backlit'],['lampColors','colors'],['lampSignatures','signature']])document.getElementById(id).addEventListener('click',()=>setLampStyle(style));
 document.getElementById('togglePoints').addEventListener('click',()=>{showPoints=usePointsGPU||!showPoints;usePointsGPU=false;refreshMatterUI();});
 document.getElementById('togglePointsGPU').addEventListener('click',()=>{showPoints=!usePointsGPU||!showPoints;usePointsGPU=true;refreshMatterUI();});
 document.getElementById('toggleGaz').addEventListener('click',()=>{showGasLayer=!showGasLayer;refreshMatterUI();});
