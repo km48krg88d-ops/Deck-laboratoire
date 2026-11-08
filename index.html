@@ -119,7 +119,7 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
       <div class="presets" style="margin-bottom:12px"><button class="preset" id="editLampPositions" type="button">Placer les lampes</button><button class="preset" id="resetLampPositions" type="button">Positions d’origine</button></div>
       <div class="hint" style="margin-bottom:10px">Touchez un point pour sélectionner une lampe, puis pincez pour régler son intensité. Touchez le fond pour poser un halo ; déplacez-le ou pincez pour changer sa taille. Maximum trois halos. Double-touchez un halo pour le supprimer.</div>
       <div class="controls" id="gazLampControls"></div>
-      <details id="signaturePanel" style="margin:16px 0 12px" open>
+      <details id="signaturePanel" style="margin:16px 0 12px">
         <summary class="rowtitle" style="cursor:pointer;padding:8px 0">Identité lumineuse · six lampes</summary>
         <div class="hint" style="margin:6px 0 12px">Six interprétations graphiques inspirées de tes luminaires, modifiables indépendamment. Activer « Signatures lumineuses » pour les afficher. Les valeurs sont des propositions, pas des mesures photométriques.</div>
         <label class="rowtitle" for="signatureSelect">Lampe à modifier</label>
@@ -467,9 +467,8 @@ const labelData=[
  ['GIANCARLO MATTIOLI','Artemide Nesso'],
  ['H&M',''],
  ['TORD BJÖRKLUND','Ikea Prologue'],
- ['LAM PADAIRE MÉTAL','']
+ ['LAMPADAIRE MÉTAL','']
 ];
-labelData[5][0]='LAMPADAIRE MÉTAL';
 function drawLampGrid(){
  if(lampStyle!=='redgrid')return;
  const cellW=w/5,cellH=cellW*1.55,rows=Math.ceil(h/cellH);
@@ -509,7 +508,7 @@ const redGridSprite=(()=>{
 })();
 function drawRedGridLamps(){
  for(let i=0;i<lights.length;i++){
-  const p=fixedLampPoint(i),radius=lampDiscRadius(i)*2.15;
+  const p=fixedLampPoint(i),radius=lampDiscRadius(i)*1.22;
   // Still visible as a quiet fingerprint when off; strong when illuminated.
   const alpha=.18+.82*lights[i].level;
   ctx.save();ctx.globalAlpha=alpha;
