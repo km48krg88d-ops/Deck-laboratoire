@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V39 · Trame et halos rouges</title>
+<title>DECK — V40 · Bleu pastel et grain</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -56,9 +56,9 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 39</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 40</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 39 · Trame et halos rouges</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 40 · Bleu pastel et grain</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -469,6 +469,53 @@ const labelData=[
  ['TORD BJÖRKLUND','Ikea Prologue'],
  ['LAMPADAIRE MÉTAL','']
 ];
+
+/* Précomputed material: misty blue with very fine print grain.
+   Drawn once per resize, then composited as a single canvas per frame. */
+let softBackdrop=null,softBackdropW=0,softBackdropH=0;
+function makeSoftBackdrop(){
+ const bw=Math.max(2,Math.round(w*.80)),bh=Math.max(2,Math.round(h*.80));
+ const c=document.createElement('canvas');c.width=bw;c.height=bh;
+ const g=c.getContext('2d');
+ g.fillStyle='#DCE5F4';g.fillRect(0,0,bw,bh);
+ function mist(x,y,r,color,opacity){
+  g.save();g.globalAlpha=opacity;
+  const gradient=g.createRadialGradient(x*bw,y*bh,0,x*bw,y*bh,r*Math.max(bw,bh));
+  gradient.addColorStop(0,color);
+  gradient.addColorStop(.48,color.replace(/, 1\)/,', .62)'));
+  gradient.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gradient;g.fillRect(0,0,bw,bh);g.restore();
+ }
+ // Difference is deliberately subtle, a printed/frosted surface rather than a landscape.
+ mist(.10,.14,.55,'rgba(229,218,237,1)',.62);
+ mist(.83,.26,.48,'rgba(170,207,231,1)',.46);
+ mist(.32,.56,.54,'rgba(242,230,229,1)',.50);
+ mist(.88,.80,.54,'rgba(187,191,225,1)',.49);
+ mist(.19,.93,.46,'rgba(235,230,210,1)',.42);
+ mist(.64,.45,.42,'rgba(203,220,241,1)',.34);
+ // Create one tiny grain tile; tiling has effectively zero per-frame allocation.
+ const tile=document.createElement('canvas');tile.width=tile.height=192;
+ const tg=tile.getContext('2d'),pixels=tg.createImageData(192,192);
+ let seed=143771;
+ for(let k=0;k<pixels.data.length;k+=4){
+  seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+  const n=(seed>>>24);
+  pixels.data[k]=n<128?25:255;
+  pixels.data[k+1]=n<128?32:255;
+  pixels.data[k+2]=n<128?48:255;
+  pixels.data[k+3]=n<128?26:19;
+ }
+ tg.putImageData(pixels,0,0);
+ g.save();g.globalAlpha=.45;g.fillStyle=g.createPattern(tile,'repeat');g.fillRect(0,0,bw,bh);g.restore();
+ softBackdrop=c;softBackdropW=bw;softBackdropH=bh;
+}
+function drawSoftBackdrop(){
+ if(lampStyle!=='redgrid')return;
+ const bw=Math.max(2,Math.round(w*.80)),bh=Math.max(2,Math.round(h*.80));
+ if(!softBackdrop||bw!==softBackdropW||bh!==softBackdropH)makeSoftBackdrop();
+ ctx.drawImage(softBackdrop,0,0,w,h);
+}
+
 function drawLampGrid(){
  if(lampStyle!=='redgrid')return;
  const cellW=w/5,cellH=cellW*1.55,rows=Math.ceil(h/cellH);
@@ -487,10 +534,12 @@ function drawLampLabels(){
  fixedLampPositions.forEach((pos,i)=>{
   // Place each label at the lower left corner of its lamp's grid cell.
   const col=Math.min(4,Math.floor(pos.x*5)),row=Math.max(0,Math.floor(pos.y*h/cellH));
-  const x=col*cellW+4,y=Math.min(h-6,(row+1)*cellH-19);
-  ctx.fillStyle='rgba(34,39,57,.83)';
-  ctx.font='600 8px Georgia,serif';ctx.fillText(labelData[i][0],x,y,cellW-8);
-  ctx.font='italic 8px Georgia,serif';ctx.fillText(labelData[i][1],x,y+11,cellW-8);
+  const margin=Math.max(8,cellW*.115);
+  const x=col*cellW+margin,y=Math.min(h-margin,(row+1)*cellH-margin-10);
+  const availableWidth=cellW-margin*2;
+  ctx.fillStyle='rgba(39,49,67,.72)';
+  ctx.font='600 6.2px Georgia,serif';ctx.fillText(labelData[i][0],x,y,availableWidth);
+  ctx.font='italic 6.2px Georgia,serif';ctx.fillText(labelData[i][1],x,y+9,availableWidth);
  });
  ctx.restore();
 }
@@ -1058,6 +1107,7 @@ function render(now){
   const gasEnergy=lights.reduce((a,l)=>a+l.level,0)/lights.length;
   const ambience=ambiences[currentAmbience];
   ctx.fillStyle=lampStyle==='redgrid'?'#DCE5F4':lampStyle==='backlit'?'#d4d3d0':showGasLayer?'#ede8e5':ambience.base;ctx.fillRect(0,0,w,h);
+  drawSoftBackdrop();
   drawLampGrid();
   if(lampStyle!=='backlit' && showPoints && !showGasLayer && ambience.light)drawPearlBackground();
   if(lampStyle!=='backlit' && showPoints && !showGasLayer && currentAmbience!=='original'){
