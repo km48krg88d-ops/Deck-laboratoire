@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V47 · Feuillets et gestes</title>
+<title>DECK — V48 · Gestes et trame persistante</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -52,7 +52,11 @@ input[type=range]{width:100%;height:18px;margin:0;accent-color:#e3e3e6;cursor:po
 body.placing-lamps #stage{cursor:move}
 body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 /* V47: the resting scene contains no permanently displayed controls. */
-body:not(.atelier) .top, .immersive-hint{display:none!important}
+.immersive-hint{display:none!important}
+body:not(.atelier) .top .mark,body:not(.atelier) #placeLamps,body:not(.atelier) #reset{display:none}
+body:not(.atelier) .topright{margin-left:auto}
+body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;padding:8px 12px}
+.panel{z-index:30}.top{z-index:31}
 #deckNotice{position:fixed;z-index:25;top:calc(env(safe-area-inset-top) + 20px);left:50%;transform:translateX(-50%);max-width:86vw;text-align:center;color:#5c3651;background:#fff8;padding:9px 16px;border-radius:24px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(12px)}
 #deckNotice.visible{opacity:1}
 .deck-sheet{position:fixed;z-index:20;top:0;bottom:0;width:min(82vw,380px);padding:calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 28px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:linear-gradient(130deg,#f9eef0e8,#e2e8f3ed);color:#573a4c;backdrop-filter:blur(24px);box-shadow:0 0 40px #5b35451a;transition:transform .36s cubic-bezier(.2,.7,.2,1),visibility .36s;visibility:hidden}
@@ -81,9 +85,9 @@ body:not(.atelier) .top, .immersive-hint{display:none!important}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 47</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 48</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 47 · Feuillets et gestes</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 48 · Gestes et trame persistante</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -91,7 +95,7 @@ body:not(.atelier) .top, .immersive-hint{display:none!important}
 
   <div class="view active" id="sphereView">
     <details id="backgroundFold" style="margin-bottom:14px"><summary class="rowtitle" style="cursor:pointer;padding:10px 0">Fonds · afficher / masquer</summary>
-    <div class="ambience-options" id="ambienceOptions" role="group" aria-label="Choisir l'atmosphère du fond">
+    <label class="hint" style="display:block;margin:10px 0"><input type="checkbox" id="deckAutoBackground" checked> Fond selon l’heure de la journée</label><div class="ambience-options" id="ambienceOptions" role="group" aria-label="Choisir l'atmosphère du fond">
       <button type="button" class="ambience" data-ambience="original" aria-pressed="false"><span class="ambience-dot" style="background:#050505"></span>Original</button>
       <button type="button" class="ambience" data-ambience="charcoal" aria-pressed="false"><span class="ambience-dot" style="background:#171513"></span>Charbon chaud</button>
       <button type="button" class="ambience" data-ambience="blue" aria-pressed="false"><span class="ambience-dot" style="background:#101722"></span>Bleu fumé</button>
@@ -204,11 +208,11 @@ const ambiences={
   dawn:{base:'#DFE7F4',centre:'rgba(236,216,242,.27)',light:true},
   sand:{base:'#F5E9DD',centre:'rgba(230,185,148,.24)',light:true}
 };
-let currentAmbience='dawn';
+let currentAmbience='dawn',deckAutoBackground=true;
 document.body.style.background=ambiences[currentAmbience].base;document.body.classList.add('opal-mode');
 document.querySelector('meta[name="theme-color"]').content=ambiences[currentAmbience].base;
 document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEventListener('click',()=>{
-  currentAmbience=btn.dataset.ambience;
+  currentAmbience=btn.dataset.ambience;deckAutoBackground=false;const auto=document.getElementById('deckAutoBackground');if(auto)auto.checked=false;
   document.body.classList.toggle('opal-mode',showGasLayer||!!ambiences[currentAmbience].light);
   document.querySelectorAll('#ambienceOptions .ambience').forEach(item=>{
     const active=item===btn;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));
@@ -1491,7 +1495,7 @@ function selectFaceAt(x,y){
   activeFace=chosen?(activeFace===chosen.name?null:chosen.name):null;
 }
 // V47 — interaction layer. Commands are simulated until a hardware adapter is attached.
-const deck={sheet:null,target:'all',grid:0,revealUntil:0,gesture:null,points:new Map(),multi:false,pinch:0,pinchStart:0,baseLevels:[],preview:null,fanTimer:0,music:{playing:false,volume:.45,track:0},lastDim:1};
+const deck={sheet:null,target:'all',grid:0,gridTarget:null,lastTap:null,revealUntil:0,gesture:null,points:new Map(),multi:false,pinch:0,pinchStart:0,baseLevels:[],preview:null,fanTimer:0,music:{playing:false,volume:.45,track:0},lastDim:1};
 let deckPointScale=1,deckPointAlpha=1;
 const deckNames=['Arc · haut','Disque · haut','Anneau · haut','Rosace · haut','Disque · bas','Demi-disque · bas','Bandeau · haut','Bandeau · bas','Lampadaire · bas'];
 const deckDimmable=[true,true,true,true,true,true,false,false,true];
@@ -1499,11 +1503,16 @@ let deckSafeTop=0,deckSafeBottom=0;
 function measureDeckSafe(){const p=document.createElement('div');p.style.cssText='position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';document.body.append(p);const c=getComputedStyle(p);deckSafeTop=parseFloat(c.paddingTop)||0;deckSafeBottom=parseFloat(c.paddingBottom)||0;p.remove();}
 measureDeckSafe();window.addEventListener('resize',measureDeckSafe);
 function deckBounds(){const x=Math.max(24,Math.min(w*.06,48)),y=Math.max(60,deckSafeTop+18),bottom=Math.max(54,deckSafeBottom+22);return {x,y,w:w-2*x,h:Math.max(100,h-y-bottom)};}
-function deckSphere(){const b=deckBounds();return {x:w/2,y:b.y+b.h*.5,r:Math.min(b.w*.205,b.h*.14,130)*sceneZoom/.82};}
-function deckDayColor(){const hour=new Date().getHours()+new Date().getMinutes()/60;const stops=[[0,[38,42,65]],[6,[178,187,214]],[10,[220,229,244]],[16,[229,224,234]],[20,[151,136,165]],[24,[38,42,65]]];let i=0;while(i<stops.length-2&&hour>stops[i+1][0])i++;const a=stops[i],b=stops[i+1],t=(hour-a[0])/(b[0]-a[0]);return `rgb(${a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*t)).join(',')})`;}
+function deckSphereRect(){const b=deckBounds();return {x:b.x+b.w/6,y:b.y+3*b.h/8,w:b.w*4/6,h:b.h/4};}
+function deckSphere(){const b=deckSphereRect();const pointsEnvelope=(1+sphereCfg.deform*1.55)*(1+sphereCfg.breath)*1.34;const gasEnvelope=showGasLayer?(opalPreset==='gaz'?1.83:opalPreset==='brume'?2.06:1.38):0;const envelope=Math.max(pointsEnvelope,gasEnvelope);const fit=Math.min(b.w/2-12,b.h/2-10)/envelope;return {x:b.x+b.w/2,y:b.y+b.h/2,r:Math.min(130,fit)*clamp(sceneZoom/.82,.65,1)};}
+
+function deckDayColor(){if(!deckAutoBackground)return ambiences[currentAmbience].base;const hour=new Date().getHours()+new Date().getMinutes()/60;const stops=[[0,[38,42,65]],[6,[178,187,214]],[10,[220,229,244]],[16,[229,224,234]],[20,[151,136,165]],[24,[38,42,65]]];let i=0;while(i<stops.length-2&&hour>stops[i+1][0])i++;const a=stops[i],b=stops[i+1],t=(hour-a[0])/(b[0]-a[0]);return `rgb(${a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*t)).join(',')})`;}
 function deckIndices(target=deck.target){return lights.map((_,i)=>i).filter(i=>target==='all'||typeof target==='number'&&i===target||target==='upper'&&fixedLampPositions[i].y<.5||target==='lower'&&fixedLampPositions[i].y>=.5);}
 function deckTargetName(t){return t==='upper'?'Cuisine + salle à manger':t==='lower'?'Chambre + séjour':typeof t==='number'?deckNames[t]:'Toutes les lumières';}
-function deckReveal(){deck.revealUntil=performance.now()+4000;}
+function deckGridZone(target=deck.target){return typeof target==='number'?(fixedLampPositions[target].y<.5?'upper':'lower'):target;}
+function deckReveal(target=deck.target){deck.gridTarget=deckGridZone(target);}
+function deckLaboratory(open){document.body.classList.toggle('atelier',open);panel.classList.toggle('hidden',!open);panel.inert=!open;document.getElementById('toggle').textContent=open?'Retour':'Réglages';document.getElementById('toggle').setAttribute('aria-expanded',String(open));}
+
 let deckNoticeTimer;
 function deckNotify(text){const el=document.getElementById('deckNotice');el.textContent=text;el.classList.add('visible');clearTimeout(deckNoticeTimer);deckNoticeTimer=setTimeout(()=>el.classList.remove('visible'),2100);}
 function deckSave(){try{localStorage.setItem('deck-state-v47',JSON.stringify({levels:lampManualLevels,dimmable:deckDimmable}));}catch(_){}}
@@ -1512,8 +1521,9 @@ function deckApply(target,on){deck.target=target;for(const i of deckIndices(targ
 function deckDim(ratio){const ids=deckIndices().filter(i=>deckDimmable[i]);if(!ids.length)return;for(const i of ids)lampManualLevels[i]=clamp(deck.baseLevels[i]+Math.log(Math.max(.1,ratio))*.85,0,1);recomputeSpatialLamps();deckReveal();}
 function drawDeckBand(i){const b=deckBounds(),p=fixedLampPoint(i),v=animatedLampLevels[i],vertical=i===6,len=(vertical?b.h*.22:b.w*.34)*(fixedLampPositions[i].scale||1),thick=Math.max(7,b.w*.022);ctx.save();ctx.translate(p.x,p.y);ctx.filter=`blur(${2+v*2}px)`;ctx.fillStyle=`rgba(214,21,59,${.20+.65*v})`;ctx.shadowColor='#ef3058';ctx.shadowBlur=4+v*15;ctx.beginPath();ctx.roundRect(vertical?-thick/2:-len/2,vertical?-len/2:-thick/2,vertical?thick:len,vertical?len:thick,thick/2);ctx.fill();ctx.restore();}
 function deckGridSegments(){const b=deckBounds(),cw=b.w/6,ch=b.h/8,lines=[];for(let j=0;j<=6;j++){const x=b.x+j*cw;if(j>1&&j<5){lines.push([x,b.y,x,b.y+3*ch],[x,b.y+5*ch,x,b.y+b.h]);}else lines.push([x,b.y,x,b.y+b.h]);}for(let j=0;j<=8;j++){const y=b.y+j*ch;if(j===4){lines.push([b.x,y,b.x+cw,y],[b.x+5*cw,y,b.x+b.w,y]);}else lines.push([b.x,y,b.x+b.w,y]);}return lines;}
-function drawGestureGrid(){if(deck.grid<.005&&!placingLamps)return;ctx.save();ctx.globalAlpha=placingLamps?1:deck.grid;ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();}
-function updateDeck(dt,now){const desired=deck.gesture?.axis==='y'||deck.revealUntil>now||deck.sheet==='lamp'||placingLamps?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
+function deckVisibleGridZone(){if(placingLamps)return 'all';const p=deck.preview;if(p?.kind==='lights')return deckGridZone(p.target);if(deck.gesture?.axis==='y'){const g=deck.gesture;if(Math.abs(g.dy)>=deckBounds().h*2/3)return 'all';return g.y<deckSphere().y?'upper':'lower';}return deck.gridTarget;}
+function drawGestureGrid(){const zone=deckVisibleGridZone();if(!zone||deck.grid<.005)return;const b=deckBounds(),r=deckSphereRect();ctx.save();ctx.globalAlpha=placingLamps?1:deck.grid;ctx.beginPath();if(zone==='upper')ctx.rect(b.x-1,b.y-1,b.w+2,r.y-b.y+2);else if(zone==='lower')ctx.rect(b.x-1,r.y+r.h-1,b.w+2,b.y+b.h-r.y-r.h+2);else ctx.rect(b.x-1,b.y-1,b.w+2,b.h+2);ctx.clip();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();}
+function updateDeck(dt,now){const desired=deckVisibleGridZone()?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
 function drawDeckFeedback(now){const b=deckBounds(),s=deckSphere();ctx.save();
  // Crosses reveal only a local portion of the shared lattice.
  const fanPreview=deck.sheet==='fan'||deck.gesture?.axis==='x'&&deck.gesture.dx>0;
@@ -1523,36 +1533,49 @@ function drawDeckFeedback(now){const b=deckBounds(),s=deckSphere();ctx.save();
  if(deck.music.playing){const t=now/1000;ctx.strokeStyle='rgba(255,255,255,.5)';for(let i=0;i<3;i++){const phase=(t*.35+i/3)%1;ctx.globalAlpha=(1-phase)*.5*deck.music.volume;ctx.lineWidth=.7;ctx.beginPath();ctx.arc(s.x,s.y,s.r*(.65+phase*.65),0,Math.PI*2);ctx.stroke();}}
  ctx.restore();}
 const dc=document.getElementById('deckControls');
-panel.inert=true;
+panel.inert=true;document.getElementById('toggle').textContent='Réglages';document.getElementById('toggle').setAttribute('aria-expanded','false');
+document.getElementById('deckAutoBackground').onchange=e=>deckAutoBackground=e.target.checked;
 dc.innerHTML=`
 <section id="fanSheet" class="deck-sheet left" inert aria-label="Commandes du ventilateur"><button class="close" data-close aria-label="Fermer le ventilateur">×</button><h2>VENTILATEUR</h2><div class="row"><button data-speed="-3" aria-label="Vitesse inverse 3">−3</button><button data-speed="-2" aria-label="Vitesse inverse 2">−2</button><button data-speed="-1" aria-label="Vitesse inverse 1">−1</button></div><div class="row"><button data-speed="0" aria-label="Arrêter le ventilateur">○</button><span class="readout" id="fanReadout">0</span></div><div class="row"><button data-speed="1" aria-label="Vitesse 1">1</button><button data-speed="2" aria-label="Vitesse 2">2</button><button data-speed="3" aria-label="Vitesse 3">3</button></div><div class="row"><button class="word" id="deckSilent" aria-pressed="false">Silencieux</button></div><label>Minuterie</label><div class="row"><button data-timer="1" aria-label="Arrêt dans une heure">●</button><button data-timer="2" aria-label="Arrêt dans deux heures">●●</button><button data-timer="3" aria-label="Arrêt dans trois heures">●●●</button><button data-timer="0" aria-label="Annuler la minuterie">×</button></div><p id="timerReadout" class="subtle"></p><button class="word" data-atelier>Atelier</button><p class="subtle">Prototype · commandes simulées</p></section>
-<section id="musicSheet" class="deck-sheet right" inert aria-label="Commandes de musique"><button class="close" data-close aria-label="Fermer la musique">×</button><h2>MUSIQUE</h2><div class="row"><button id="musicPrev" aria-label="Piste précédente">‹</button><button id="musicPlay" aria-label="Lecture" aria-pressed="false">▷</button><button id="musicNext" aria-label="Piste suivante">›</button></div><label>Volume <output id="musicVolumeValue">45 %</output><input id="musicVolume" type="range" min="0" max="100" value="45" aria-label="Volume de la musique"></label><button class="word" data-atelier>Atelier</button><details class="subtle"><summary>Gestes lumière</summary><p>Vers la sphère : allumer la moitié correspondante. Vers l’extérieur : l’éteindre. Grand geste vers le haut : tout allumer ; vers le bas : tout éteindre. Pincer la sphère : varier le groupe sélectionné. Toucher une lampe : réglages individuels.</p></details><p class="subtle">Prototype · aucun lecteur audio connecté</p></section>
-<section id="lampSheet" class="deck-sheet" inert aria-label="Réglage individuel de lumière"><button class="close" data-close aria-label="Fermer les réglages de la lampe">×</button><h2 id="lampName"></h2><div class="row"><button class="word" id="lampPower" aria-pressed="false">Allumer</button><output id="lampValue"></output></div><label id="lampDimLabel">Intensité<input id="lampDim" type="range" min="0" max="100" value="0" aria-label="Intensité de la lampe"></label><label><input id="lampCanDim" type="checkbox"> Luminaire dimmable</label></section>`;
-function deckSyncSheets(){document.querySelectorAll('[data-speed]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.speed===fanLevel)));document.getElementById('fanReadout').textContent=fanLevel===0?'○':Math.abs(fanLevel)+(fanLevel<0?' ↶':' ↷');document.getElementById('deckSilent').setAttribute('aria-pressed',String(fanSilent));document.querySelectorAll('[data-timer]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.timer>0&&deck.timerHours===+b.dataset.timer&&!!deck.fanTimer)));document.getElementById('timerReadout').textContent=deck.fanTimer?'Arrêt à '+new Date(deck.fanTimer).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';const play=document.getElementById('musicPlay');play.textContent=deck.music.playing?'Ⅱ':'▷';play.setAttribute('aria-pressed',String(deck.music.playing));play.setAttribute('aria-label',deck.music.playing?'Pause':'Lecture');if(typeof deck.target==='number'){const i=deck.target,on=lampManualLevels[i]>0;document.getElementById('lampName').textContent=deckNames[i];document.getElementById('lampPower').textContent=on?'Éteindre':'Allumer';document.getElementById('lampPower').setAttribute('aria-pressed',String(on));document.getElementById('lampDim').value=Math.round(lampManualLevels[i]*100);document.getElementById('lampValue').textContent=deckDimmable[i]?Math.round(lampManualLevels[i]*100)+' %':on?'ON':'OFF';document.getElementById('lampDimLabel').hidden=!deckDimmable[i];document.getElementById('lampCanDim').checked=deckDimmable[i];}}
-function deckSheet(name){deck.sheet=name;for(const key of ['fan','music','lamp']){const el=document.getElementById(key+'Sheet'),on=key===name;el.classList.toggle('open',on);el.inert=!on;}if(name==='lamp')deckReveal();deckSyncSheets();}
+<section id="musicSheet" class="deck-sheet right" inert aria-label="Commandes de musique"><button class="close" data-close aria-label="Fermer la musique">×</button><h2>MUSIQUE</h2><div class="row"><button id="musicPrev" aria-label="Piste précédente">‹</button><button id="musicPlay" aria-label="Lecture" aria-pressed="false">▷</button><button id="musicNext" aria-label="Piste suivante">›</button></div><label>Volume <output id="musicVolumeValue">45 %</output><input id="musicVolume" type="range" min="0" max="100" value="45" aria-label="Volume de la musique"></label><button class="word" data-atelier>Atelier</button><details class="subtle"><summary>Gestes lumière</summary><p>Vers la sphère : allumer la moitié correspondante. Vers l’extérieur : l’éteindre. Grand geste vers le haut : tout allumer ; vers le bas : tout éteindre. Pincer la sphère : varier le groupe sélectionné. Toucher une lampe : la sélectionner ; pincer la sphère : varier son intensité. Double toucher : ON/OFF.</p></details><p class="subtle">Prototype · aucun lecteur audio connecté</p></section>
+`;
+function deckSyncSheets(){document.querySelectorAll('[data-speed]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.speed===fanLevel)));document.getElementById('fanReadout').textContent=fanLevel===0?'○':Math.abs(fanLevel)+(fanLevel<0?' ↶':' ↷');document.getElementById('deckSilent').setAttribute('aria-pressed',String(fanSilent));document.querySelectorAll('[data-timer]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.timer>0&&deck.timerHours===+b.dataset.timer&&!!deck.fanTimer)));document.getElementById('timerReadout').textContent=deck.fanTimer?'Arrêt à '+new Date(deck.fanTimer).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';const play=document.getElementById('musicPlay');play.textContent=deck.music.playing?'Ⅱ':'▷';play.setAttribute('aria-pressed',String(deck.music.playing));play.setAttribute('aria-label',deck.music.playing?'Pause':'Lecture');}
+function deckSheet(name){deck.sheet=name;for(const key of ['fan','music']){const el=document.getElementById(key+'Sheet'),on=key===name;el.classList.toggle('open',on);el.inert=!on;}deckSyncSheets();}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>deckSheet(null));
 // A sheet can be slid back out without touching its controls.
 for(const name of ['fan','music']){const sheet=document.getElementById(name+'Sheet');let origin=null;sheet.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,summary'))return;origin={id:e.pointerId,x:e.clientX,y:e.clientY};});sheet.addEventListener('pointerup',e=>{if(!origin||origin.id!==e.pointerId)return;const dx=e.clientX-origin.x,dy=e.clientY-origin.y;origin=null;if(Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5&&(name==='fan'?dx<0:dx>0))deckSheet(null);});sheet.addEventListener('pointercancel',()=>origin=null);}
 
-document.querySelectorAll('[data-atelier]').forEach(b=>b.onclick=()=>{deckSheet(null);document.body.classList.add('atelier');panel.classList.remove('hidden');panel.inert=false;document.getElementById('toggle').textContent='Retour';document.getElementById('toggle').setAttribute('aria-expanded','true');});
+document.querySelectorAll('[data-atelier]').forEach(b=>b.onclick=()=>{deckSheet(null);deckLaboratory(true);});
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{setFanLevel(+b.dataset.speed);deckSyncSheets();deckCommand('fan',{level:fanLevel,silent:fanSilent});});
 document.getElementById('deckSilent').onclick=()=>{fanSilent=!fanSilent;deckSyncSheets();deckCommand('fan',{level:fanLevel,silent:fanSilent});};
 document.querySelectorAll('[data-timer]').forEach(b=>b.onclick=()=>{deck.timerHours=+b.dataset.timer;deck.fanTimer=deck.timerHours?Date.now()+deck.timerHours*3600000:0;deckSyncSheets();deckCommand('fan-timer',{hours:deck.timerHours});});
 document.getElementById('musicPlay').onclick=()=>{deck.music.playing=!deck.music.playing;deckSyncSheets();deckCommand('music',{...deck.music});};
 for(const [id,step] of [['musicPrev',-1],['musicNext',1]])document.getElementById(id).onclick=()=>{deck.music.track+=step;deckNotify(step<0?'Piste précédente · simulation':'Piste suivante · simulation');deckCommand('music',{...deck.music});};
 document.getElementById('musicVolume').oninput=e=>{deck.music.volume=+e.target.value/100;document.getElementById('musicVolumeValue').textContent=e.target.value+' %';deckCommand('music',{...deck.music});};
-document.getElementById('lampPower').onclick=()=>{deckApply(deck.target,lampManualLevels[deck.target]===0);deckSyncSheets();};
-document.getElementById('lampDim').oninput=e=>{lampManualLevels[deck.target]=+e.target.value/100;recomputeSpatialLamps();deckReveal();deckSyncSheets();deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});};
-document.getElementById('lampCanDim').onchange=e=>{deckDimmable[deck.target]=e.target.checked;if(!e.target.checked)lampManualLevels[deck.target]=lampManualLevels[deck.target]>0?1:0;recomputeSpatialLamps();deckSyncSheets();deckSave();};
 try{const saved=JSON.parse(localStorage.getItem('deck-state-v47'));if(saved?.levels?.length===9)saved.levels.forEach((v,i)=>{lampManualLevels[i]=Number.isFinite(v)?clamp(v,0,1):0;});if(saved?.dimmable?.length===9)saved.dimmable.forEach((v,i)=>deckDimmable[i]=!!v);}catch(_){}
+const caps=document.createElement('details');caps.innerHTML='<summary class="rowtitle" style="padding:12px 0;cursor:pointer">Lampes · variation disponible</summary>';
+for(let i=0;i<lights.length;i++){const label=document.createElement('label');label.style.cssText='display:block;font-size:12px;margin:10px 0';const input=document.createElement('input');input.type='checkbox';input.checked=deckDimmable[i];input.addEventListener('change',()=>{deckDimmable[i]=input.checked;if(!input.checked)lampManualLevels[i]=lampManualLevels[i]>0?1:0;recomputeSpatialLamps();deckSave();});label.append(input,document.createTextNode(' '+deckNames[i]));caps.append(label);}document.getElementById('membranePanel').append(caps);
 recomputeSpatialLamps();
 function deckHit(x,y){let found=null;for(let i=0;i<lights.length;i++){const p=fixedLampPoint(i),b=deckBounds();const distance=(i<6||i===8)?Math.hypot(x-p.x,y-p.y):i===6?Math.hypot(x-p.x,Math.max(0,Math.abs(y-p.y)-b.h*.11)):Math.hypot(Math.max(0,Math.abs(x-p.x)-b.w*.17),y-p.y);if(distance<Math.max(22,lampDiscRadius(i))&&(!found||distance<found.d))found={index:i,d:distance};}return found;}
 // Pure classifier: no commands until the last pointer is released.
-function classifyDeckGesture(g){const b=deckBounds(),s=deckSphere(),dy=g.dy,dx=g.dx;if(g.axis==='x')return Math.abs(dx)>Math.min(70,b.w*.22)?{kind:'sheet',sheet:dx>0?'fan':'music'}:null;if(g.axis!=='y')return null;if(Math.abs(dy)>=b.h*2/3)return {kind:'lights',target:'all',on:dy<0};const end=g.y+dy,top=s.y-s.r,bottom=s.y+s.r,tolerance=Math.max(28,s.r*.65);if(g.y<top-24&&dy>32&&Math.abs(end-top)<tolerance)return {kind:'lights',target:'upper',on:true};if(g.y>bottom+24&&dy< -32&&Math.abs(end-bottom)<tolerance)return {kind:'lights',target:'lower',on:true};if(Math.abs(g.y-top)<tolerance&&dy< -b.h*.12)return {kind:'lights',target:'upper',on:false};if(Math.abs(g.y-bottom)<tolerance&&dy>b.h*.12)return {kind:'lights',target:'lower',on:false};return null;}
+function classifyDeckGesture(g){
+ const b=deckBounds(),s=deckSphere(),r=deckSphereRect(),dy=g.dy,dx=g.dx,end=g.y+dy;
+ if(g.axis==='x')return Math.abs(dx)>Math.min(70,b.w*.22)?{kind:'sheet',sheet:dx>0?'fan':'music'}:null;
+ if(g.axis!=='y')return null;
+ if(Math.abs(dy)>=b.h*2/3)return {kind:'lights',target:'all',on:dy<0};
+ // The landing zone spans the approach to the sphere, rather than a narrow ring.
+ const approach=Math.max(36,s.r*.8),travel=Math.max(32,b.h*.10);
+ if(g.y<r.y&&dy>travel&&end>=r.y-approach&&end<=s.y+24)return {kind:'lights',target:'upper',on:true};
+ if(g.y>r.y+r.h&&dy< -travel&&end<=r.y+r.h+approach&&end>=s.y-24)return {kind:'lights',target:'lower',on:true};
+ if(g.y>=r.y-approach&&g.y<=s.y+12&&dy< -b.h*.12)return {kind:'lights',target:'upper',on:false};
+ if(g.y<=r.y+r.h+approach&&g.y>=s.y-12&&dy>b.h*.12)return {kind:'lights',target:'lower',on:false};
+ return null;
+}
+function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
-canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
-function finishDeck(e){if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;const wasMulti=deck.multi;deck.points.delete(e.pointerId);if(e.type!=='pointerup'){if(wasMulti){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();return;}if(deck.points.size)return;if(wasMulti){if(deck.pinch){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});if(!deckIndices().some(i=>deckDimmable[i]))deckNotify('Ce groupe est uniquement ON/OFF');}}else if(deck.gesture){const g=deck.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;const action=classifyDeckGesture(g);if(action?.kind==='sheet')deckSheet(action.sheet);else if(action)deckApply(action.target,action.on);else if(Math.hypot(g.dx,g.dy)<12){const hit=deckHit(e.clientX,e.clientY);if(hit){deck.target=hit.index;deckSheet('lamp');}else deckReveal();}}deckCancel();}
+canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
+function finishDeck(e){if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;const wasMulti=deck.multi;deck.points.delete(e.pointerId);if(e.type!=='pointerup'){if(wasMulti){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();return;}if(deck.points.size)return;if(wasMulti){if(deck.pinch){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});if(!deckIndices().some(i=>deckDimmable[i]))deckNotify('Ce groupe est uniquement ON/OFF');}}else if(deck.gesture){const g=deck.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;const action=classifyDeckGesture(g);if(action?.kind==='sheet')deckSheet(action.sheet);else if(action)deckApply(action.target,action.on);else if(Math.hypot(g.dx,g.dy)<12){const hit=deckHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());}else deckReveal();}}deckCancel();}
 canvas.addEventListener('pointerup',finishDeck,true);canvas.addEventListener('pointercancel',finishDeck,true);canvas.addEventListener('lostpointercapture',e=>{if(deck.points.has(e.pointerId)){finishDeck({pointerId:e.pointerId,type:'pointercancel',stopImmediatePropagation(){}});}},true);
 window.addEventListener('blur',()=>{if(deck.multi&&deck.pinch){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){deckSheet(null);deckCancel();}if(e.target===document.body){if(e.key==='ArrowRight')deckSheet('fan');if(e.key==='ArrowLeft')deckSheet('music');}});
@@ -1710,7 +1733,7 @@ function endPointer(e){
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
-document.getElementById('toggle').addEventListener('click',()=>{document.body.classList.remove('atelier');if(placingLamps)finishPlaceLamps(true);panel.classList.toggle('hidden'); const hidden=panel.classList.contains('hidden');panel.inert=hidden; document.getElementById('toggle').textContent=hidden?'Réglages':'Immersion'; document.getElementById('toggle').setAttribute('aria-expanded',String(!hidden)); document.getElementById('immersiveHint').classList.toggle('show',hidden);});
+document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
