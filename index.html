@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V45 · Fond continu</title>
+<title>DECK — V46 · Trame fusionnée et sphère recentrée</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -56,9 +56,9 @@ body.placing-lamps #placeLamps{background:#fff;color:#222;border-color:#fff}
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 45</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 46</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 45 · Fond continu</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 46 · Trame fusionnée et sphère recentrée</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -535,17 +535,34 @@ function drawSoftBackdrop(){
  ctx.drawImage(softBackdrop,0,0,w,h);
 }
 
-const upperPanelFraction=2/3;
+// Original V43 grid: five equal columns, portrait cells with H/W=1.55.
+// The six central cells form one upper frame, and the three below another.
+// All other original lines remain, right down to the bottom of the screen.
 function drawLampGrid(){
  if(lampStyle!=='redgrid'&&lampStyle!=='geometry')return;
- // Keep the previous full-height pastel blue background intact.
- // Only the horizontal frame divider remains; no colored fill over the bottom.
- const boundary=h*upperPanelFraction;
+ const cellW=w/5,cellH=cellW*1.55,rows=Math.ceil(h/cellH);
+ const upperTop=2*cellH,lowerBottom=5*cellH;
  ctx.save();
- ctx.strokeStyle=lightLines?'rgba(255,255,255,.78)':'rgba(47,57,84,.38)';
- ctx.lineWidth=.8;
- ctx.beginPath();ctx.moveTo(0,Math.round(boundary)+.5);ctx.lineTo(w,Math.round(boundary)+.5);ctx.stroke();
- ctx.restore();
+ ctx.strokeStyle=lightLines?'rgba(255,255,255,.76)':'rgba(47,57,84,.32)';
+ ctx.lineWidth=.65;
+ ctx.beginPath();
+ for(let j=1;j<5;j++){
+  const x=Math.round(j*cellW)+.5;
+  if(j===2||j===3){
+   // Delete the internal vertical divisions of the two merged blocks.
+   ctx.moveTo(x,0);ctx.lineTo(x,Math.min(h,upperTop));
+   if(lowerBottom<h){ctx.moveTo(x,lowerBottom);ctx.lineTo(x,h);}
+  }else{ctx.moveTo(x,0);ctx.lineTo(x,h);}
+ }
+ for(let j=1;j<rows;j++){
+  const y=Math.round(j*cellH)+.5;
+  if(j===3){
+   // The horizontal stroke across the middle of the 3x2 upper block.
+   ctx.moveTo(0,y);ctx.lineTo(cellW,y);
+   ctx.moveTo(4*cellW,y);ctx.lineTo(w,y);
+  }else{ctx.moveTo(0,y);ctx.lineTo(w,y);}
+ }
+ ctx.stroke();ctx.restore();
 }
 function drawLampLabels(){
  if((lampStyle!=='redgrid'&&lampStyle!=='geometry')||placingLamps)return;
@@ -1219,9 +1236,9 @@ function render(now){
   drawSpatialLights(true);
   drawLampLabels();
   for(const name of Object.keys(reveal)){const target=activeFace===name?1:0; reveal[name]+=(target-reveal[name])*Math.min(1,dt*2.9);} 
-  const cx=w*.5, cy=h*upperPanelFraction*.49;
+  const cx=w*.5, cy=h*.45+(panel.classList.contains('hidden')?h*.055:-Math.min(h*.04,26));
   // Le zoom agit sur l'ensemble cube/sphère/jauge, donc les coordonnées de toucher restent cohérentes.
-  const radius=Math.min(w*.205,(h*upperPanelFraction)*.215,130)*sceneZoom;
+  const radius=Math.min(w*.205,h*(panel.classList.contains('hidden')?.235:.18),130)*sceneZoom;
   const breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
   const sy=Math.sin(angleY), cyo=Math.cos(angleY), sx=Math.sin(angleX), cxo=Math.cos(angleX);
   lightHitRegions=[];
