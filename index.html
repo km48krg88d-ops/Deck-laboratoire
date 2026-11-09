@@ -10,11 +10,11 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — V48 · Gestes et trame persistante</title>
+<title>DECK — V49 · Calques indépendants</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
-html,body{margin:0;background:#090e16;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;margin:0;background:#090e16;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
 button,input{font:inherit}
 #stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #stage:active{cursor:grabbing}
@@ -85,9 +85,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" aria-label="DECK — sphère et cube"></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 48</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 49</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 48 · Gestes et trame persistante</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 49 · Calques indépendants</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -347,7 +347,7 @@ function haloLampInfluence(halo,p,r){
  const distance=haloDistance(halo,p.x,p.y);
  return halo.power*clamp((halo.radius+r-distance)/(2*r),0,1);
 }
-function fixedLampPoint(index){const p=fixedLampPositions[index];const b=deckBounds();return {x:b.x+p.x*b.w,y:b.y+p.y*b.h};}
+function fixedLampPoint(index){const p=fixedLampPositions[index],b=deckBounds(),pad=index===6||index===7?0:Math.min(lampDiscRadius(index)*1.72,h*.1);return {x:b.x+p.x*b.w,y:clamp(b.y+p.y*b.h,pad,h-pad)};}
 function haloDistance(h,x,y){return Math.hypot(h.x-x,h.y-y);}
 function findFixedLamp(x,y){
  let found=null;
@@ -871,7 +871,7 @@ function resize(){
   ctx.setTransform(physicalW/w,0,0,physicalH/h,0,0);
   ctx.imageSmoothingEnabled=true;
 }
-window.addEventListener('resize',resize); resize(); createParticles();
+window.addEventListener('resize',resize);if(window.visualViewport)window.visualViewport.addEventListener('resize',resize); resize(); createParticles();
 // Petite pastille lumineuse precalculee une fois, dessinee sans carre opaque.
 // Pour un test de comparaison immediat, Douceur=0 utilise le rendu V10 original.
 const dotSprite=document.createElement('canvas');dotSprite.width=32;dotSprite.height=32;
@@ -1495,14 +1495,17 @@ function selectFaceAt(x,y){
   activeFace=chosen?(activeFace===chosen.name?null:chosen.name):null;
 }
 // V47 — interaction layer. Commands are simulated until a hardware adapter is attached.
-const deck={sheet:null,target:'all',grid:0,gridTarget:null,lastTap:null,revealUntil:0,gesture:null,points:new Map(),multi:false,pinch:0,pinchStart:0,baseLevels:[],preview:null,fanTimer:0,music:{playing:false,volume:.45,track:0},lastDim:1};
+const deck={sheet:null,target:'all',grid:0,gridTarget:null,gridLayers:{upper:0,lower:0,center:0},gridDisplay:{upper:0,lower:0,center:0},lastTap:null,revealUntil:0,gesture:null,points:new Map(),multi:false,pinch:0,pinchStart:0,baseLevels:[],preview:null,fanTimer:0,music:{playing:false,volume:.45,track:0},lastDim:1};
 let deckPointScale=1,deckPointAlpha=1;
 const deckNames=['Arc · haut','Disque · haut','Anneau · haut','Rosace · haut','Disque · bas','Demi-disque · bas','Bandeau · haut','Bandeau · bas','Lampadaire · bas'];
 const deckDimmable=[true,true,true,true,true,true,false,false,true];
 let deckSafeTop=0,deckSafeBottom=0;
 function measureDeckSafe(){const p=document.createElement('div');p.style.cssText='position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';document.body.append(p);const c=getComputedStyle(p);deckSafeTop=parseFloat(c.paddingTop)||0;deckSafeBottom=parseFloat(c.paddingBottom)||0;p.remove();}
 measureDeckSafe();window.addEventListener('resize',measureDeckSafe);
-function deckBounds(){const x=Math.max(24,Math.min(w*.06,48)),y=Math.max(60,deckSafeTop+18),bottom=Math.max(54,deckSafeBottom+22);return {x,y,w:w-2*x,h:Math.max(100,h-y-bottom)};}
+// Visual composition fills the viewport. Only gesture starts use an inset.
+function deckBounds(){return {x:0,y:0,w,h};}
+function deckGestureBounds(){const x=Math.max(24,Math.min(w*.06,48)),y=Math.max(48,deckSafeTop+14),bottom=Math.max(38,deckSafeBottom+16);return {x,y,w:w-2*x,h:Math.max(100,h-y-bottom)};}
+
 function deckSphereRect(){const b=deckBounds();return {x:b.x+b.w/6,y:b.y+3*b.h/8,w:b.w*4/6,h:b.h/4};}
 function deckSphere(){const b=deckSphereRect();const pointsEnvelope=(1+sphereCfg.deform*1.55)*(1+sphereCfg.breath)*1.34;const gasEnvelope=showGasLayer?(opalPreset==='gaz'?1.83:opalPreset==='brume'?2.06:1.38):0;const envelope=Math.max(pointsEnvelope,gasEnvelope);const fit=Math.min(b.w/2-12,b.h/2-10)/envelope;return {x:b.x+b.w/2,y:b.y+b.h/2,r:Math.min(130,fit)*clamp(sceneZoom/.82,.65,1)};}
 
@@ -1510,7 +1513,8 @@ function deckDayColor(){if(!deckAutoBackground)return ambiences[currentAmbience]
 function deckIndices(target=deck.target){return lights.map((_,i)=>i).filter(i=>target==='all'||typeof target==='number'&&i===target||target==='upper'&&fixedLampPositions[i].y<.5||target==='lower'&&fixedLampPositions[i].y>=.5);}
 function deckTargetName(t){return t==='upper'?'Cuisine + salle à manger':t==='lower'?'Chambre + séjour':typeof t==='number'?deckNames[t]:'Toutes les lumières';}
 function deckGridZone(target=deck.target){return typeof target==='number'?(fixedLampPositions[target].y<.5?'upper':'lower'):target;}
-function deckReveal(target=deck.target){deck.gridTarget=deckGridZone(target);}
+function deckReveal(target=deck.target){const zone=deckGridZone(target);deck.gridTarget=zone;if(zone==='all'){deck.gridLayers.upper=1;deck.gridLayers.lower=1;deck.gridLayers.center=1;}else deck.gridLayers[zone]=1;}
+
 function deckLaboratory(open){document.body.classList.toggle('atelier',open);panel.classList.toggle('hidden',!open);panel.inert=!open;document.getElementById('toggle').textContent=open?'Retour':'Réglages';document.getElementById('toggle').setAttribute('aria-expanded',String(open));}
 
 let deckNoticeTimer;
@@ -1521,14 +1525,42 @@ function deckApply(target,on){deck.target=target;for(const i of deckIndices(targ
 function deckDim(ratio){const ids=deckIndices().filter(i=>deckDimmable[i]);if(!ids.length)return;for(const i of ids)lampManualLevels[i]=clamp(deck.baseLevels[i]+Math.log(Math.max(.1,ratio))*.85,0,1);recomputeSpatialLamps();deckReveal();}
 function drawDeckBand(i){const b=deckBounds(),p=fixedLampPoint(i),v=animatedLampLevels[i],vertical=i===6,len=(vertical?b.h*.22:b.w*.34)*(fixedLampPositions[i].scale||1),thick=Math.max(7,b.w*.022);ctx.save();ctx.translate(p.x,p.y);ctx.filter=`blur(${2+v*2}px)`;ctx.fillStyle=`rgba(214,21,59,${.20+.65*v})`;ctx.shadowColor='#ef3058';ctx.shadowBlur=4+v*15;ctx.beginPath();ctx.roundRect(vertical?-thick/2:-len/2,vertical?-len/2:-thick/2,vertical?thick:len,vertical?len:thick,thick/2);ctx.fill();ctx.restore();}
 function deckGridSegments(){const b=deckBounds(),cw=b.w/6,ch=b.h/8,lines=[];for(let j=0;j<=6;j++){const x=b.x+j*cw;if(j>1&&j<5){lines.push([x,b.y,x,b.y+3*ch],[x,b.y+5*ch,x,b.y+b.h]);}else lines.push([x,b.y,x,b.y+b.h]);}for(let j=0;j<=8;j++){const y=b.y+j*ch;if(j===4){lines.push([b.x,y,b.x+cw,y],[b.x+5*cw,y,b.x+b.w,y]);}else lines.push([b.x,y,b.x+b.w,y]);}return lines;}
-function deckVisibleGridZone(){if(placingLamps)return 'all';const p=deck.preview;if(p?.kind==='lights')return deckGridZone(p.target);if(deck.gesture?.axis==='y'){const g=deck.gesture;if(Math.abs(g.dy)>=deckBounds().h*2/3)return 'all';return g.y<deckSphere().y?'upper':'lower';}return deck.gridTarget;}
-function drawGestureGrid(){const zone=deckVisibleGridZone();if(!zone||deck.grid<.005)return;const b=deckBounds(),r=deckSphereRect();ctx.save();ctx.globalAlpha=placingLamps?1:deck.grid;ctx.beginPath();if(zone==='upper')ctx.rect(b.x-1,b.y-1,b.w+2,r.y-b.y+2);else if(zone==='lower')ctx.rect(b.x-1,r.y+r.h-1,b.w+2,b.y+b.h-r.y-r.h+2);else ctx.rect(b.x-1,b.y-1,b.w+2,b.h+2);ctx.clip();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();}
-function updateDeck(dt,now){const desired=deckVisibleGridZone()?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
+function deckGridDrag(){
+ const g=deck.gesture;if(!g||g.axis!=='y')return null;
+ const r=deckSphereRect(),end=clamp(g.y+g.dy,0,h),span=deckGestureBounds().h*2/3;
+ const upper=g.y<deckSphere().y,zone=upper?'upper':'lower',inward=upper?g.dy>0:g.dy<0;
+ const direction=inward?(upper?1:-1):(upper?-1:1);
+ const distance=inward?Math.abs((upper?r.y:r.y+r.h)-g.y):Math.max(64,upper?r.y:h-r.y-r.h);
+ const progress=clamp(Math.abs(g.dy)/Math.max(64,distance),0,1);
+ const values={upper:0,center:0,lower:0};values[zone]=progress;
+ if(inward){
+  values.center=upper?clamp((end-r.y)/r.h,0,1):clamp((r.y+r.h-end)/r.h,0,1);
+  values[upper?'lower':'upper']=upper?clamp((end-r.y-r.h)/(h-r.y-r.h),0,1):clamp((r.y-end)/r.y,0,1);
+ }
+ return {zone:Math.abs(g.dy)>=span||values.center>0?'all':zone,progress,direction,values};
+}
+function deckVisibleGridZone(){const d=deckGridDrag();if(placingLamps||d?.zone==='all')return 'all';if(d)return d.zone;const l=deck.gridLayers;if(l.upper&&l.lower&&l.center)return 'all';return l.upper&&l.lower?'both':l.upper?'upper':l.lower?'lower':null;}
+function deckLayerOffset(zone,progress,direction){const r=deckSphereRect();const distance=zone==='upper'?r.y:zone==='lower'?h-r.y-r.h:h;return direction*(progress-1)*distance;}
+function drawGestureGrid(){
+ const r=deckSphereRect(),drag=deckGridDrag();
+ const zones=[['upper',0,r.y],['center',r.y,r.h],['lower',r.y+r.h,h-r.y-r.h]];
+ for(const [zone,top,height] of zones){
+  const involved=drag&&(drag.zone==='all'||drag.zone===zone);
+  // Stable layers stay put. The layer being brought in moves with the finger.
+  const progress=placingLamps?1:involved?Math.max(deck.gridDisplay[zone],drag.values[zone]):deck.gridDisplay[zone];
+  if(progress<.001)continue;
+  const direction=involved?drag.direction:zone==='upper'?1:-1;
+  const offset=deckLayerOffset(zone,progress,direction);
+  ctx.save();ctx.beginPath();ctx.rect(0,top,w,height);ctx.clip();ctx.translate(0,offset);
+  ctx.strokeStyle=lightLines?'rgba(255,255,255,.76)':'rgba(255,255,255,.48)';ctx.lineWidth=.65;ctx.beginPath();
+  for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();
+ }
+}
+function updateDeck(dt,now){for(const zone of ['upper','lower','center']){deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*10));}const desired=deckVisibleGridZone()?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
 function drawDeckFeedback(now){const b=deckBounds(),s=deckSphere();ctx.save();
  // Crosses reveal only a local portion of the shared lattice.
  const fanPreview=deck.sheet==='fan'||deck.gesture?.axis==='x'&&deck.gesture.dx>0;
  if(fanPreview){ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=1;const cw=b.w/6,ch=b.h/8;for(const col of [2,3,4])for(const row of [3,4,5]){const x=b.x+col*cw,y=b.y+row*ch;ctx.beginPath();ctx.moveTo(x-4,y);ctx.lineTo(x+4,y);ctx.moveTo(x,y-4);ctx.lineTo(x,y+4);ctx.stroke();}}
- if(deck.grid>.02){ctx.globalAlpha=deck.grid*.7;for(const i of deckIndices()){const p=fixedLampPoint(i);ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();if(i<6||i===8)ctx.arc(p.x,p.y,lampDiscRadius(i)*1.5,0,Math.PI*2);else{const vert=i===6,len=(vert?b.h*.22:b.w*.34);ctx.roundRect(p.x-(vert?12:len/2+6),p.y-(vert?len/2+6:12),vert?24:len+12,vert?len+12:24,10);}ctx.stroke();}ctx.globalAlpha=1;}
  if(deck.preview){ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=1.2;const g=deck.gesture;ctx.beginPath();ctx.moveTo(g.x,g.y);ctx.lineTo(g.x+g.dx,g.y+g.dy);ctx.stroke();const text=deck.preview.kind==='sheet'?(deck.preview.sheet==='fan'?'Ventilateur':'Musique'):deckTargetName(deck.preview.target)+' · '+(deck.preview.on?'allumer':'éteindre');ctx.font='12px -apple-system, sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText(text,w/2,b.y+b.h*.5+s.r+32);}
  if(deck.music.playing){const t=now/1000;ctx.strokeStyle='rgba(255,255,255,.5)';for(let i=0;i<3;i++){const phase=(t*.35+i/3)%1;ctx.globalAlpha=(1-phase)*.5*deck.music.volume;ctx.lineWidth=.7;ctx.beginPath();ctx.arc(s.x,s.y,s.r*(.65+phase*.65),0,Math.PI*2);ctx.stroke();}}
  ctx.restore();}
@@ -1562,7 +1594,7 @@ function classifyDeckGesture(g){
  const b=deckBounds(),s=deckSphere(),r=deckSphereRect(),dy=g.dy,dx=g.dx,end=g.y+dy;
  if(g.axis==='x')return Math.abs(dx)>Math.min(70,b.w*.22)?{kind:'sheet',sheet:dx>0?'fan':'music'}:null;
  if(g.axis!=='y')return null;
- if(Math.abs(dy)>=b.h*2/3)return {kind:'lights',target:'all',on:dy<0};
+ if(Math.abs(dy)>=deckGestureBounds().h*2/3)return {kind:'lights',target:'all',on:dy<0};
  // The landing zone spans the approach to the sphere, rather than a narrow ring.
  const approach=Math.max(36,s.r*.8),travel=Math.max(32,b.h*.10);
  if(g.y<r.y&&dy>travel&&end>=r.y-approach&&end<=s.y+24)return {kind:'lights',target:'upper',on:true};
@@ -1573,9 +1605,9 @@ function classifyDeckGesture(g){
 }
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
-canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
+canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
-function finishDeck(e){if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;const wasMulti=deck.multi;deck.points.delete(e.pointerId);if(e.type!=='pointerup'){if(wasMulti){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();return;}if(deck.points.size)return;if(wasMulti){if(deck.pinch){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});if(!deckIndices().some(i=>deckDimmable[i]))deckNotify('Ce groupe est uniquement ON/OFF');}}else if(deck.gesture){const g=deck.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;const action=classifyDeckGesture(g);if(action?.kind==='sheet')deckSheet(action.sheet);else if(action)deckApply(action.target,action.on);else if(Math.hypot(g.dx,g.dy)<12){const hit=deckHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());}else deckReveal();}}deckCancel();}
+function finishDeck(e){if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;const wasMulti=deck.multi;deck.points.delete(e.pointerId);if(e.type!=='pointerup'){if(wasMulti){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();return;}if(deck.points.size)return;if(wasMulti){if(deck.pinch){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});if(!deckIndices().some(i=>deckDimmable[i]))deckNotify('Ce groupe est uniquement ON/OFF');}}else if(deck.gesture){const g=deck.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;const action=classifyDeckGesture(g);if(action?.kind==='sheet')deckSheet(action.sheet);else if(action){const drag=deckGridDrag();if(drag){for(const zone of ['upper','lower','center'])if(drag.zone==='all'||drag.zone===zone)deck.gridDisplay[zone]=Math.max(deck.gridDisplay[zone],drag.values[zone]);}deckApply(action.target,action.on);}else if(Math.hypot(g.dx,g.dy)<12){const hit=deckHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());}else deckReveal();}}deckCancel();}
 canvas.addEventListener('pointerup',finishDeck,true);canvas.addEventListener('pointercancel',finishDeck,true);canvas.addEventListener('lostpointercapture',e=>{if(deck.points.has(e.pointerId)){finishDeck({pointerId:e.pointerId,type:'pointercancel',stopImmediatePropagation(){}});}},true);
 window.addEventListener('blur',()=>{if(deck.multi&&deck.pinch){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}deckCancel();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){deckSheet(null);deckCancel();}if(e.target===document.body){if(e.key==='ArrowRight')deckSheet('fan');if(e.key==='ArrowLeft')deckSheet('music');}});
