@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 21 · Arrivées échelonnées</title>
+<title>DECK — Essai 22 · Rotation et arrivées décalées</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E21</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E22</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 21 · Arrivées échelonnées</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 22 · Rotation et arrivées décalées</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1737,13 +1737,17 @@ function experimentCurrentGrain(index){
  return deformExperimentPoint(base,base,radius,0);
 }
 // Each rear-shell light grows on its own schedule and settles during cloud traversal.
-function experimentLampTiming(index){return {arrival:.48+.22*experimentHash(index+47),growthStart:.06+.17*experimentHash(index+307)};}
+function experimentLampTiming(index){
+ // A shuffled sequence gives each light a distinct settling window.
+ const rank=(index*7+3)%(lights.length+2);
+ return {arrival:.35+.45*rank/Math.max(1,lights.length+1),growthStart:.06+.17*experimentHash(index+307)};
+}
 function experimentLampGrowth(index,amount){const timing=experimentLampTiming(index);return experimentEase(timing.growthStart,timing.arrival,amount);}
 function experimentCenter(index,amount,time){
  const destination=experimentControlPoint(index),particleIndex=experiment.lampIndices[index],a=experiment.departures;
  if(!a||experiment.departureParticles!==particles||particleIndex===undefined)return destination;
  if(amount===0&&experiment.target===0)return experimentCurrentGrain(particleIndex);
- const j=particleIndex*4,seed=particles[particleIndex].seed,arrival=experimentLampTiming(index).arrival,u=clamp(amount/arrival,0,1),t=1-Math.pow(1-u,1.15+.35*experimentHash(index+59)),v=1-t;
+ const j=particleIndex*4,seed=particles[particleIndex].seed,arrival=experimentLampTiming(index).arrival,u=clamp(amount/arrival,0,1),t=u+u*u-u*u*u,v=1-t;
  const sphere=deckSphere(),z0=experiment.flightDepths?.[particleIndex*2]||0,k0=2.9/(2.9-z0),k1=2.9/(2.9-1.3),projection=2.9/(2.9-(z0+(1.3-z0)*t));
  const start={x:sphere.x+(a[j]-sphere.x)/k0,y:sphere.y+(a[j+1]-sphere.y)/k0},end={x:sphere.x+(destination.x-sphere.x)/k1,y:sphere.y+(destination.y-sphere.y)/k1},dx=end.x-start.x,dy=end.y-start.y,length=Math.max(1,Math.hypot(dx,dy)),bend=(experimentHash(seed*61)-.5)*Math.min(w,h)*.13*experimentCfg.curve;
  const c1={x:start.x+a[j+2]/k0*.3,y:start.y+a[j+3]/k0*.3},c2={x:end.x-dx*.18-dy/length*bend,y:end.y-dy*.18+dx/length*bend},drift=experimentDrift(seed,t),wander=experimentWander(index,time),settled=experimentEase(.75,1,u);
@@ -1966,6 +1970,15 @@ function experimentReset(cancelled=false){
  for(const t of experiment.handles)t.id=null;
  experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;experiment.gestureTarget=null;experiment.gesture=null;experiment.dimmed=false;deck.gesture=null;
 }
+// One finger orbits the neutral sphere; only a two-finger stretch pulls its skin.
+function orbitExperiment(previous,next){
+ if(!previous||experiment.multi||experiment.points.size!==1||experiment.target!==0||experiment.amount!==0)return false;
+ angleY+=(next.x-previous.x)*.007;angleX=clamp(angleX+(next.y-previous.y)*.006,-1.4,1.4);return true;
+}
+function rebaseExperimentTouches(){
+ for(const handle of experiment.handles)handle.id=null;
+ for(const [pointerId,p] of experiment.points)experimentTouchStart({pointerId,clientX:p.x,clientY:p.y});
+}
 function experimentTouchStart(e){
  const t=experiment.handles.find(t=>t.id===null);if(!t)return;
  const sphere=deckSphere(),radius=sphere.r*1.18,dx=e.clientX-sphere.x,dy=e.clientY-sphere.y,length=Math.hypot(dx,dy),factor=length>radius?radius/length:1;
@@ -1977,11 +1990,11 @@ canvas.addEventListener('pointerdown',e=>{
  if(!experiment.points.size&&experiment.target===0&&experiment.amount===0){experiment.preselected=false;experiment.reveal=0;experiment.lampFlags=null;experiment.lampIndices=[];experiment.departures=null;experiment.departureParticles=null;}
  experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
  if(experiment.points.size===1){experiment.active=experiment.target===1&&experiment.amount>.65;experiment.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};if(experiment.active)experimentWake();}
- if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
+ if(experiment.points.size===2){rebaseExperimentTouches();const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
 },true);
 canvas.addEventListener('pointermove',e=>{
  if(placingLamps)return;e.stopImmediatePropagation();if(moveEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
- experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle){handle.tx=(e.clientX-handle.startX)*.8*experimentCfg.softness;handle.ty=(e.clientY-handle.startY)*.8*experimentCfg.softness;}
+ const previous=experiment.points.get(e.pointerId),next={x:e.clientX,y:e.clientY};experiment.points.set(e.pointerId,next);if(orbitExperiment(previous,next))return;const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle&&experiment.points.size===2){handle.tx=(e.clientX-handle.startX)*.8*experimentCfg.softness;handle.ty=(e.clientY-handle.startY)*.8*experimentCfg.softness;}
  if(experiment.points.size===2&&experiment.startDistance>=12){
   const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),ratio=d/experiment.startDistance;experiment.lastDistance=d;experimentTryRupture();
   if(experiment.gestureTarget===null&&experiment.startTarget===1){const target=experimentDecision(experiment.startTarget,ratio,Math.abs(d-experiment.startDistance));if(target!==experiment.startTarget){experiment.gestureTarget=target;experiment.target=target;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();experiment.dimmed=false;}if(target)experimentWake();else experimentNeutral();}}
