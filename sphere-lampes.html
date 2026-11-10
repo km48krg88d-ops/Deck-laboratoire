@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 23 · Calques comparables</title>
+<title>DECK — Essai 24 · Grains et lumières</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E23</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E24</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 23 · Calques comparables</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 24 · Grains et lumières</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -227,7 +227,7 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
 }));
 const sphereAppearance={scale:1.15};
 try{if(!localStorage.getItem('deck-sphere-scale-e23')){localStorage.setItem('deck-sphere-scale','1.15');localStorage.setItem('deck-sphere-scale-e23','1');}const saved=Number(localStorage.getItem('deck-sphere-scale'));if(saved>=.65&&saved<=1.8)sphereAppearance.scale=saved;}catch(_){}
-const sphereCfg={density:200,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
+const sphereCfg={density:400,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.76,softness:.81,transparency:2,reflection:2,edge:2.5,folds:2.5,breath:.230};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
 const opalProfiles={
@@ -241,7 +241,7 @@ const membraneParams=[['fluidity','Mouvement',0,2.5,.01],['softness','Diffusion'
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
-  sommeil:{density:200,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0},
+  sommeil:{density:400,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0},
   brume:{density:62,size:1.1,deform:.13,fluidity:.75,speed:.36,breath:.065,opacity:.53,glow:.22},
   membrane:{density:72,size:.82,deform:.24,fluidity:.88,speed:.24,breath:.04,opacity:.43,glow:.35},
   dense:{density:220,size:.78,deform:.08,fluidity:.92,speed:.22,breath:.022,opacity:.78,glow:.08}
@@ -1709,7 +1709,7 @@ function drawDayCycle(){
 }
 
 const EXPERIMENT_SMALL_SCALE=.012;
-const experimentCfg={selection:.45,softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
+const experimentCfg={selection:.45,softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:0,brightness:.85};
 const experiment={flightDepths:null,preselected:false,reveal:0,lampFlags:null,lampIndices:[],departures:null,departureParticles:null,rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
@@ -1740,7 +1740,7 @@ function experimentCurrentGrain(index){
 function experimentLampTiming(index){
  // A shuffled sequence gives each light a distinct settling window.
  const rank=(index*7+3)%(lights.length+2);
- return {arrival:.35+.45*rank/Math.max(1,lights.length+1),growthStart:.06+.17*experimentHash(index+307)};
+ return {arrival:.32+.38*rank/Math.max(1,lights.length+1),growthStart:.06+.17*experimentHash(index+307)};
 }
 function experimentLampGrowth(index,amount){const timing=experimentLampTiming(index);return experimentEase(timing.growthStart,timing.arrival,amount);}
 function experimentCenter(index,amount,time){
@@ -1822,6 +1822,15 @@ function experimentTapControl(index,now){
 function beginExperimentOpening(){captureExperimentDeparture(true);experiment.reveal=1;experiment.target=1;experimentWake();}
 
 function experimentControlLevel(index){if(index<lights.length)return animatedLampLevels[index];const ids=deckIndices(index===lights.length?'upper':'lower');return ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/Math.max(1,ids.length);}
+// Lamps use the same compact point texture as the sphere, without a separate glow cloud.
+const experimentGrainSprite=document.createElement('canvas');experimentGrainSprite.width=experimentGrainSprite.height=32;
+const experimentGrainCtx=experimentGrainSprite.getContext('2d');
+function drawExperimentGrain(x,y,core,tint){
+ if(sphereCfg.softness<=.001){ctx.fillStyle=dayCSS(tint,1);ctx.fillRect(x-core,y-core,core*2,core*2);return;}
+ experimentGrainCtx.clearRect(0,0,32,32);experimentGrainCtx.globalCompositeOperation='source-over';experimentGrainCtx.drawImage(dotSprite,0,0);
+ experimentGrainCtx.globalCompositeOperation='source-in';experimentGrainCtx.fillStyle=dayCSS(tint,1);experimentGrainCtx.fillRect(0,0,32,32);experimentGrainCtx.globalCompositeOperation='source-over';
+ ctx.drawImage(experimentGrainSprite,x-core,y-core,core*2,core*2);
+}
 function drawExperimentPoints(){
  if(experiment.amount<.001&&experiment.reveal<.001)return;
  for(let i=0;i<lights.length+2;i++){
@@ -1829,8 +1838,8 @@ function drawExperimentPoints(){
   const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=i>=lights.length?2:1,core=(Math.max(.4,sphereCfg.size*.35)+(experimentCfg.core*depth-Math.max(.4,sphereCfg.size*.35))*progress)*pulse,halo=experimentCfg.halo*depth*progress,alpha=mix*(.65+.35*progress)*experimentCfg.brightness*(experiment.hasCommands?1-(1-(.18+.82*experimentControlLevel(i)))*experimentEase(timing.arrival,Math.min(1,timing.arrival+.14),experiment.amount):1);
   ctx.save();ctx.globalAlpha=alpha;
   const tint=dayTint(p.x,p.y,true);
-  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,Math.max(.01,halo));g.addColorStop(0,dayCSS(tint,.80));g.addColorStop(.12,dayCSS(tint,.54));g.addColorStop(.35,dayCSS(tint,.17));g.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
-  const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,dayCSS(tint,1));nucleus.addColorStop(.6,dayCSS(tint,.92));nucleus.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
+  if(halo>.01){const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,dayCSS(tint,.80));g.addColorStop(.12,dayCSS(tint,.54));g.addColorStop(.35,dayCSS(tint,.17));g.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);}
+  drawExperimentGrain(p.x,p.y,core,tint);ctx.restore();
  }
 }
 // The gesture chooses an endpoint; elapsed time alone drives the transition.
@@ -1971,7 +1980,7 @@ document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map
 // The existing automatic-background switch controls the same clock.
 document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
 
-createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
+createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',0,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=beginExperimentOpening;document.getElementById('experimentGather').onclick=experimentNeutral;
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
