@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 05 · Geste déclencheur</title>
+<title>DECK — Essai 06 · Lumières en voyage</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,9 +88,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E05</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E06</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 05 · Geste déclencheur</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 06 · Lumières en voyage</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -923,17 +923,18 @@ function setupPointsGPU(){
  for(int j=1;j<9;j++){if(owner==float(j))target=uTargets[j];}
  vec2 local=vec2(xx,-yy)*uRadius*uBreath*perspective;
  float split=uSplit*uSplit*(3.-2.*uSplit);
- float gather=smoothstep(.36,1.,uSplit),burst=sin(3.14159265*split);
+ float progress=pow(smoothstep(.025+.12*rnd(owner+31.),.76+.22*rnd(owner+47.),uSplit),.7+.8*rnd(owner+59.));
+ float gather=smoothstep(.16,.9,progress),burst=sin(3.14159265*split);
  float randomAngle=rnd(aPoint.w*913.+1.)*6.2831853,randomRadius=pow(rnd(aPoint.w*913.+7.),.65);
  vec2 spread=vec2(cos(randomAngle),sin(randomAngle))*randomRadius;
  vec2 flutter=vec2(sin(uFlowTime*.7+aPoint.w*87.+raw.y*8.),cos(uFlowTime*.57+aPoint.w*61.+raw.x*9.));
  float ca=cos(uTwist),sa=sin(uTwist);spread=mat2(ca,-sa,sa,ca)*spread;
- vec2 cloud=(spread*vec2(uViewport.x*.34,uViewport.y*.23)+flutter*uViewport.x*.025+uGesture*.8)*burst;
+ vec2 cloud=(spread*vec2(uViewport.x*.34,uViewport.y*.23)+flutter*uViewport.x*.025+uGesture*.8)*burst*(1.-gather);
  vec2 pixel=target+local*mix(1.+burst*.5,uSmallScale,gather)+cloud;
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
  float scint=.72+.28*sin(uClock*.65+aPoint.w*7.+(raw.x-raw.y+raw.z)*2.3);
  float alpha=min(1.,clamp((depth*.66+.18)*uOpacity,.04,1.)*(.68+.32*aPoint.w)*(1.+uEnergy*(.18+1.55*rim)*scint));
- vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.88,1.,uSplit));
+ vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.72,1.,progress));
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
  float diameter=uSoft>.001?max(1.25/uDpr,size)*(1.1+1.45*uSoft):size;
  gl_PointSize=max(1.,diameter*uDpr);
@@ -1636,21 +1637,34 @@ function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t
 function experimentHash(n){const value=Math.sin(n*127.1)*43758.5453123;return value-Math.floor(value);}
 function experimentNoise(time,seed){const cell=Math.floor(time),t=time-cell,s=t*t*(3-2*t);return ((1-s)*experimentHash(cell+seed*91.73)+s*experimentHash(cell+1+seed*91.73))*2-1;}
 function experimentWander(index,time){const seed=index*17.139+5,flow=time*experimentCfg.driftSpeed;return {x:.68*experimentNoise(flow,seed)+.32*experimentNoise(flow*2.17,seed+71),y:.68*experimentNoise(flow*.83,seed+19)+.32*experimentNoise(flow*1.79,seed+139)};}
+// Each light has its own departure, arrival and acceleration profile.
+function experimentLampProgress(index,amount){
+ const delay=.025+.12*experimentHash(index+31),arrival=.76+.22*experimentHash(index+47);
+ return Math.pow(experimentEase(delay,arrival,amount),.7+.8*experimentHash(index+59));
+}
 function experimentCenter(index,amount,time){
- const p=experimentLampPoint(index),cx=w*.5,cy=h*.5,t=experimentEase(.36,1,amount),dx=p.x-cx,dy=p.y-cy,length=Math.hypot(dx,dy)||1;
- const random=experimentWander(index,time),bend=Math.sin(Math.PI*t)*Math.min(w*.12,length*.18)*experimentCfg.curve;
- const curl=(index%2?-1:1)*(.7+.3*experimentNoise(time*.35,index+91));
- return {x:cx+dx*t-dy/length*bend*curl+experimentCfg.drift*t*random.x,y:cy+dy*t+dx/length*bend*curl+experimentCfg.drift*t*random.y};
+ const p=experimentLampPoint(index),cx=w*.5,cy=h*.5,t=experimentLampProgress(index,amount),v=1-t;
+ const side=index%2?1:-1,excursion=index%3===1;
+ const reach=excursion?1.65:.20+.30*experimentHash(index+101);
+ const c1x=cx+side*w*reach,c2x=cx+side*w*reach*.95;
+ const c1y=cy+h*(experimentHash(index+113)-.5)*1.15,c2y=p.y+h*(experimentHash(index+127)-.5)*.7;
+ const random=experimentWander(index,time);
+ // Cubic excursions can leave the viewport; their endpoints remain the lamp positions.
+ const x=v*v*v*cx+3*v*v*t*c1x+3*v*t*t*c2x+t*t*t*p.x;
+ const y=v*v*v*cy+3*v*v*t*c1y+3*v*t*t*c2y+t*t*t*p.y;
+ return {x:cx+(p.x-cx)*t+(x-cx-(p.x-cx)*t)*experimentCfg.curve+experimentCfg.drift*t*random.x,
+ y:cy+(p.y-cy)*t+(y-cy-(p.y-cy)*t)*experimentCfg.curve+experimentCfg.drift*t*random.y};
 }
 function experimentParticleOffset(raw,seed,amount){
  const split=amount*amount*(3-2*amount),burst=Math.sin(Math.PI*split),randomAngle=experimentHash(seed*913+1)*Math.PI*2,randomRadius=Math.pow(experimentHash(seed*913+7),.65),sx=Math.cos(randomAngle)*randomRadius,sy=Math.sin(randomAngle)*randomRadius,c=Math.cos(experiment.twist),s=Math.sin(experiment.twist);
  return {x:((sx*c+sy*s)*w*.34+Math.sin(experiment.time*.7+seed*87+raw.y*8)*w*.025+experiment.handX*.8)*burst,y:((-sx*s+sy*c)*h*.23+Math.cos(experiment.time*.57+seed*61+raw.x*9)*w*.025+experiment.handY*.8)*burst};
 }
-function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),gather=experimentEase(.36,1,amount),burst=Math.sin(Math.PI*amount*amount*(3-2*amount)),scale=(1+burst*.5)*(1-gather)+EXPERIMENT_SMALL_SCALE*gather,scatter=experimentParticleOffset(raw,seed,amount);return {x:p.x+raw.x*radius*scale+scatter.x,y:p.y+raw.y*radius*scale+scatter.y};}
+function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),gather=experimentEase(.16,.9,experimentLampProgress(Math.min(8,Math.floor(seed*9)),amount)),burst=Math.sin(Math.PI*amount*amount*(3-2*amount)),scale=(1+burst*.5)*(1-gather)+EXPERIMENT_SMALL_SCALE*gather,scatter=experimentParticleOffset(raw,seed,amount);return {x:p.x+raw.x*radius*scale+scatter.x*(1-gather),y:p.y+raw.y*radius*scale+scatter.y*(1-gather)};}
 function drawExperimentPoints(){
- const mix=experimentEase(.80,1,experiment.amount);if(mix<.001)return;
+ if(experiment.amount<.001)return;
  for(let i=0;i<lights.length;i++){
-  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.035*experimentNoise(experiment.time*.6,i*2.17+400),core=experimentCfg.core*pulse,halo=experimentCfg.halo,alpha=mix*experimentCfg.brightness;
+  const progress=experimentLampProgress(i,experiment.amount),mix=experimentEase(.025,.24,progress);if(mix<.001)continue;
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.035*experimentNoise(experiment.time*.6,i*2.17+400),depth=.75+.5*experimentHash(i+151),core=experimentCfg.core*pulse*depth,halo=experimentCfg.halo*depth,alpha=mix*experimentCfg.brightness;
   ctx.save();ctx.globalAlpha=alpha;
   const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'rgba(255,255,255,.80)');g.addColorStop(.12,'rgba(255,255,255,.54)');g.addColorStop(.35,'rgba(255,255,255,.17)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
   const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,'rgba(255,255,255,1)');nucleus.addColorStop(.6,'rgba(255,255,255,.92)');nucleus.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
@@ -1671,8 +1685,8 @@ function renderExperiment(now,dt){
  const drawParticles=showPoints&&experiment.amount<.995;
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
-  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1-experimentEase(.88,1,experiment.amount);
-  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*fade;const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
+  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
+  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.72,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawExperimentPoints();if(placingLamps)renderPlacementMarkers();
