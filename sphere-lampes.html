@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 06 · Lumières en voyage</title>
+<title>DECK — Essai 07 · Matière tactile</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,9 +88,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E06</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E07</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 06 · Lumières en voyage</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 07 · Matière tactile</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -906,7 +906,7 @@ function setupPointsGPU(){
  const vs=`precision highp float;
  attribute vec4 aPoint;
  uniform vec2 uViewport,uCenter,uAngles;
- uniform vec2 uTargets[9],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
+ uniform vec4 uTouches[2];uniform vec2 uTargets[9],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
  varying float vAlpha;
  float rnd(float n){return fract(sin(n*127.1)*43758.5453123);}
@@ -931,8 +931,9 @@ function setupPointsGPU(){
  float ca=cos(uTwist),sa=sin(uTwist);spread=mat2(ca,-sa,sa,ca)*spread;
  vec2 cloud=(spread*vec2(uViewport.x*.34,uViewport.y*.23)+flutter*uViewport.x*.025+uGesture*.8)*burst*(1.-gather);
  vec2 pixel=target+local*mix(1.+burst*.5,uSmallScale,gather)+cloud;
+ for(int j=0;j<2;j++){vec2 d=(uCenter+local)-uTouches[j].xy;float weight=exp(-dot(d,d)/(uRadius*uRadius*.64));pixel+=uTouches[j].zw*weight*(1.-uSplit)*(1.-uSplit);}
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
- float scint=.72+.28*sin(uClock*.65+aPoint.w*7.+(raw.x-raw.y+raw.z)*2.3);
+ float scint=1.;
  float alpha=min(1.,clamp((depth*.66+.18)*uOpacity,.04,1.)*(.68+.32*aPoint.w)*(1.+uEnergy*(.18+1.55*rim)*scint));
  vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.72,1.,progress));
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
@@ -954,6 +955,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
+ uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
  let uploaded=null;
@@ -963,6 +965,7 @@ function setupPointsGPU(){
   gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   if(uploaded!==particles){const data=new Float32Array(particles.length*4);particles.forEach((p,i)=>data.set([p.x,p.y,p.z,p.seed],i*4));gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);uploaded=particles;}
   gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform4fv(uniforms.Touches,new Float32Array(experiment.handles.flatMap(t=>[t.ax,t.ay,t.x,t.y])));
   gl.uniform2f(uniforms.Gesture,experiment.handX,experiment.handY);gl.uniform1f(uniforms.FlowTime,experiment.time);gl.uniform1f(uniforms.Twist,experiment.twist);
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
   gl.uniform2fv(uniforms.Targets,new Float32Array(lights.flatMap((_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];})));
@@ -1627,10 +1630,10 @@ function classifyDeckGesture(g){
 }
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
-// Independent experiment 01. No lamp commands, no persisted V49 settings are changed by its gestures.
+// Alternative tactile study. V49 remains available at the original entry point.
 const EXPERIMENT_SMALL_SCALE=.012;
 const experimentCfg={curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
-const experiment={handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null};
+const experiment={handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
 function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t*(3-2*t);}
@@ -1664,21 +1667,38 @@ function drawExperimentPoints(){
  if(experiment.amount<.001)return;
  for(let i=0;i<lights.length;i++){
   const progress=experimentLampProgress(i,experiment.amount),mix=experimentEase(.025,.24,progress);if(mix<.001)continue;
-  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.035*experimentNoise(experiment.time*.6,i*2.17+400),depth=.75+.5*experimentHash(i+151),core=experimentCfg.core*pulse*depth,halo=experimentCfg.halo*depth,alpha=mix*experimentCfg.brightness;
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=.75+.5*experimentHash(i+151),core=experimentCfg.core*pulse*depth,halo=experimentCfg.halo*depth,alpha=mix*experimentCfg.brightness*(experiment.hasCommands?.18+.82*animatedLampLevels[i]:1);
   ctx.save();ctx.globalAlpha=alpha;
   const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'rgba(255,255,255,.80)');g.addColorStop(.12,'rgba(255,255,255,.54)');g.addColorStop(.35,'rgba(255,255,255,.17)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
   const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,'rgba(255,255,255,1)');nucleus.addColorStop(.6,'rgba(255,255,255,.92)');nucleus.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
  }
 }
 // The gesture chooses an endpoint; elapsed time alone drives the transition.
+function experimentWake(){experiment.deadline=performance.now()+5000;}
+function experimentNeutral(){experiment.target=0;experiment.deadline=0;deck.lastTap=null;deck.gesture=null;for(const zone of ['upper','lower','center'])deck.gridLayers[zone]=0;}
+function updateExperimentTouch(dt){
+ const step=Math.min(dt,.025),radius=deckSphere().r*1.18;
+ for(const t of experiment.handles){
+  if(t.id===null){t.tx=0;t.ty=0;}
+  t.vx+=(t.tx-t.x)*100*step;t.vy+=(t.ty-t.y)*100*step;
+  const damping=Math.exp(-step*15);t.vx*=damping;t.vy*=damping;t.x+=t.vx*step;t.y+=t.vy*step;
+  const length=Math.hypot(t.x,t.y),limit=radius*.95;if(length>limit){t.x*=limit/length;t.y*=limit/length;}
+ }
+}
+function deformExperimentPoint(p,base,radius,amount){
+ let x=p.x,y=p.y;for(const t of experiment.handles){const dx=base.x-t.ax,dy=base.y-t.ay,weight=Math.exp(-(dx*dx+dy*dy)/(radius*radius*.64))*(1-amount)*(1-amount);x+=t.x*weight;y+=t.y*weight;}return {x,y};
+}
 function advanceExperiment(dt){
  experiment.amount+=(experiment.target-experiment.amount)*(1-Math.exp(-dt*.8));
  if(Math.abs(experiment.amount-experiment.target)<.0005)experiment.amount=experiment.target;
 }
 function renderExperiment(now,dt){
  clock+=dt*sphereCfg.speed;experiment.time+=dt*.25;
- advanceExperiment(dt);
+ if(experiment.deadline&&now>=experiment.deadline&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
+ updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);
+ for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
  ctx.fillStyle=deckDayColor();ctx.fillRect(0,0,w,h);ctx.save();ctx.globalAlpha=.18;drawSoftBackdrop();ctx.restore();
+ if(experiment.amount>.05){ctx.save();ctx.globalAlpha=experiment.amount;drawGestureGrid();ctx.restore();}
  const s=deckSphere(),radius=s.r*1.18,cx=w*.5,cy=h*.5,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
  deckPointScale=1;deckPointAlpha=1;
  if(showGasLayer&&experiment.amount<.995&&membraneRenderer&&gasCtx){membraneTime+=dt*(.10+membraneCfg.fluidity*.85);const ready=membraneRenderer.draw(membraneTime,membraneCfg,angleX,angleY,0,0,1);if(ready){gasCtx.clearRect(0,0,512,512);gasCtx.drawImage(membraneRenderer.canvas,0,0,512,512);gasCtx.globalCompositeOperation='destination-in';gasCtx.fillStyle=gasMask;gasCtx.fillRect(0,0,512,512);gasCtx.globalCompositeOperation='source-over';ctx.save();ctx.globalAlpha=1-experiment.amount;const extent=radius*3.65;ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();}}
@@ -1686,7 +1706,7 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.72,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
+  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=deformExperimentPoint(experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),base,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.72,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawExperimentPoints();if(placingLamps)renderPlacementMarkers();
@@ -1695,17 +1715,55 @@ function renderExperiment(now,dt){
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
 createControlGrid('experimentLightControls',experimentCfg,[['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
-document.getElementById('experimentExpand').onclick=()=>experiment.target=1;document.getElementById('experimentGather').onclick=()=>experiment.target=0;
-function experimentReset(cancelled=false){if(cancelled&&experiment.multi)experiment.target=experiment.startTarget;experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;experiment.gestureTarget=null;}
-canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startAmount=experiment.amount;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.startMidX=(p[0].x+p[1].x)/2;experiment.startMidY=(p[0].y+p[1].y)/2;experiment.startAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);experiment.multi=true;}},true);
-canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size!==2||experiment.startDistance<12)return;const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=d;
- if(experiment.gestureTarget===null){const target=experimentDecision(experiment.startTarget,d/experiment.startDistance,Math.abs(d-experiment.startDistance));if(target!==experiment.startTarget){experiment.gestureTarget=target;experiment.target=target;}}
+document.getElementById('experimentExpand').onclick=()=>{experiment.target=1;experimentWake();};document.getElementById('experimentGather').onclick=experimentNeutral;
+panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
+function experimentReset(cancelled=false){
+ if(cancelled&&experiment.multi){experiment.target=experiment.startTarget;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}}
+ for(const t of experiment.handles)t.id=null;
+ experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;experiment.gestureTarget=null;experiment.gesture=null;experiment.dimmed=false;deck.gesture=null;
+}
+function experimentTouchStart(e){
+ const t=experiment.handles.find(t=>t.id===null);if(!t)return;
+ const sphere=deckSphere(),radius=sphere.r*1.18,dx=e.clientX-sphere.x,dy=e.clientY-sphere.y,length=Math.hypot(dx,dy),factor=length>radius?radius/length:1;
+ Object.assign(t,{id:e.pointerId,ax:sphere.x+dx*factor,ay:sphere.y+dy*factor,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:e.clientX,startY:e.clientY});
+}
+canvas.addEventListener('pointerdown',e=>{
+ if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
+ canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
+ if(experiment.points.size===1){experiment.active=experiment.target===1&&experiment.amount>.65;experiment.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};if(experiment.active)experimentWake();}
+ if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
 },true);
-function finishExperiment(e){if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;if(e.type!=='pointerup'){experimentReset(true);return;}experiment.points.delete(e.pointerId);if(!experiment.points.size)experimentReset();}
+canvas.addEventListener('pointermove',e=>{
+ if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;
+ experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle){handle.tx=(e.clientX-handle.startX)*.8;handle.ty=(e.clientY-handle.startY)*.8;}
+ if(experiment.points.size===2&&experiment.startDistance>=12){
+  const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),ratio=d/experiment.startDistance;experiment.lastDistance=d;
+  if(experiment.gestureTarget===null){const target=experimentDecision(experiment.startTarget,ratio,Math.abs(d-experiment.startDistance));if(target!==experiment.startTarget){experiment.gestureTarget=target;experiment.target=target;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();experiment.dimmed=false;}if(target)experimentWake();else experimentNeutral();}}
+  if(experiment.active&&experiment.gestureTarget===null&&Math.abs(d-experiment.startDistance)>8){deckDim(ratio);experiment.dimmed=true;experimentWake();}
+  return;
+ }
+ if(experiment.multi||!experiment.active)return;
+ const g=experiment.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';else if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';}
+ deck.gesture=g;if(g.axis==='y')experimentWake();
+},true);
+function experimentLampHit(x,y){let best=null;for(let i=0;i<lights.length;i++){const p=experimentCenter(i,experiment.amount,experiment.time),d=Math.hypot(x-p.x,y-p.y);if(d<28&&(!best||d<best.d))best={index:i,d};}return best;}
+function finishExperiment(e){
+ if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;
+ if(e.type!=='pointerup'){experimentReset(true);return;}
+ const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle)handle.id=null;
+ if(experiment.points.size===1&&!experiment.multi&&experiment.active){
+  const g=experiment.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;
+  const action=classifyDeckGesture(g);
+  if(action?.kind==='lights'){deckApply(action.target,action.on);experiment.hasCommands=true;experimentWake();}
+  else if(Math.hypot(g.dx,g.dy)<12){const hit=experimentLampHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());experiment.hasCommands=true;experimentWake();}}
+ }
+ experiment.points.delete(e.pointerId);
+ if(!experiment.points.size){if(experiment.dimmed){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});experiment.hasCommands=true;experimentWake();}experimentReset();}
+}
 canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
-// Keyboard equivalent allows testing the same two states without a touch screen.
-document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();experiment.target=experiment.target===0?1:0;}},true);
+// Keyboard equivalent for the visual prototype.
+document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(experiment.target===0){experiment.target=1;experimentWake();}else experimentNeutral();}},true);
 
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
