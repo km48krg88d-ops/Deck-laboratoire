@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 11 · Colonnes et feuillets</title>
+<title>DECK — Essai 12 · Trames seules</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E11</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E12</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 11 · Colonnes et feuillets</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 12 · Trames seules</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1774,30 +1774,29 @@ function renderExperiment(now,dt){
 }
 // The two edge leaves are visual placeholders: no fan or music command is dispatched.
 const edgeLeaf={name:null,target:0,amount:0,pointer:null,startX:0,startY:0,startAmount:0,previous:0};
-const edgeChrome=document.createElement('section');edgeChrome.id='edgeLeafChrome';edgeChrome.hidden=true;edgeChrome.setAttribute('aria-label','Feuillet de réglages');edgeChrome.style.cssText='position:fixed;z-index:12;left:22px;right:22px;display:none;align-items:center;justify-content:space-between;pointer-events:none;color:white';edgeChrome.innerHTML='<span id="edgeLeafTitle" style="font-size:11px;letter-spacing:.18em"></span><button id="edgeLeafClose" class="chip" style="pointer-events:auto" aria-label="Fermer le feuillet">×</button>';document.body.append(edgeChrome);document.getElementById('edgeLeafClose').onclick=()=>edgeLeaf.target=0;
 function edgeLeafZone(x,y){const strip=Math.max(36,w*.10);if(x>=10&&x<=strip&&y>=h/8&&y<=h*2/8)return 'fan';if(x>=w-strip&&x<=w-10&&y>=h*6/8&&y<=h*7/8)return 'music';return null;}
 function beginEdgeLeaf(e){
- if(edgeLeaf.pointer!==null)return true;if(experiment.points.size)return false;const name=edgeLeafZone(e.clientX,e.clientY);
+ if(experiment.target!==0||experiment.amount>.01||experiment.points.size)return false;
+ if(edgeLeaf.pointer!==null)return true;const name=edgeLeafZone(e.clientX,e.clientY);
  if(!name&&edgeLeaf.amount<.01)return false;
  edgeLeaf.previous=edgeLeaf.target;
  if(name&&name!==edgeLeaf.name){edgeLeaf.name=name;edgeLeaf.amount=0;edgeLeaf.target=0;}
  edgeLeaf.pointer=e.pointerId;edgeLeaf.startX=e.clientX;edgeLeaf.startY=e.clientY;edgeLeaf.startAmount=edgeLeaf.amount;canvas.setPointerCapture(e.pointerId);return true;
 }
 function moveEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=(edgeLeaf.name==='fan'?1:-1)*(e.clientX-edgeLeaf.startX);edgeLeaf.amount=clamp(edgeLeaf.startAmount+inward/w,0,1);return true;}
-function endEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const travel=Math.hypot(e.clientX-edgeLeaf.startX,e.clientY-edgeLeaf.startY);edgeLeaf.target=e.type==='pointerup'?(travel<10&&edgeLeaf.startAmount>.8?0:edgeLeaf.amount>.24?1:0):edgeLeaf.previous;edgeLeaf.pointer=null;return true;}
+function endEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=(edgeLeaf.name==='fan'?1:-1)*(e.clientX-edgeLeaf.startX);edgeLeaf.target=e.type==='pointerup'?(edgeLeaf.startAmount>.5?(inward< -w*.12?0:1):(edgeLeaf.amount>.24?1:0)):edgeLeaf.previous;edgeLeaf.pointer=null;return true;}
 function updateEdgeLeaf(dt){
+ if(experiment.target!==0||experiment.amount>.01){edgeLeaf.target=0;edgeLeaf.amount=0;edgeLeaf.pointer=null;return;}
  if(edgeLeaf.pointer===null){edgeLeaf.amount+=(edgeLeaf.target-edgeLeaf.amount)*(1-Math.exp(-dt*7));if(Math.abs(edgeLeaf.amount-edgeLeaf.target)<.001)edgeLeaf.amount=edgeLeaf.target;}
- const visible=edgeLeaf.amount>.02;edgeChrome.hidden=!visible;edgeChrome.style.display=visible?'flex':'none';edgeChrome.style.top=(edgeLeaf.name==='music'?h/2+20:Math.max(deckSafeTop+18,18))+'px';edgeChrome.style.opacity=edgeLeaf.amount;edgeChrome.style.right=edgeLeaf.name==='fan'?'112px':'22px';document.getElementById('edgeLeafTitle').textContent=edgeLeaf.name==='fan'?'VENTILATEUR':'MUSIQUE';
 }
 function drawEdgeMarks(){
  ctx.save();ctx.strokeStyle='rgba(255,255,255,.46)';ctx.lineWidth=.8;ctx.beginPath();
  for(let col=0;col<=6;col++){const x=clamp(w*col/6,2,w-2);ctx.moveTo(x,2);ctx.lineTo(x,9);ctx.moveTo(x,h-9);ctx.lineTo(x,h-2);}
  for(let row=0;row<=8;row++){const y=clamp(h*row/8,2,h-2);ctx.moveTo(2,y);ctx.lineTo(9,y);ctx.moveTo(w-9,y);ctx.lineTo(w-2,y);}ctx.stroke();
- // Double ticks identify the two reserved edge entry slots.
- ctx.strokeStyle='rgba(255,255,255,.82)';ctx.beginPath();for(const [x,y,sign] of [[3,h*1.5/8,1],[w-3,h*6.5/8,-1]]){ctx.moveTo(x,y-5);ctx.lineTo(x+sign*12,y-5);ctx.moveTo(x,y+5);ctx.lineTo(x+sign*12,y+5);}ctx.stroke();ctx.restore();
+ ctx.restore();
 }
 function drawEdgeLeaf(){if(edgeLeaf.amount<.001)return;const top=edgeLeaf.name==='fan'?0:h/2,offset=(edgeLeaf.name==='fan'?-1:1)*(1-edgeLeaf.amount)*w;
- ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.fillStyle=dayCSS(dayPalette.a,.78);ctx.fillRect(0,top,w,h/2);ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();
+ ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();
  ctx.strokeStyle='rgba(255,255,255,.82)';ctx.beginPath();for(let col=1;col<6;col++)for(let row=1;row<4;row++){const x=col*w/6,y=top+row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
 window.addEventListener('blur',()=>{edgeLeaf.pointer=null;edgeLeaf.target=edgeLeaf.previous;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')edgeLeaf.target=0;});
