@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 22 · Rotation et arrivées décalées</title>
+<title>DECK — Essai 23 · Calques comparables</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,10 +88,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E22</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E23</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 22 · Rotation et arrivées décalées</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 23 · Calques comparables</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -225,8 +225,8 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.body.style.background=bg;
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
-const sphereAppearance={scale:1.25};
-try{const saved=Number(localStorage.getItem('deck-sphere-scale'));if(saved>=.65&&saved<=1.8)sphereAppearance.scale=saved;}catch(_){}
+const sphereAppearance={scale:1.15};
+try{if(!localStorage.getItem('deck-sphere-scale-e23')){localStorage.setItem('deck-sphere-scale','1.15');localStorage.setItem('deck-sphere-scale-e23','1');}const saved=Number(localStorage.getItem('deck-sphere-scale'));if(saved>=.65&&saved<=1.8)sphereAppearance.scale=saved;}catch(_){}
 const sphereCfg={density:200,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.76,softness:.81,transparency:2,reflection:2,edge:2.5,folds:2.5,breath:.230};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
@@ -1779,10 +1779,13 @@ function captureExperimentDeparture(preserveSelection=false,launch=true){
 }
 // Greedy directional matching: nine distinct real grains, nearest to natural outward routes.
 function selectExperimentLampGrains(){
- const data=experiment.departures,backCount=experiment.flightDepths?particles.reduce((sum,_,i)=>sum+(experiment.flightDepths[i*2]<-.04?1:0),0):0,used=new Set(),indices=[],flags=new Float32Array(particles.length).fill(-1),sphere=deckSphere();
+ const data=experiment.departures,used=new Set(),indices=[],flags=new Float32Array(particles.length).fill(-1),sphere=deckSphere(),radius=sphere.r*1.18;
+ const all=particles.map((_,i)=>i),back=all.filter(i=>experiment.flightDepths&&experiment.flightDepths[i*2]<-.04),rear=back.length>=lights.length+2?back:all;
+ const central=rear.filter(i=>Math.hypot(data[i*4]-sphere.x,data[i*4+1]-sphere.y)<=radius*.55);
+ const pool=central.length>=lights.length+2?central:rear.sort((a,b)=>Math.hypot(data[a*4]-sphere.x,data[a*4+1]-sphere.y)-Math.hypot(data[b*4]-sphere.x,data[b*4+1]-sphere.y)).slice(0,Math.max(lights.length+2,Math.floor(rear.length*.1)));
  const order=Array.from({length:lights.length+2},(_,i)=>i).sort((a,b)=>{const p=experimentControlPoint(a),q=experimentControlPoint(b);return Math.hypot(q.x-sphere.x,q.y-sphere.y)-Math.hypot(p.x-sphere.x,p.y-sphere.y);});
  for(const lamp of order){const target=experimentControlPoint(lamp);let best=-1,cost=Infinity;
-  for(let i=0;i<particles.length;i++){if(used.has(i)||(backCount>=lights.length+2&&experiment.flightDepths[i*2]>=-.04))continue;const j=i*4,dx=target.x-data[j],dy=target.y-data[j+1],distance=Math.max(1,Math.hypot(dx,dy)),speed=Math.max(1,Math.hypot(data[j+2],data[j+3])),alignment=(dx*data[j+2]+dy*data[j+3])/(distance*speed),miss=Math.hypot(data[j]+data[j+2]*2.2-target.x,data[j+1]+data[j+3]*2.2-target.y),score=(1-alignment)*Math.max(w,h)+miss*.5;
+  for(const i of pool){if(used.has(i))continue;const j=i*4,dx=target.x-data[j],dy=target.y-data[j+1],distance=Math.max(1,Math.hypot(dx,dy)),speed=Math.max(1,Math.hypot(data[j+2],data[j+3])),alignment=(dx*data[j+2]+dy*data[j+3])/(distance*speed),miss=Math.hypot(data[j]+data[j+2]*2.2-target.x,data[j+1]+data[j+3]*2.2-target.y),score=(1-alignment)*Math.max(w,h)+miss*.5;
    if(score<cost){cost=score;best=i;}
   }
   if(best>=0){indices[lamp]=best;flags[best]=lamp;used.add(best);}
@@ -1896,37 +1899,43 @@ function renderExperiment(now,dt){
   for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;if(q.passed)continue;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth))*Math.min(48,q.scale||1);ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
- drawEdgeLeaf();if(experiment.amount<.05)drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
+ drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
  frames++;frameAcc+=dt;if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
 // The two edge leaves are visual placeholders: no fan or music command is dispatched.
-const edgeLeaf={name:null,target:0,amount:0,pointer:null,startX:0,startY:0,startAmount:0,previous:0};
-function edgeLeafZone(x,y){const strip=Math.max(36,w*.10);if(x>=10&&x<=strip&&y>=h/8&&y<=h*2/8)return 'fan';if(x>=w-strip&&x<=w-10&&y>=h*6/8&&y<=h*7/8)return 'music';return null;}
+const edgeLeaf={fan:{target:0,amount:0},music:{target:0,amount:0},name:null,pointer:null,startX:0,startY:0,startAmount:0,previous:0};
+function edgeLeafZone(x,y){const strip=Math.max(36,w*.10);return x>=w-strip&&x<=w&&y>=0&&y<=h?(y<h/2?'fan':'music'):null;}
 function beginEdgeLeaf(e){
  if(experiment.target!==0||experiment.amount>.01||experiment.points.size)return false;
- if(edgeLeaf.pointer!==null)return true;const name=edgeLeafZone(e.clientX,e.clientY);
- if(!name&&edgeLeaf.amount<.01)return false;
- edgeLeaf.previous=edgeLeaf.target;
- if(name&&name!==edgeLeaf.name){edgeLeaf.name=name;edgeLeaf.amount=0;edgeLeaf.target=0;}
- edgeLeaf.pointer=e.pointerId;edgeLeaf.startX=e.clientX;edgeLeaf.startY=e.clientY;edgeLeaf.startAmount=edgeLeaf.amount;canvas.setPointerCapture(e.pointerId);return true;
+ if(edgeLeaf.pointer!==null)return true;let name=edgeLeafZone(e.clientX,e.clientY);
+ if(!name){const candidate=e.clientY<h/2?'fan':'music',sphere=deckSphere();if(edgeLeaf[candidate].amount>.01&&Math.hypot(e.clientX-sphere.x,e.clientY-sphere.y)>sphere.r*1.2)name=candidate;else return false;}
+ const leaf=edgeLeaf[name];edgeLeaf.name=name;edgeLeaf.previous=leaf.target;
+ edgeLeaf.pointer=e.pointerId;edgeLeaf.startX=e.clientX;edgeLeaf.startY=e.clientY;edgeLeaf.startAmount=leaf.amount;canvas.setPointerCapture(e.pointerId);return true;
 }
-function moveEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=(edgeLeaf.name==='fan'?1:-1)*(e.clientX-edgeLeaf.startX);edgeLeaf.amount=clamp(edgeLeaf.startAmount+inward/w,0,1);return true;}
-function endEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=(edgeLeaf.name==='fan'?1:-1)*(e.clientX-edgeLeaf.startX);edgeLeaf.target=e.type==='pointerup'?(edgeLeaf.startAmount>.5?(inward< -w*.12?0:1):(edgeLeaf.amount>.24?1:0)):edgeLeaf.previous;edgeLeaf.pointer=null;return true;}
+function moveEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=edgeLeaf.startX-e.clientX;edgeLeaf[edgeLeaf.name].amount=clamp(edgeLeaf.startAmount+inward/w,0,1);return true;}
+function endEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=edgeLeaf.startX-e.clientX,leaf=edgeLeaf[edgeLeaf.name];leaf.target=e.type==='pointerup'?(edgeLeaf.startAmount>.5?(inward< -w*.12?0:1):(leaf.amount>.24?1:0)):edgeLeaf.previous;edgeLeaf.pointer=null;return true;}
 function updateEdgeLeaf(dt){
- if(experiment.target!==0||experiment.amount>.01){edgeLeaf.target=0;edgeLeaf.amount=0;edgeLeaf.pointer=null;return;}
- if(edgeLeaf.pointer===null){edgeLeaf.amount+=(edgeLeaf.target-edgeLeaf.amount)*(1-Math.exp(-dt*7));if(Math.abs(edgeLeaf.amount-edgeLeaf.target)<.001)edgeLeaf.amount=edgeLeaf.target;}
+ if(experiment.target!==0||experiment.amount>.01){for(const name of ['fan','music']){edgeLeaf[name].target=0;edgeLeaf[name].amount=0;}edgeLeaf.pointer=null;return;}
+ for(const name of ['fan','music']){const leaf=edgeLeaf[name];if(edgeLeaf.pointer!==null&&edgeLeaf.name===name)continue;leaf.amount+=(leaf.target-leaf.amount)*(1-Math.exp(-dt*7));if(Math.abs(leaf.amount-leaf.target)<.001)leaf.amount=leaf.target;}
 }
+
 function drawEdgeMarks(){
  ctx.save();ctx.strokeStyle='rgba(255,255,255,.46)';ctx.lineWidth=.8;ctx.beginPath();
  for(let col=0;col<=6;col++){const x=clamp(w*col/6,2,w-2);ctx.moveTo(x,2);ctx.lineTo(x,9);ctx.moveTo(x,h-9);ctx.lineTo(x,h-2);}
  for(let row=0;row<=8;row++){const y=clamp(h*row/8,2,h-2);ctx.moveTo(2,y);ctx.lineTo(9,y);ctx.moveTo(w-9,y);ctx.lineTo(w-2,y);}ctx.stroke();
  ctx.restore();
 }
-function drawEdgeLeaf(){if(edgeLeaf.amount<.001)return;const top=edgeLeaf.name==='fan'?0:h/2,offset=(edgeLeaf.name==='fan'?-1:1)*(1-edgeLeaf.amount)*w;
- ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();
- ctx.strokeStyle='rgba(255,255,255,.82)';ctx.beginPath();for(let col=1;col<6;col++)for(let row=1;row<4;row++){const x=col*w/6,y=top+row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
-window.addEventListener('blur',()=>{edgeLeaf.pointer=null;edgeLeaf.target=edgeLeaf.previous;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')edgeLeaf.target=0;});
+function drawEdgeLeaf(){
+ for(const name of ['fan','music']){
+  const leaf=edgeLeaf[name];if(leaf.amount<.001)continue;const top=name==='fan'?0:h/2,offset=(1-leaf.amount)*w;
+  ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);
+  // Fan retains the complete lattice; music exposes only its intersection crosses.
+  if(name==='fan'){ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();}
+  ctx.strokeStyle='rgba(255,255,255,.82)';ctx.lineWidth=.7;ctx.beginPath();for(let col=1;col<6;col++)for(let row=1;row<4;row++){const x=col*w/6,y=top+row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();
+ }
+}
+window.addEventListener('blur',()=>{if(edgeLeaf.pointer!==null)edgeLeaf[edgeLeaf.name].target=edgeLeaf.previous;edgeLeaf.pointer=null;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')for(const name of ['fan','music'])edgeLeaf[name].target=0;});
 
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
