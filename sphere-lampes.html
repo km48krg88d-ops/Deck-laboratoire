@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 15 · Souple et fragile</title>
+<title>DECK — Essai 16 · Éclatement continu</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E15</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E16</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 15 · Souple et fragile</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 16 · Éclatement continu</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -907,7 +907,8 @@ function setupPointsGPU(){
  const gl=c.getContext('webgl',{alpha:true,antialias:false,depth:false,premultipliedAlpha:true,preserveDrawingBuffer:true});
  if(!gl)return null;
  const vs=`precision highp float;
- attribute vec4 aPoint;
+ attribute vec4 aPoint,aDeparture;
+ uniform float uDepartureMix;
  uniform vec2 uViewport,uCenter,uAngles;
  uniform vec4 uTouches[2];uniform vec2 uTargets[9],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
@@ -934,8 +935,17 @@ function setupPointsGPU(){
  vec2 flutter=vec2(sin(uFlowTime*.7+aPoint.w*87.+raw.y*8.),cos(uFlowTime*.57+aPoint.w*61.+raw.x*9.));
  float ca=cos(uTwist),sa=sin(uTwist);spread=mat2(ca,-sa,sa,ca)*spread;
  vec2 cloud=(spread*vec2(uViewport.x*.34,uViewport.y*.23)+flutter*uViewport.x*.025+uGesture*.8)*burst*(1.-gather);
- vec2 pixel=target+local*mix(1.+burst*.5,uSmallScale,gather)+cloud;
- for(int j=0;j<2;j++){vec2 d=(uCenter+local)-uTouches[j].xy;float weight=exp(-dot(d,d)/(uRadius*uRadius*.64));pixel+=uTouches[j].zw*weight*(1.-uSplit)*(1.-uSplit);}
+ vec2 source=uCenter+local;
+ // Sample both touch weights from the undeformed point, just as in Canvas.
+ vec2 deformation=vec2(0.);
+ for(int j=0;j<2;j++){vec2 d=(uCenter+local)-uTouches[j].xy;deformation+=uTouches[j].zw*exp(-dot(d,d)/(uRadius*uRadius*.64));}
+ source+=deformation;
+ vec2 velocity=(source-uCenter)*1.1+deformation*1.4;
+ source=mix(source,aDeparture.xy,uDepartureMix);velocity=mix(velocity,aDeparture.zw,uDepartureMix);
+ vec2 freeFlight=source+velocity*uSplit*2.2+cloud*.25;
+ float attraction=smoothstep(.36+.08*rnd(owner+211.),.84+.14*rnd(owner+223.),uSplit);
+ vec2 destination=target+local*mix(.14,uSmallScale,gather);
+ vec2 pixel=mix(freeFlight,destination,attraction);
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
  float scint=1.;
  float alpha=min(1.,clamp((depth*.66+.18)*uOpacity,.04,1.)*(.68+.32*aPoint.w)*(1.+uEnergy*(.18+1.55*rim)*scint));
@@ -955,6 +965,7 @@ function setupPointsGPU(){
  try{
  const program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vs));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
  gl.useProgram(program);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+ const departureBuffer=gl.createBuffer(),departureAttr=gl.getAttribLocation(program,'aDeparture');
  const attr=gl.getAttribLocation(program,'aPoint');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,4,gl.FLOAT,false,0,0);
  const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,dotSprite);
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
@@ -964,12 +975,18 @@ function setupPointsGPU(){
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
- let uploaded=null;
+ uniforms.DepartureMix=gl.getUniformLocation(program,'uDepartureMix');
+ let uploaded=null,uploadedDeparture=null,departureCount=0;
  return {draw(cx,cy,radius,breathe,energy){
   if(gl.isContextLost())return false;
   if(c.width!==canvas.width||c.height!==canvas.height){c.width=canvas.width;c.height=canvas.height;gl.viewport(0,0,c.width,c.height);}
   gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   if(uploaded!==particles){const data=new Float32Array(particles.length*4);particles.forEach((p,i)=>data.set([p.x,p.y,p.z,p.seed],i*4));gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);uploaded=particles;}
+  const departures=experiment.departureParticles===particles?experiment.departures:null;
+  gl.bindBuffer(gl.ARRAY_BUFFER,departureBuffer);
+  if(uploadedDeparture!==departures||departureCount!==particles.length){gl.bufferData(gl.ARRAY_BUFFER,departures||new Float32Array(particles.length*4),gl.STATIC_DRAW);uploadedDeparture=departures;departureCount=particles.length;}
+  gl.enableVertexAttribArray(departureAttr);gl.vertexAttribPointer(departureAttr,4,gl.FLOAT,false,0,0);
+  gl.uniform1f(uniforms.DepartureMix,departures?(experiment.target===1?1:experimentEase(0,.3,experiment.amount)):0);
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
   gl.uniform4fv(uniforms.Touches,new Float32Array(experimentDeformationHandles().flatMap(t=>[t.ax,t.ay,t.x,t.y])));
@@ -1684,7 +1701,7 @@ function drawDayCycle(){
 
 const EXPERIMENT_SMALL_SCALE=.012;
 const experimentCfg={softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
-const experiment={rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
+const experiment={departures:null,departureParticles:null,rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
 function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t*(3-2*t);}
@@ -1713,7 +1730,27 @@ function experimentParticleOffset(raw,seed,amount){
  const split=amount*amount*(3-2*amount),burst=Math.sin(Math.PI*split),randomAngle=experimentHash(seed*913+1)*Math.PI*2,randomRadius=Math.pow(experimentHash(seed*913+7),.65),sx=Math.cos(randomAngle)*randomRadius,sy=Math.sin(randomAngle)*randomRadius,c=Math.cos(experiment.twist),s=Math.sin(experiment.twist);
  return {x:((sx*c+sy*s)*w*.34+Math.sin(experiment.time*.7+seed*87+raw.y*8)*w*.025+experiment.handX*.8)*burst,y:((-sx*s+sy*c)*h*.23+Math.cos(experiment.time*.57+seed*61+raw.x*9)*w*.025+experiment.handY*.8)*burst};
 }
-function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),gather=experimentEase(.52,.98,experimentLampProgress(Math.min(8,Math.floor(seed*9)),amount)),burst=Math.sin(Math.PI*amount*amount*(3-2*amount)),scale=(1+burst*.5)*(1-gather)+EXPERIMENT_SMALL_SCALE*gather,scatter=experimentParticleOffset(raw,seed,amount);return {x:p.x+raw.x*radius*scale+scatter.x*(1-gather),y:p.y+raw.y*radius*scale+scatter.y*(1-gather)};}
+// One shell first: lamp ownership has no influence on the initial free flight.
+function experimentPose(raw,seed,cx,cy,radius,amount,index){
+ const local={x:raw.x*radius,y:raw.y*radius},base={x:cx+local.x,y:cy+local.y};
+ const deformed=deformExperimentPoint(base,base,radius,0),deformation={x:deformed.x-base.x,y:deformed.y-base.y};
+ let source=deformed,velocity={x:(deformed.x-cx)*1.1+deformation.x*1.4,y:(deformed.y-cy)*1.1+deformation.y*1.4};
+ if(experiment.departureParticles===particles&&experiment.departures){const a=experiment.departures,j=index*4,mix=experiment.target===1?1:experimentEase(0,.3,amount);source={x:source.x+(a[j]-source.x)*mix,y:source.y+(a[j+1]-source.y)*mix};velocity={x:velocity.x+(a[j+2]-velocity.x)*mix,y:velocity.y+(a[j+3]-velocity.y)*mix};}
+ const owner=Math.min(8,Math.floor(seed*9)),target=experimentCenter(owner,amount,experiment.time),progress=experimentLampProgress(owner,amount),gather=experimentEase(.52,.98,progress),scatter=experimentParticleOffset(raw,seed,amount),attraction=experimentEase(.36+.08*experimentHash(owner+211),.84+.14*experimentHash(owner+223),amount),scale=.14+(EXPERIMENT_SMALL_SCALE-.14)*gather;
+ const flight={x:source.x+velocity.x*amount*2.2+scatter.x*(1-gather)*.25,y:source.y+velocity.y*amount*2.2+scatter.y*(1-gather)*.25};
+ return {x:flight.x+(target.x+local.x*scale-flight.x)*attraction,y:flight.y+(target.y+local.y*scale-flight.y)*attraction};
+}
+// One O(N) snapshot at rupture; subsequent integration stays on the GPU.
+function captureExperimentDeparture(){
+ const s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),data=new Float32Array(particles.length*4);
+ for(let i=0;i<particles.length;i++){
+  const p=particles[i],radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius},point=deformExperimentPoint(base,base,radius,0);
+  data.set([point.x,point.y,(point.x-s.x)*1.1+(point.x-base.x)*1.4,(point.y-s.y)*1.1+(point.y-base.y)*1.4],i*4);
+ }
+ experiment.departures=data;experiment.departureParticles=particles;
+}
+function beginExperimentOpening(){captureExperimentDeparture();experiment.target=1;experimentWake();}
+
 function drawExperimentPoints(){
  if(experiment.amount<.001)return;
  for(let i=0;i<lights.length;i++){
@@ -1741,7 +1778,7 @@ function experimentTryRupture(){
  const stretch=((b.x-a.x)*dx+(b.y-a.y)*dy)/length;
  if(stretch<radius*experimentCfg.rupture)return false;
  experiment.rupture=experiment.handles.map(t=>({ax:t.ax,ay:t.ay,x:t.x,y:t.y}));
- experiment.gestureTarget=1;experiment.target=1;experimentWake();return true;
+ experiment.gestureTarget=1;beginExperimentOpening();return true;
 }
 function updateExperimentTouch(dt){
  if(experiment.rupture)return;
@@ -1783,7 +1820,7 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=deformExperimentPoint(experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),base,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.86,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
+  for(let pi=0;pi<particles.length;pi++){const p=particles[pi],radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.86,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawExperimentPoints();drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
@@ -1853,7 +1890,7 @@ document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map
 document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
 
 createControlGrid('experimentLightControls',experimentCfg,[['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
-document.getElementById('experimentExpand').onclick=()=>{experiment.target=1;experimentWake();};document.getElementById('experimentGather').onclick=experimentNeutral;
+document.getElementById('experimentExpand').onclick=beginExperimentOpening;document.getElementById('experimentGather').onclick=experimentNeutral;
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
  if(cancelled&&experiment.multi&&experiment.gestureTarget===null){experiment.target=experiment.startTarget;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}}
@@ -1901,7 +1938,7 @@ function finishExperiment(e){
 canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(edgeLeaf.pointer===e.pointerId)endEdgeLeaf({...e,type:'pointercancel'});if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent for the visual prototype.
-document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(experiment.target===0){experiment.target=1;experimentWake();}else experimentNeutral();}},true);
+document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(experiment.target===0){beginExperimentOpening();}else experimentNeutral();}},true);
 
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
