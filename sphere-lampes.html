@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 02 · Points lumineux</title>
+<title>DECK — Essai 03 · Dispersion vivante</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,9 +88,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E02</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E03</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 02 · Points lumineux</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 03 · Dispersion vivante</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -224,7 +224,7 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.body.style.background=bg;
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
-const sphereCfg={density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0,softness:.65};
+const sphereCfg={density:400,size:.50,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.76,softness:.81,transparency:2,reflection:2,edge:2.5,folds:2.5,breath:.230};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
 const opalProfiles={
@@ -238,7 +238,7 @@ const membraneParams=[['fluidity','Mouvement',0,2.5,.01],['softness','Diffusion'
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
-  sommeil:{density:400,size:.50,deform:.25,fluidity:.82,speed:.47,breath:.045,opacity:1.00,glow:0},
+  sommeil:{density:400,size:.50,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0},
   brume:{density:62,size:1.1,deform:.13,fluidity:.75,speed:.36,breath:.065,opacity:.53,glow:.22},
   membrane:{density:72,size:.82,deform:.24,fluidity:.88,speed:.24,breath:.04,opacity:.43,glow:.35},
   dense:{density:220,size:.78,deform:.08,fluidity:.92,speed:.22,breath:.022,opacity:.78,glow:.08}
@@ -906,9 +906,10 @@ function setupPointsGPU(){
  const vs=`precision highp float;
  attribute vec4 aPoint;
  uniform vec2 uViewport,uCenter,uAngles;
- uniform vec2 uTargets[9];uniform float uSplit,uSmallScale;
+ uniform vec2 uTargets[9],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
  varying float vAlpha;
+ float rnd(float n){return fract(sin(n*127.1)*43758.5453123);}
  float wave(vec3 p){float f=1.-uFluid;float t=uClock;
  float low=sin((2.1+f*1.2)*p.x+(1.6+f*.8)*p.y+sin((1.4+f*.5)*p.z+t*.42))*cos((2.+f*.9)*p.z-(1.9+f*.5)*p.y+t*.37);
  float mid=.55*sin((4.4+f*4.5)*p.y+(3.3+f*3.4)*p.z-1.35*t+sin(1.2*p.x+t*.25));
@@ -922,11 +923,17 @@ function setupPointsGPU(){
  for(int j=1;j<9;j++){if(owner==float(j))target=uTargets[j];}
  vec2 local=vec2(xx,-yy)*uRadius*uBreath*perspective;
  float split=uSplit*uSplit*(3.-2.*uSplit);
- vec2 pixel=target+local*mix(1.,uSmallScale,split);
+ float gather=smoothstep(.36,1.,uSplit),burst=sin(3.14159265*split);
+ float randomAngle=rnd(aPoint.w*913.+1.)*6.2831853,randomRadius=pow(rnd(aPoint.w*913.+7.),.65);
+ vec2 spread=vec2(cos(randomAngle),sin(randomAngle))*randomRadius;
+ vec2 flutter=vec2(sin(uFlowTime*.7+aPoint.w*87.+raw.y*8.),cos(uFlowTime*.57+aPoint.w*61.+raw.x*9.));
+ float ca=cos(uTwist),sa=sin(uTwist);spread=mat2(ca,-sa,sa,ca)*spread;
+ vec2 cloud=(spread*vec2(uViewport.x*.34,uViewport.y*.23)+flutter*uViewport.x*.025+uGesture*.8)*burst;
+ vec2 pixel=target+local*mix(1.+burst*.5,uSmallScale,gather)+cloud;
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
  float scint=.72+.28*sin(uClock*.65+aPoint.w*7.+(raw.x-raw.y+raw.z)*2.3);
  float alpha=min(1.,clamp((depth*.66+.18)*uOpacity,.04,1.)*(.68+.32*aPoint.w)*(1.+uEnergy*(.18+1.55*rim)*scint));
- vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.60,1.,uSplit));
+ vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.88,1.,uSplit));
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
  float diameter=uSoft>.001?max(1.25/uDpr,size)*(1.1+1.45*uSoft):size;
  gl_PointSize=max(1.,diameter*uDpr);
@@ -946,6 +953,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
+ uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
  let uploaded=null;
  return {draw(cx,cy,radius,breathe,energy){
@@ -954,6 +962,7 @@ function setupPointsGPU(){
   gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   if(uploaded!==particles){const data=new Float32Array(particles.length*4);particles.forEach((p,i)=>data.set([p.x,p.y,p.z,p.seed],i*4));gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);uploaded=particles;}
   gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(uniforms.Gesture,experiment.handX,experiment.handY);gl.uniform1f(uniforms.FlowTime,experiment.time);gl.uniform1f(uniforms.Twist,experiment.twist);
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
   gl.uniform2fv(uniforms.Targets,new Float32Array(lights.flatMap((_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];})));
   gl.uniform2f(uniforms.Viewport,w,h);gl.uniform2f(uniforms.Center,cx,cy);gl.uniform2f(uniforms.Angles,angleX,angleY);
@@ -1619,23 +1628,29 @@ function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;de
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
 // Independent experiment 01. No lamp commands, no persisted V49 settings are changed by its gestures.
 const EXPERIMENT_SMALL_SCALE=.012;
-const experimentCfg={curve:.65,drift:1.7,driftSpeed:.35,core:3.2,halo:24,brightness:.85};
-const experiment={time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0};
+const experimentCfg={curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
+const experiment={handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
 function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t*(3-2*t);}
+function experimentHash(n){const value=Math.sin(n*127.1)*43758.5453123;return value-Math.floor(value);}
+function experimentNoise(time,seed){const cell=Math.floor(time),t=time-cell,s=t*t*(3-2*t);return ((1-s)*experimentHash(cell+seed*91.73)+s*experimentHash(cell+1+seed*91.73))*2-1;}
+function experimentWander(index,time){const seed=index*17.139+5,flow=time*experimentCfg.driftSpeed;return {x:.68*experimentNoise(flow,seed)+.32*experimentNoise(flow*2.17,seed+71),y:.68*experimentNoise(flow*.83,seed+19)+.32*experimentNoise(flow*1.79,seed+139)};}
 function experimentCenter(index,amount,time){
- const p=experimentLampPoint(index),cx=w*.5,cy=h*.5,t=amount*amount*(3-2*amount),dx=p.x-cx,dy=p.y-cy,length=Math.hypot(dx,dy)||1,phase=index*2.39996323;
- const bend=Math.sin(Math.PI*t)*Math.min(w*.12,length*.18)*experimentCfg.curve;
- const curl=(index%2?-1:1)*(.8+.2*Math.sin(phase));
- const drift=experimentCfg.drift*t,flow=time*experimentCfg.driftSpeed;
- return {x:cx+dx*t-dy/length*bend*curl+drift*Math.sin(flow+phase),y:cy+dy*t+dx/length*bend*curl+drift*.75*Math.sin(flow*.79+phase*1.3)};
+ const p=experimentLampPoint(index),cx=w*.5,cy=h*.5,t=experimentEase(.36,1,amount),dx=p.x-cx,dy=p.y-cy,length=Math.hypot(dx,dy)||1;
+ const random=experimentWander(index,time),bend=Math.sin(Math.PI*t)*Math.min(w*.12,length*.18)*experimentCfg.curve;
+ const curl=(index%2?-1:1)*(.7+.3*experimentNoise(time*.35,index+91));
+ return {x:cx+dx*t-dy/length*bend*curl+experimentCfg.drift*t*random.x,y:cy+dy*t+dx/length*bend*curl+experimentCfg.drift*t*random.y};
 }
-function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),t=amount*amount*(3-2*amount),scale=1+(EXPERIMENT_SMALL_SCALE-1)*t;return {x:p.x+raw.x*radius*scale,y:p.y+raw.y*radius*scale};}
+function experimentParticleOffset(raw,seed,amount){
+ const split=amount*amount*(3-2*amount),burst=Math.sin(Math.PI*split),randomAngle=experimentHash(seed*913+1)*Math.PI*2,randomRadius=Math.pow(experimentHash(seed*913+7),.65),sx=Math.cos(randomAngle)*randomRadius,sy=Math.sin(randomAngle)*randomRadius,c=Math.cos(experiment.twist),s=Math.sin(experiment.twist);
+ return {x:((sx*c+sy*s)*w*.34+Math.sin(experiment.time*.7+seed*87+raw.y*8)*w*.025+experiment.handX*.8)*burst,y:((-sx*s+sy*c)*h*.23+Math.cos(experiment.time*.57+seed*61+raw.x*9)*w*.025+experiment.handY*.8)*burst};
+}
+function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),gather=experimentEase(.36,1,amount),burst=Math.sin(Math.PI*amount*amount*(3-2*amount)),scale=(1+burst*.5)*(1-gather)+EXPERIMENT_SMALL_SCALE*gather,scatter=experimentParticleOffset(raw,seed,amount);return {x:p.x+raw.x*radius*scale+scatter.x,y:p.y+raw.y*radius*scale+scatter.y};}
 function drawExperimentPoints(){
- const mix=experimentEase(.25,.92,experiment.amount);if(mix<.001)return;
+ const mix=experimentEase(.80,1,experiment.amount);if(mix<.001)return;
  for(let i=0;i<lights.length;i++){
-  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.025*Math.sin(experiment.time*.6+i*1.7),core=experimentCfg.core*pulse,halo=experimentCfg.halo,alpha=mix*experimentCfg.brightness;
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.035*experimentNoise(experiment.time*.6,i*2.17+400),core=experimentCfg.core*pulse,halo=experimentCfg.halo,alpha=mix*experimentCfg.brightness;
   ctx.save();ctx.globalAlpha=alpha;
   const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'rgba(255,250,246,.80)');g.addColorStop(.12,'rgba(255,232,229,.54)');g.addColorStop(.35,'rgba(255,185,198,.17)');g.addColorStop(1,'rgba(255,165,188,0)');ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
   const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,'rgba(255,255,255,1)');nucleus.addColorStop(.6,'rgba(255,248,244,.92)');nucleus.addColorStop(1,'rgba(255,233,227,0)');ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
@@ -1643,7 +1658,7 @@ function drawExperimentPoints(){
 }
 function renderExperiment(now,dt){
  clock+=dt*sphereCfg.speed;experiment.time+=dt;const held=experiment.multi&&experiment.points.size===2;
- if(!held){experiment.amount+=(experiment.target-experiment.amount)*(1-Math.exp(-dt*6));if(Math.abs(experiment.amount-experiment.target)<.0005)experiment.amount=experiment.target;}
+ if(!held){experiment.handX*=Math.exp(-dt*3);experiment.handY*=Math.exp(-dt*3);experiment.twist*=Math.exp(-dt*3);experiment.amount+=(experiment.target-experiment.amount)*(1-Math.exp(-dt*3.8));if(Math.abs(experiment.amount-experiment.target)<.0005)experiment.amount=experiment.target;}
  ctx.fillStyle=deckDayColor();ctx.fillRect(0,0,w,h);ctx.save();ctx.globalAlpha=.18;drawSoftBackdrop();ctx.restore();
  const s=deckSphere(),radius=s.r*1.18,cx=w*.5,cy=h*.5,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
  deckPointScale=1;deckPointAlpha=1;
@@ -1651,7 +1666,7 @@ function renderExperiment(now,dt){
  const drawParticles=showPoints&&experiment.amount<.995;
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
-  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1-experimentEase(.6,1,experiment.amount);
+  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1-experimentEase(.88,1,experiment.amount);
   for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*fade;const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
@@ -1660,12 +1675,12 @@ function renderExperiment(now,dt){
 }
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
-createControlGrid('experimentLightControls',experimentCfg,[['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,5,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
+createControlGrid('experimentLightControls',experimentCfg,[['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=()=>experiment.target=1;document.getElementById('experimentGather').onclick=()=>experiment.target=0;
-function experimentReset(cancelled=false){if(cancelled&&experiment.multi)experiment.target=experiment.startAmount;experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;}
-canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startAmount=experiment.target;experiment.multi=true;}},true);
-canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size!==2||experiment.startDistance<12)return;const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=d;const ratio=d/experiment.startDistance;experiment.amount=clamp(experiment.startAmount+Math.log(Math.max(.15,ratio))/Math.log(1.8),0,1);},true);
-function finishExperiment(e){if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;if(e.type!=='pointerup'){experimentReset(true);return;}if(experiment.multi&&experiment.points.size===2){const ratio=experiment.lastDistance/experiment.startDistance,travel=Math.abs(experiment.lastDistance-experiment.startDistance);experiment.target=experimentDecision(experiment.startAmount,ratio,travel);}experiment.points.delete(e.pointerId);if(!experiment.points.size)experimentReset();}
+function experimentReset(cancelled=false){if(cancelled&&experiment.multi)experiment.target=experiment.startTarget;experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;}
+canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startAmount=experiment.amount;experiment.startTarget=experiment.target;experiment.startMidX=(p[0].x+p[1].x)/2;experiment.startMidY=(p[0].y+p[1].y)/2;experiment.startAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);experiment.multi=true;}},true);
+canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size!==2||experiment.startDistance<12)return;const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=d;experiment.handX=(p[0].x+p[1].x)/2-experiment.startMidX;experiment.handY=(p[0].y+p[1].y)/2-experiment.startMidY;const angle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x)-experiment.startAngle;experiment.twist=Math.atan2(Math.sin(angle),Math.cos(angle));const ratio=d/experiment.startDistance;experiment.amount=clamp(experiment.startAmount+Math.log(Math.max(.15,ratio))/Math.log(1.8),0,1);},true);
+function finishExperiment(e){if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;if(e.type!=='pointerup'){experimentReset(true);return;}if(experiment.multi&&experiment.points.size===2){const ratio=experiment.lastDistance/experiment.startDistance,travel=Math.abs(experiment.lastDistance-experiment.startDistance);experiment.target=experimentDecision(experiment.startTarget,ratio,travel);}experiment.points.delete(e.pointerId);if(!experiment.points.size)experimentReset();}
 canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent allows testing the same two states without a touch screen.
