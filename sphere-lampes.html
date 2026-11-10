@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 01 · Sphère déployable</title>
+<title>DECK — Essai 02 · Points lumineux</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -81,16 +81,16 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 @media(prefers-reduced-motion:reduce){.deck-sheet{transition:none}}
 
 
-.top,.panel,#deckControls,#deckNotice,#lampPlacementBar{display:none!important}
+#deckControls,#deckNotice{display:none!important}
 #stage:focus{outline:none}
 </style>
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ 49</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E02</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Version 49 · Calques indépendants</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 02 · Points lumineux</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -922,11 +922,11 @@ function setupPointsGPU(){
  for(int j=1;j<9;j++){if(owner==float(j))target=uTargets[j];}
  vec2 local=vec2(xx,-yy)*uRadius*uBreath*perspective;
  float split=uSplit*uSplit*(3.-2.*uSplit);
- vec2 pixel=mix(uCenter+local,target+local*uSmallScale,split);
+ vec2 pixel=target+local*mix(1.,uSmallScale,split);
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
  float scint=.72+.28*sin(uClock*.65+aPoint.w*7.+(raw.x-raw.y+raw.z)*2.3);
  float alpha=min(1.,clamp((depth*.66+.18)*uOpacity,.04,1.)*(.68+.32*aPoint.w)*(1.+uEnergy*(.18+1.55*rim)*scint));
- vAlpha=min(.98,alpha*(zz<0.?.52:1.));
+ vAlpha=min(.98,alpha*(zz<0.?.52:1.))*(1.-smoothstep(.60,1.,uSplit));
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
  float diameter=uSoft>.001?max(1.25/uDpr,size)*(1.1+1.45*uSoft):size;
  gl_PointSize=max(1.,diameter*uDpr);
@@ -955,7 +955,7 @@ function setupPointsGPU(){
   if(uploaded!==particles){const data=new Float32Array(particles.length*4);particles.forEach((p,i)=>data.set([p.x,p.y,p.z,p.seed],i*4));gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);uploaded=particles;}
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
-  gl.uniform2fv(uniforms.Targets,new Float32Array(lights.flatMap((_,i)=>{const p=experimentLampPoint(i);return [p.x,p.y];})));
+  gl.uniform2fv(uniforms.Targets,new Float32Array(lights.flatMap((_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];})));
   gl.uniform2f(uniforms.Viewport,w,h);gl.uniform2f(uniforms.Center,cx,cy);gl.uniform2f(uniforms.Angles,angleX,angleY);
   const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness,Dpr:dpr};
   for(const [k,v] of Object.entries(values))gl.uniform1f(uniforms[k],v);
@@ -1618,37 +1618,58 @@ function classifyDeckGesture(g){
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
 // Independent experiment 01. No lamp commands, no persisted V49 settings are changed by its gestures.
-const EXPERIMENT_SMALL_SCALE=.34;
-const experiment={amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0};
+const EXPERIMENT_SMALL_SCALE=.012;
+const experimentCfg={curve:.65,drift:1.7,driftSpeed:.35,core:3.2,halo:24,brightness:.85};
+const experiment={time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
-function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentLampPoint(Math.min(8,Math.floor(seed*9))),t=amount*amount*(3-2*amount);return {x:cx+raw.x*radius+(p.x-cx+raw.x*radius*(EXPERIMENT_SMALL_SCALE-1))*t,y:cy+raw.y*radius+(p.y-cy+raw.y*radius*(EXPERIMENT_SMALL_SCALE-1))*t};}
+function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t*(3-2*t);}
+function experimentCenter(index,amount,time){
+ const p=experimentLampPoint(index),cx=w*.5,cy=h*.5,t=amount*amount*(3-2*amount),dx=p.x-cx,dy=p.y-cy,length=Math.hypot(dx,dy)||1,phase=index*2.39996323;
+ const bend=Math.sin(Math.PI*t)*Math.min(w*.12,length*.18)*experimentCfg.curve;
+ const curl=(index%2?-1:1)*(.8+.2*Math.sin(phase));
+ const drift=experimentCfg.drift*t,flow=time*experimentCfg.driftSpeed;
+ return {x:cx+dx*t-dy/length*bend*curl+drift*Math.sin(flow+phase),y:cy+dy*t+dx/length*bend*curl+drift*.75*Math.sin(flow*.79+phase*1.3)};
+}
+function experimentPose(raw,seed,cx,cy,radius,amount){const p=experimentCenter(Math.min(8,Math.floor(seed*9)),amount,experiment.time),t=amount*amount*(3-2*amount),scale=1+(EXPERIMENT_SMALL_SCALE-1)*t;return {x:p.x+raw.x*radius*scale,y:p.y+raw.y*radius*scale};}
+function drawExperimentPoints(){
+ const mix=experimentEase(.25,.92,experiment.amount);if(mix<.001)return;
+ for(let i=0;i<lights.length;i++){
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1+.025*Math.sin(experiment.time*.6+i*1.7),core=experimentCfg.core*pulse,halo=experimentCfg.halo,alpha=mix*experimentCfg.brightness;
+  ctx.save();ctx.globalAlpha=alpha;
+  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'rgba(255,250,246,.80)');g.addColorStop(.12,'rgba(255,232,229,.54)');g.addColorStop(.35,'rgba(255,185,198,.17)');g.addColorStop(1,'rgba(255,165,188,0)');ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
+  const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,'rgba(255,255,255,1)');nucleus.addColorStop(.6,'rgba(255,248,244,.92)');nucleus.addColorStop(1,'rgba(255,233,227,0)');ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
+ }
+}
 function renderExperiment(now,dt){
- clock+=dt*sphereCfg.speed;const held=experiment.multi&&experiment.points.size===2;
+ clock+=dt*sphereCfg.speed;experiment.time+=dt;const held=experiment.multi&&experiment.points.size===2;
  if(!held){experiment.amount+=(experiment.target-experiment.amount)*(1-Math.exp(-dt*6));if(Math.abs(experiment.amount-experiment.target)<.0005)experiment.amount=experiment.target;}
- ctx.fillStyle=deckDayColor();ctx.fillRect(0,0,w,h);
- ctx.save();ctx.globalAlpha=.18;drawSoftBackdrop();ctx.restore();
+ ctx.fillStyle=deckDayColor();ctx.fillRect(0,0,w,h);ctx.save();ctx.globalAlpha=.18;drawSoftBackdrop();ctx.restore();
  const s=deckSphere(),radius=s.r*1.18,cx=w*.5,cy=h*.5,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
  deckPointScale=1;deckPointAlpha=1;
- // Ambient light is painted only around the newly formed spheres; there are no outlines.
- if(experiment.amount>.01){for(let i=0;i<lights.length;i++){const p=experimentLampPoint(i),t=experiment.amount*experiment.amount*(3-2*experiment.amount),x=cx+(p.x-cx)*t,y=cy+(p.y-cy)*t,r=radius*.65;const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,120,145,${.13*t})`);g.addColorStop(1,'rgba(255,120,145,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}}
- const gpu=usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
- if(!gpu){
-  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY);
-  const r=Math.round(255-50*experiment.amount),g=Math.round(255-95*experiment.amount);ctx.fillStyle=`rgb(255,${g},${r})`;
-  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else ctx.fillRect(q.x,q.y,size,size);}
+ if(showGasLayer&&experiment.amount<.995&&membraneRenderer&&gasCtx){membraneTime+=dt*(.10+membraneCfg.fluidity*.85);const ready=membraneRenderer.draw(membraneTime,membraneCfg,angleX,angleY,0,0,1);if(ready){gasCtx.clearRect(0,0,512,512);gasCtx.drawImage(membraneRenderer.canvas,0,0,512,512);gasCtx.globalCompositeOperation='destination-in';gasCtx.fillStyle=gasMask;gasCtx.fillRect(0,0,512,512);gasCtx.globalCompositeOperation='source-over';ctx.save();ctx.globalAlpha=1-experiment.amount;const extent=radius*3.65;ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();}}
+ const drawParticles=showPoints&&experiment.amount<.995;
+ const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
+ if(drawParticles&&!gpu){
+  const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1-experimentEase(.6,1,experiment.amount);
+  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*fade;const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
+ drawExperimentPoints();if(placingLamps)renderPlacementMarkers();
  frames++;frameAcc+=dt;if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
+const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
+document.getElementById('sphereView').prepend(experimentSettings);
+createControlGrid('experimentLightControls',experimentCfg,[['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,5,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
+document.getElementById('experimentExpand').onclick=()=>experiment.target=1;document.getElementById('experimentGather').onclick=()=>experiment.target=0;
 function experimentReset(cancelled=false){if(cancelled&&experiment.multi)experiment.target=experiment.startAmount;experiment.points.clear();experiment.multi=false;experiment.startDistance=0;experiment.lastDistance=0;}
-canvas.addEventListener('pointerdown',e=>{e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startAmount=experiment.target;experiment.multi=true;}},true);
-canvas.addEventListener('pointermove',e=>{e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size!==2||experiment.startDistance<12)return;const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=d;const ratio=d/experiment.startDistance;experiment.amount=clamp(experiment.startAmount+Math.log(Math.max(.15,ratio))/Math.log(1.8),0,1);},true);
-function finishExperiment(e){e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;if(e.type!=='pointerup'){experimentReset(true);return;}if(experiment.multi&&experiment.points.size===2){const ratio=experiment.lastDistance/experiment.startDistance,travel=Math.abs(experiment.lastDistance-experiment.startDistance);experiment.target=experimentDecision(experiment.startAmount,ratio,travel);}experiment.points.delete(e.pointerId);if(!experiment.points.size)experimentReset();}
+canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startAmount=experiment.target;experiment.multi=true;}},true);
+canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(experiment.points.size!==2||experiment.startDistance<12)return;const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=d;const ratio=d/experiment.startDistance;experiment.amount=clamp(experiment.startAmount+Math.log(Math.max(.15,ratio))/Math.log(1.8),0,1);},true);
+function finishExperiment(e){if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;if(e.type!=='pointerup'){experimentReset(true);return;}if(experiment.multi&&experiment.points.size===2){const ratio=experiment.lastDistance/experiment.startDistance,travel=Math.abs(experiment.lastDistance-experiment.startDistance);experiment.target=experimentDecision(experiment.startAmount,ratio,travel);}experiment.points.delete(e.pointerId);if(!experiment.points.size)experimentReset();}
 canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent allows testing the same two states without a touch screen.
-document.addEventListener('keydown',e=>{if(e.code==='Space'||e.key===' '){e.preventDefault();e.stopImmediatePropagation();experiment.target=experiment.target===0?1:0;}},true);
+document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();experiment.target=experiment.target===0?1:0;}},true);
 
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
