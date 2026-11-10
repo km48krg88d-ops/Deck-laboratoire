@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 12 · Trames seules</title>
+<title>DECK — Essai 13 · Test sans retour automatique</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E12</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E13</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 12 · Trames seules</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 13 · Test sans retour automatique</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1726,7 +1726,9 @@ function drawExperimentPoints(){
  }
 }
 // The gesture chooses an endpoint; elapsed time alone drives the transition.
-function experimentWake(){experiment.deadline=performance.now()+5000;}
+// Temporarily disabled while testing lamp controls. Manual gathering stays available.
+const EXPERIMENT_AUTO_RETURN=false;
+function experimentWake(){experiment.deadline=EXPERIMENT_AUTO_RETURN?performance.now()+5000:0;}
 function experimentNeutral(){experiment.target=0;experiment.deadline=0;deck.lastTap=null;deck.gesture=null;for(const zone of ['upper','lower','center'])deck.gridLayers[zone]=0;}
 function updateExperimentTouch(dt){
  const step=Math.min(dt,.025),radius=deckSphere().r*1.18;
@@ -1754,7 +1756,7 @@ function drawExperimentWarmth(){
 }
 function renderExperiment(now,dt){
  clock+=dt*sphereCfg.speed;experiment.time+=dt*.25;
- if(experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
+ if(EXPERIMENT_AUTO_RETURN&&experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
  updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);updateEdgeLeaf(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
  drawDayCycle();
