@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta name="theme-color" content="#182C50" id="deckThemeColor">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#050505">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 09 · Douze lumières du jour</title>
+<title>DECK — Essai 10 · Trames latérales</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E09</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E10</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 09 · Douze lumières du jour</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 10 · Trames latérales</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -224,7 +225,9 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
   document.body.style.background=bg;
   document.querySelector('meta[name="theme-color"]').content=bg;
 }));
-const sphereCfg={density:200,size:.50,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
+const sphereAppearance={scale:1.25};
+try{const saved=Number(localStorage.getItem('deck-sphere-scale'));if(saved>=.65&&saved<=1.8)sphereAppearance.scale=saved;}catch(_){}
+const sphereCfg={density:200,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:.65};
 const membraneCfg={fluidity:.76,softness:.81,transparency:2,reflection:2,edge:2.5,folds:2.5,breath:.230};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
 const opalProfiles={
@@ -238,7 +241,7 @@ const membraneParams=[['fluidity','Mouvement',0,2.5,.01],['softness','Diffusion'
 const fanParams=[['fanRotate','Rotation',0,1.4,.01],['fanLength','Longueur des rayons',.25,1.15,.01],['fanDots','Points par rayon',3,32,1],['fanDotWidth','Épaisseur des points',.5,4,.05],['fanStrokeWidth','Épaisseur des traits',.5,4,.05]];
 const lightParams=[['lightSize','Taille',.006,.05,.001],['lightIntensity','Intensité',0,1.2,.01],['lightDiffusion','Diffusion',0,.95,.01]];
 const presets={
-  sommeil:{density:200,size:.50,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0},
+  sommeil:{density:200,size:1.5,deform:0,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0},
   brume:{density:62,size:1.1,deform:.13,fluidity:.75,speed:.36,breath:.065,opacity:.53,glow:.22},
   membrane:{density:72,size:.82,deform:.24,fluidity:.88,speed:.24,breath:.04,opacity:.43,glow:.35},
   dense:{density:220,size:.78,deform:.08,fluidity:.92,speed:.22,breath:.022,opacity:.78,glow:.08}
@@ -866,7 +869,7 @@ function createParticles(){
 }
 function resize(){
   // Cap internal resolution to avoid filling nine physical pixels per CSS pixel.
-  w=window.innerWidth;h=window.innerHeight;
+  w=Math.max(window.innerWidth,document.documentElement.clientWidth);h=Math.max(window.innerHeight,document.documentElement.clientHeight);
   dpr=Math.min(window.devicePixelRatio||1,1.5);
   const physicalW=Math.round(w*dpr),physicalH=Math.round(h*dpr);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
@@ -1536,7 +1539,7 @@ function deckBounds(){return {x:0,y:0,w,h};}
 function deckGestureBounds(){const x=Math.max(24,Math.min(w*.06,48)),y=Math.max(48,deckSafeTop+14),bottom=Math.max(38,deckSafeBottom+16);return {x,y,w:w-2*x,h:Math.max(100,h-y-bottom)};}
 
 function deckSphereRect(){const b=deckBounds();return {x:b.x+b.w/6,y:b.y+3*b.h/8,w:b.w*4/6,h:b.h/4};}
-function deckSphere(){const b=deckSphereRect();const pointsEnvelope=(1+sphereCfg.deform*1.55)*(1+sphereCfg.breath)*1.34;const gasEnvelope=showGasLayer?(opalPreset==='gaz'?1.83:opalPreset==='brume'?2.06:1.38):0;const envelope=Math.max(pointsEnvelope,gasEnvelope);const fit=Math.min(b.w/2-12,b.h/2-10)/envelope;return {x:b.x+b.w/2,y:b.y+b.h/2,r:Math.min(130,fit)*clamp(sceneZoom/.82,.65,1)};}
+function deckSphere(){const b=deckSphereRect();const pointsEnvelope=(1+sphereCfg.deform*1.55)*(1+sphereCfg.breath)*1.34;const gasEnvelope=showGasLayer?(opalPreset==='gaz'?1.83:opalPreset==='brume'?2.06:1.38):0;const envelope=Math.max(pointsEnvelope,gasEnvelope);const fit=Math.min(b.w/2-12,b.h/2-10)/envelope;return {x:b.x+b.w/2,y:b.y+b.h/2,r:Math.min(Math.min(w,h)*.43/1.18,Math.min(130,fit)*clamp(sceneZoom/.82,.65,1)*sphereAppearance.scale)};}
 
 function deckDayColor(){if(!deckAutoBackground)return ambiences[currentAmbience].base;const hour=new Date().getHours()+new Date().getMinutes()/60;const stops=[[0,[38,42,65]],[6,[178,187,214]],[10,[220,229,244]],[16,[229,224,234]],[20,[151,136,165]],[24,[38,42,65]]];let i=0;while(i<stops.length-2&&hour>stops[i+1][0])i++;const a=stops[i],b=stops[i+1],t=(hour-a[0])/(b[0]-a[0]);return `rgb(${a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*t)).join(',')})`;}
 function deckIndices(target=deck.target){return lights.map((_,i)=>i).filter(i=>target==='all'||typeof target==='number'&&i===target||target==='upper'&&fixedLampPositions[i].y<.5||target==='lower'&&fixedLampPositions[i].y>=.5);}
@@ -1544,7 +1547,7 @@ function deckTargetName(t){return t==='upper'?'Cuisine + salle à manger':t==='l
 function deckGridZone(target=deck.target){return typeof target==='number'?(fixedLampPositions[target].y<.5?'upper':'lower'):target;}
 function deckReveal(target=deck.target){const zone=deckGridZone(target);deck.gridTarget=zone;if(zone==='all'){deck.gridLayers.upper=1;deck.gridLayers.lower=1;deck.gridLayers.center=1;}else deck.gridLayers[zone]=1;}
 
-function deckLaboratory(open){document.body.classList.toggle('atelier',open);panel.classList.toggle('hidden',!open);panel.inert=!open;document.getElementById('toggle').textContent=open?'Retour':'Réglages';document.getElementById('toggle').setAttribute('aria-expanded',String(open));}
+function deckLaboratory(open){if(!open&&experiment.target===1)experimentWake();document.body.classList.toggle('atelier',open);panel.classList.toggle('hidden',!open);panel.inert=!open;document.getElementById('toggle').textContent=open?'Retour':'Réglages';document.getElementById('toggle').setAttribute('aria-expanded',String(open));}
 
 let deckNoticeTimer;
 function deckNotify(text){const el=document.getElementById('deckNotice');el.textContent=text;el.classList.add('visible');clearTimeout(deckNoticeTimer);deckNoticeTimer=setTimeout(()=>el.classList.remove('visible'),2100);}
@@ -1553,7 +1556,7 @@ function deckCommand(type,detail){window.dispatchEvent(new CustomEvent('deck-com
 function deckApply(target,on){deck.target=target;for(const i of deckIndices(target))lampManualLevels[i]=on?1:0;spatialHalos.length=0;recomputeSpatialLamps();deckReveal();deckSave();deckCommand('lights',{target,levels:[...lampManualLevels]});deckNotify(deckTargetName(target)+' · '+(on?'allumé':'éteint'));}
 function deckDim(ratio){const ids=deckIndices().filter(i=>deckDimmable[i]);if(!ids.length)return;for(const i of ids)lampManualLevels[i]=clamp(deck.baseLevels[i]+Math.log(Math.max(.1,ratio))*.85,0,1);recomputeSpatialLamps();deckReveal();}
 function drawDeckBand(i){const b=deckBounds(),p=fixedLampPoint(i),v=animatedLampLevels[i],vertical=i===6,len=(vertical?b.h*.22:b.w*.34)*(fixedLampPositions[i].scale||1),thick=Math.max(7,b.w*.022);ctx.save();ctx.translate(p.x,p.y);ctx.filter=`blur(${2+v*2}px)`;ctx.fillStyle=`rgba(214,21,59,${.20+.65*v})`;ctx.shadowColor='#ef3058';ctx.shadowBlur=4+v*15;ctx.beginPath();ctx.roundRect(vertical?-thick/2:-len/2,vertical?-len/2:-thick/2,vertical?thick:len,vertical?len:thick,thick/2);ctx.fill();ctx.restore();}
-function deckGridSegments(){const b=deckBounds(),cw=b.w/6,ch=b.h/8,lines=[];for(let j=0;j<=6;j++){const x=b.x+j*cw;if(j>1&&j<5){lines.push([x,b.y,x,b.y+3*ch],[x,b.y+5*ch,x,b.y+b.h]);}else lines.push([x,b.y,x,b.y+b.h]);}for(let j=0;j<=8;j++){const y=b.y+j*ch;if(j===4){lines.push([b.x,y,b.x+cw,y],[b.x+5*cw,y,b.x+b.w,y]);}else lines.push([b.x,y,b.x+b.w,y]);}return lines;}
+function deckGridSegments(){const lines=[];for(let j=0;j<=6;j++)lines.push([w*j/6,0,w*j/6,h]);for(let j=0;j<=8;j++)lines.push([0,h*j/8,w,h*j/8]);return lines;}
 function deckGridDrag(){
  const g=deck.gesture;if(!g||g.axis!=='y')return null;
  const r=deckSphereRect(),end=clamp(g.y+g.dy,0,h),span=deckGestureBounds().h*2/3;
@@ -1570,19 +1573,22 @@ function deckGridDrag(){
 }
 function deckVisibleGridZone(){const d=deckGridDrag();if(placingLamps||d?.zone==='all')return 'all';if(d)return d.zone;const l=deck.gridLayers;if(l.upper&&l.lower&&l.center)return 'all';return l.upper&&l.lower?'both':l.upper?'upper':l.lower?'lower':null;}
 function deckLayerOffset(zone,progress,direction){const r=deckSphereRect();const distance=zone==='upper'?r.y:zone==='lower'?h-r.y-r.h:h;return direction*(progress-1)*distance;}
+// The two complete half-screen layers travel horizontally and retain their entry side.
+const lampGridMemory={upper:{selected:false,side:'left',display:0},lower:{selected:false,side:'right',display:0}};
+try{const saved=JSON.parse(localStorage.getItem('deck-half-grids-v1'));for(const zone of ['upper','lower'])if(saved?.[zone]){lampGridMemory[zone].selected=saved[zone].selected===true;lampGridMemory[zone].side=saved[zone].side==='right'?'right':'left';}}catch(_){}
+function rememberLampGrid(target,on,side){
+ for(const zone of ['upper','lower'])if(target==='all'||target===zone){const memory=lampGridMemory[zone];memory.selected=on;if(side)memory.side=side;}
+ try{localStorage.setItem('deck-half-grids-v1',JSON.stringify(lampGridMemory));}catch(_){}
+}
+function updateLampGrid(dt){const visible=experiment.target===1&&experiment.amount>.65;for(const memory of Object.values(lampGridMemory)){const target=visible&&memory.selected?1:0;memory.display+=(target-memory.display)*(1-Math.exp(-dt*5));if(Math.abs(memory.display-target)<.001)memory.display=target;}}
 function drawGestureGrid(){
- const r=deckSphereRect(),drag=deckGridDrag();
- const zones=[['upper',0,r.y],['center',r.y,r.h],['lower',r.y+r.h,h-r.y-r.h]];
- for(const [zone,top,height] of zones){
-  const involved=drag&&(drag.zone==='all'||drag.zone===zone);
-  // Stable layers stay put. The layer being brought in moves with the finger.
-  const progress=placingLamps?1:involved?Math.max(deck.gridDisplay[zone],drag.values[zone]):deck.gridDisplay[zone];
+ const g=experiment.active&&!experiment.multi?deck.gesture:null;
+ for(const [zone,top] of [['upper',0],['lower',h/2]]){
+  const memory=lampGridMemory[zone];let progress=placingLamps?1:memory.display,side=memory.side;
+  if(g?.axis==='x'&&(g.y<h/2?'upper':'lower')===zone){const inward=g.x<w/2?g.dx>0:g.dx<0,drag=clamp(Math.abs(g.dx)/(w*.55),0,1);side=g.x<w/2?'left':'right';progress=inward?Math.max(progress,drag):memory.display*(1-drag);}
   if(progress<.001)continue;
-  const direction=involved?drag.direction:zone==='upper'?1:-1;
-  const offset=deckLayerOffset(zone,progress,direction);
-  ctx.save();ctx.beginPath();ctx.rect(0,top,w,height);ctx.clip();ctx.translate(0,offset);
-  ctx.strokeStyle=lightLines?'rgba(255,255,255,.76)':'rgba(255,255,255,.48)';ctx.lineWidth=.65;ctx.beginPath();
-  for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();
+  const offset=(side==='left'?-1:1)*(1-progress)*w;
+  ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.strokeStyle='rgba(255,255,255,.52)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();
  }
 }
 function updateDeck(dt,now){for(const zone of ['upper','lower','center']){deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*10));}const desired=deckVisibleGridZone()?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
@@ -1620,16 +1626,8 @@ recomputeSpatialLamps();
 function deckHit(x,y){let found=null;for(let i=0;i<lights.length;i++){const p=fixedLampPoint(i),b=deckBounds();const distance=(i<6||i===8)?Math.hypot(x-p.x,y-p.y):i===6?Math.hypot(x-p.x,Math.max(0,Math.abs(y-p.y)-b.h*.11)):Math.hypot(Math.max(0,Math.abs(x-p.x)-b.w*.17),y-p.y);if(distance<Math.max(22,lampDiscRadius(i))&&(!found||distance<found.d))found={index:i,d:distance};}return found;}
 // Pure classifier: no commands until the last pointer is released.
 function classifyDeckGesture(g){
- const b=deckBounds(),s=deckSphere(),r=deckSphereRect(),dy=g.dy,dx=g.dx,end=g.y+dy;
- if(g.axis==='x')return Math.abs(dx)>Math.min(70,b.w*.22)?{kind:'sheet',sheet:dx>0?'fan':'music'}:null;
- if(g.axis!=='y')return null;
- if(Math.abs(dy)>=deckGestureBounds().h*2/3)return {kind:'lights',target:'all',on:dy<0};
- // The landing zone spans the approach to the sphere, rather than a narrow ring.
- const approach=Math.max(36,s.r*.8),travel=Math.max(32,b.h*.10);
- if(g.y<r.y&&dy>travel&&end>=r.y-approach&&end<=s.y+24)return {kind:'lights',target:'upper',on:true};
- if(g.y>r.y+r.h&&dy< -travel&&end<=r.y+r.h+approach&&end>=s.y-24)return {kind:'lights',target:'lower',on:true};
- if(g.y>=r.y-approach&&g.y<=s.y+12&&dy< -b.h*.12)return {kind:'lights',target:'upper',on:false};
- if(g.y<=r.y+r.h+approach&&g.y>=s.y-12&&dy>b.h*.12)return {kind:'lights',target:'lower',on:false};
+ if(g.axis==='y'&&Math.abs(g.dy)>=Math.max(52,h*.09))return {kind:'lights',target:'all',on:g.dy<0};
+ if(g.axis==='x'&&Math.abs(g.dx)>=Math.max(48,w*.16))return {kind:'lights',target:g.y<h/2?'upper':'lower',on:g.x<w/2?g.dx>0:g.dx<0,side:g.x<w/2?'left':'right'};
  return null;
 }
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
@@ -1641,8 +1639,8 @@ const dayCycleDefaults=[
  ['Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
  ['Avant l’aube','#243D60','#9AA9C5',.52,1.12,1.34,1.80],
  ['Aube','#688BA4','#E3A17F',.48,1.08,1.20,1.25],
- ['Matin','#92B8C2','#F2AA76',.48,1.02,1.06,1.30],
- ['Matin lumineux','#92B8C2','#F2AA76',.38,.93,1.12,1.25],
+ ['Matin lumineux','#9CAEB1','#F2AA76',.38,.93,1.12,1.25],
+ ['Matin','#9CAEB1','#F2AA76',.48,1.02,1.06,1.30],
  ['Vers le rose','#7C9DB0','#E9A1A0',.56,.52,1.10,1.15],
  ['Après-midi','#657D9E','#DEA0B2',.58,-.05,1.10,1.30],
  ['Après-midi doux','#657D9E','#DEA0B2',.42,-.08,1.18,1.45],
@@ -1652,7 +1650,9 @@ const dayCycleDefaults=[
 ].map((p,i)=>({name:p[0],hour:i*2,a:p[1],b:p[2],x:p[3],y:p[4],spread:p[5],balance:p[6]}));
 let dayCycle=dayCycleDefaults.map(p=>({...p}));
 try{const saved=JSON.parse(localStorage.getItem('deck-daycycle-v1'));if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k]))))dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));}catch(_){}
-const dayPreview={auto:true,hour:8};let dayPalette=null;
+for(const i of [4,5]){if(dayCycle[i].a.toLowerCase()==='#92b8c2')dayCycle[i].a='#9CAEB1';}
+if(dayCycle[4].x===.48&&dayCycle[4].y===1.02&&dayCycle[5].x===.38&&dayCycle[5].y===.93){for(const k of ['x','y','spread','balance']){const v=dayCycle[4][k];dayCycle[4][k]=dayCycle[5][k];dayCycle[5][k]=v;}}
+const dayPreview={auto:true,hour:8};let dayPalette=null,dayChromeKey='';
 function dayRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 function dayMix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
 function dayPaletteAt(hour){
@@ -1667,6 +1667,9 @@ function drawDayCycle(){
  dayPalette=dayPaletteAt(hour);const p=dayPalette,r=Math.max(w,h)*p.spread,gradient=ctx.createRadialGradient(w*p.x,h*p.y,0,w*p.x,h*p.y,r);
  for(let i=0;i<=32;i++){const d=i/32;gradient.addColorStop(d,dayCSS(dayMix(p.a,p.b,dayWeight(d,p))));}
  ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+ const top=dayCSS(dayTint(w*.5,0)),bottom=dayCSS(dayTint(w*.5,h)),key=top+bottom;
+ if(key!==dayChromeKey){dayChromeKey=key;document.documentElement.style.backgroundColor=bottom;document.body.style.background=`linear-gradient(${top},${bottom})`;document.getElementById('deckThemeColor').setAttribute('content',top);}
+
 }
 
 const EXPERIMENT_SMALL_SCALE=.012;
@@ -1742,7 +1745,7 @@ function drawExperimentWarmth(){
 function renderExperiment(now,dt){
  clock+=dt*sphereCfg.speed;experiment.time+=dt*.25;
  if(experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
- updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);
+ updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
  drawDayCycle();
  if(experiment.amount>.05){ctx.save();ctx.globalAlpha=experiment.amount;drawGestureGrid();ctx.restore();}
@@ -1761,6 +1764,7 @@ function renderExperiment(now,dt){
 }
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
+const sphereSizeSettings=document.createElement('div');sphereSizeSettings.className='group';sphereSizeSettings.innerHTML='<div class="rowtitle">Volume de la sphère</div><div class="controls" id="sphereSizeControls"></div>';document.getElementById('sphereView').prepend(sphereSizeSettings);createControlGrid('sphereSizeControls',sphereAppearance,[['scale','Taille de la sphère',.65,1.8,.01]],()=>{try{localStorage.setItem('deck-sphere-scale',String(sphereAppearance.scale));}catch(_){}});
 const daySettings=document.createElement('div');daySettings.className='group';daySettings.innerHTML=`
 <div class="rowtitle">Journée · douze phases</div>
 <label style="display:block;margin:10px 0"><input id="dayLive" type="checkbox" checked> Heure réelle du téléphone</label>
@@ -1822,7 +1826,7 @@ canvas.addEventListener('pointermove',e=>{
  }
  if(experiment.multi||!experiment.active)return;
  const g=experiment.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';else if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';}
- deck.gesture=g;if(g.axis==='y')experimentWake();
+ deck.gesture=g;if(g.axis)experimentWake();
 },true);
 function experimentLampHit(x,y){let best=null;for(let i=0;i<lights.length;i++){const p=experimentCenter(i,experiment.amount,experiment.time),d=Math.hypot(x-p.x,y-p.y);if(d<28&&(!best||d<best.d))best={index:i,d};}return best;}
 function finishExperiment(e){
@@ -1832,7 +1836,7 @@ function finishExperiment(e){
  if(experiment.points.size===1&&!experiment.multi&&experiment.active){
   const g=experiment.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;
   const action=classifyDeckGesture(g);
-  if(action?.kind==='lights'){deckApply(action.target,action.on);experiment.hasCommands=true;experimentWake();}
+  if(action?.kind==='lights'){deckApply(action.target,action.on);rememberLampGrid(action.target,action.on,action.side);experiment.hasCommands=true;experimentWake();}
   else if(Math.hypot(g.dx,g.dy)<12){const hit=experimentLampHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());experiment.hasCommands=true;experimentWake();}}
  }
  experiment.points.delete(e.pointerId);
