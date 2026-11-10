@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 14 · Membrane sous tension</title>
+<title>DECK — Essai 15 · Souple et fragile</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E14</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E15</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 14 · Membrane sous tension</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 15 · Souple et fragile</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1683,7 +1683,7 @@ function drawDayCycle(){
 }
 
 const EXPERIMENT_SMALL_SCALE=.012;
-const experimentCfg={rupture:.32,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
+const experimentCfg={softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
 const experiment={rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
@@ -1748,9 +1748,9 @@ function updateExperimentTouch(dt){
  const step=Math.min(dt,.025),radius=deckSphere().r*1.18;
  for(const t of experiment.handles){
   if(t.id===null){t.tx=0;t.ty=0;}
-  t.vx+=(t.tx-t.x)*100*step;t.vy+=(t.ty-t.y)*100*step;
-  const damping=Math.exp(-step*15);t.vx*=damping;t.vy*=damping;t.x+=t.vx*step;t.y+=t.vy*step;
-  const length=Math.hypot(t.x,t.y),limit=radius*.95;if(length>limit){t.x*=limit/length;t.y*=limit/length;}
+  t.vx+=(t.tx-t.x)*70*step;t.vy+=(t.ty-t.y)*70*step;
+  const damping=Math.exp(-step*11);t.vx*=damping;t.vy*=damping;t.x+=t.vx*step;t.y+=t.vy*step;
+  const length=Math.hypot(t.x,t.y),limit=radius*1.6;if(length>limit){t.x*=limit/length;t.y*=limit/length;}
  }
  experimentTryRupture();
 }
@@ -1852,7 +1852,7 @@ document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map
 // The existing automatic-background switch controls the same clock.
 document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
 
-createControlGrid('experimentLightControls',experimentCfg,[['rupture','Seuil de rupture',.15,.75,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
+createControlGrid('experimentLightControls',experimentCfg,[['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=()=>{experiment.target=1;experimentWake();};document.getElementById('experimentGather').onclick=experimentNeutral;
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
@@ -1873,7 +1873,7 @@ canvas.addEventListener('pointerdown',e=>{
 },true);
 canvas.addEventListener('pointermove',e=>{
  if(placingLamps)return;e.stopImmediatePropagation();if(moveEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
- experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle){handle.tx=(e.clientX-handle.startX)*.8;handle.ty=(e.clientY-handle.startY)*.8;}
+ experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle){handle.tx=(e.clientX-handle.startX)*.8*experimentCfg.softness;handle.ty=(e.clientY-handle.startY)*.8*experimentCfg.softness;}
  if(experiment.points.size===2&&experiment.startDistance>=12){
   const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),ratio=d/experiment.startDistance;experiment.lastDistance=d;experimentTryRupture();
   if(experiment.gestureTarget===null&&experiment.startTarget===1){const target=experimentDecision(experiment.startTarget,ratio,Math.abs(d-experiment.startDistance));if(target!==experiment.startTarget){experiment.gestureTarget=target;experiment.target=target;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();experiment.dimmed=false;}if(target)experimentWake();else experimentNeutral();}}
