@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 10 · Trames latérales</title>
+<title>DECK — Essai 11 · Colonnes et feuillets</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,10 +88,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E10</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E11</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 10 · Trames latérales</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 11 · Colonnes et feuillets</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1554,7 +1554,7 @@ function deckNotify(text){const el=document.getElementById('deckNotice');el.text
 function deckSave(){try{localStorage.setItem('deck-state-v47',JSON.stringify({levels:lampManualLevels,dimmable:deckDimmable}));}catch(_){}}
 function deckCommand(type,detail){window.dispatchEvent(new CustomEvent('deck-command',{detail:{type,...detail,simulated:true}}));}
 function deckApply(target,on){deck.target=target;for(const i of deckIndices(target))lampManualLevels[i]=on?1:0;spatialHalos.length=0;recomputeSpatialLamps();deckReveal();deckSave();deckCommand('lights',{target,levels:[...lampManualLevels]});deckNotify(deckTargetName(target)+' · '+(on?'allumé':'éteint'));}
-function deckDim(ratio){const ids=deckIndices().filter(i=>deckDimmable[i]);if(!ids.length)return;for(const i of ids)lampManualLevels[i]=clamp(deck.baseLevels[i]+Math.log(Math.max(.1,ratio))*.85,0,1);recomputeSpatialLamps();deckReveal();}
+function deckDim(ratio){const memory=lampGridMemory[deck.target],selection=memory?lampColumnSelection(deck.target,memory.side,memory.columns):deckIndices();const ids=selection.filter(i=>deckDimmable[i]);if(!ids.length)return;for(const i of ids)lampManualLevels[i]=clamp(deck.baseLevels[i]+Math.log(Math.max(.1,ratio))*.85,0,1);recomputeSpatialLamps();deckReveal();}
 function drawDeckBand(i){const b=deckBounds(),p=fixedLampPoint(i),v=animatedLampLevels[i],vertical=i===6,len=(vertical?b.h*.22:b.w*.34)*(fixedLampPositions[i].scale||1),thick=Math.max(7,b.w*.022);ctx.save();ctx.translate(p.x,p.y);ctx.filter=`blur(${2+v*2}px)`;ctx.fillStyle=`rgba(214,21,59,${.20+.65*v})`;ctx.shadowColor='#ef3058';ctx.shadowBlur=4+v*15;ctx.beginPath();ctx.roundRect(vertical?-thick/2:-len/2,vertical?-len/2:-thick/2,vertical?thick:len,vertical?len:thick,thick/2);ctx.fill();ctx.restore();}
 function deckGridSegments(){const lines=[];for(let j=0;j<=6;j++)lines.push([w*j/6,0,w*j/6,h]);for(let j=0;j<=8;j++)lines.push([0,h*j/8,w,h*j/8]);return lines;}
 function deckGridDrag(){
@@ -1573,22 +1573,32 @@ function deckGridDrag(){
 }
 function deckVisibleGridZone(){const d=deckGridDrag();if(placingLamps||d?.zone==='all')return 'all';if(d)return d.zone;const l=deck.gridLayers;if(l.upper&&l.lower&&l.center)return 'all';return l.upper&&l.lower?'both':l.upper?'upper':l.lower?'lower':null;}
 function deckLayerOffset(zone,progress,direction){const r=deckSphereRect();const distance=zone==='upper'?r.y:zone==='lower'?h-r.y-r.h:h;return direction*(progress-1)*distance;}
-// The two complete half-screen layers travel horizontally and retain their entry side.
-const lampGridMemory={upper:{selected:false,side:'left',display:0},lower:{selected:false,side:'right',display:0}};
-try{const saved=JSON.parse(localStorage.getItem('deck-half-grids-v1'));for(const zone of ['upper','lower'])if(saved?.[zone]){lampGridMemory[zone].selected=saved[zone].selected===true;lampGridMemory[zone].side=saved[zone].side==='right'?'right':'left';}}catch(_){}
-function rememberLampGrid(target,on,side){
- for(const zone of ['upper','lower'])if(target==='all'||target===zone){const memory=lampGridMemory[zone];memory.selected=on;if(side)memory.side=side;}
- try{localStorage.setItem('deck-half-grids-v1',JSON.stringify(lampGridMemory));}catch(_){}
+// Columns are stable screen cells; a side remembers how many cells are revealed.
+const lampGridMemory={upper:{selected:false,side:'left',columns:0,display:0},lower:{selected:false,side:'right',columns:0,display:0}};
+try{const saved=JSON.parse(localStorage.getItem('deck-half-grids-v1'));for(const zone of ['upper','lower'])if(saved?.[zone]){const m=lampGridMemory[zone],p=saved[zone];m.columns=Number.isFinite(p.columns)?clamp(Math.round(p.columns),0,6):p.selected?6:0;m.selected=m.columns>0;m.side=p.side==='right'?'right':'left';}}catch(_){}
+function saveLampGrid(){try{localStorage.setItem('deck-half-grids-v1',JSON.stringify(lampGridMemory));}catch(_){}}
+function rememberLampGrid(target,on,side){for(const zone of ['upper','lower'])if(target==='all'||target===zone){const m=lampGridMemory[zone];m.selected=on;m.columns=on?6:0;if(side)m.side=side;}saveLampGrid();}
+function lampColumnSelection(zone,side,columns){const edge=columns/6;return lights.map((_,i)=>i).filter(i=>{const p=fixedLampPositions[i];return (p.y<.5?'upper':'lower')===zone&&(side==='left'?p.x<=edge+1e-6:p.x>=1-edge-1e-6)&&columns>0;});}
+function lampColumnDrag(g){
+ const zone=g.y<h/2?'upper':'lower',m=lampGridMemory[zone],side=g.x<w*.18?'left':g.x>w*.82?'right':m.side;
+ const raw=clamp(side==='left'?(g.x+g.dx)/w:1-(g.x+g.dx)/w,0,1),columns=clamp(Math.round(raw*6),0,6),snap=columns/6;
+ return {zone,side,columns,progress:Math.abs(raw-snap)*w<12?snap:raw};
 }
-function updateLampGrid(dt){const visible=experiment.target===1&&experiment.amount>.65;for(const memory of Object.values(lampGridMemory)){const target=visible&&memory.selected?1:0;memory.display+=(target-memory.display)*(1-Math.exp(-dt*5));if(Math.abs(memory.display-target)<.001)memory.display=target;}}
+function commitLampColumns(g){
+ const d=lampColumnDrag(g),ids=lampColumnSelection(d.zone,d.side,d.columns),m=lampGridMemory[d.zone];
+ for(const i of deckIndices(d.zone))lampManualLevels[i]=ids.includes(i)?1:0;
+ Object.assign(m,{side:d.side,columns:d.columns,selected:d.columns>0});deck.target=d.zone;
+ spatialHalos.length=0;recomputeSpatialLamps();deckSave();saveLampGrid();deckCommand('lights',{target:d.zone,indices:ids,columns:d.columns,side:d.side,levels:[...lampManualLevels]});
+}
+function updateLampGrid(dt){const visible=experiment.target===1&&experiment.amount>.65;for(const m of Object.values(lampGridMemory)){const target=visible?m.columns/6:0;m.display+=(target-m.display)*(1-Math.exp(-dt*6));if(Math.abs(m.display-target)<.001)m.display=target;}}
 function drawGestureGrid(){
  const g=experiment.active&&!experiment.multi?deck.gesture:null;
  for(const [zone,top] of [['upper',0],['lower',h/2]]){
-  const memory=lampGridMemory[zone];let progress=placingLamps?1:memory.display,side=memory.side;
-  if(g?.axis==='x'&&(g.y<h/2?'upper':'lower')===zone){const inward=g.x<w/2?g.dx>0:g.dx<0,drag=clamp(Math.abs(g.dx)/(w*.55),0,1);side=g.x<w/2?'left':'right';progress=inward?Math.max(progress,drag):memory.display*(1-drag);}
-  if(progress<.001)continue;
-  const offset=(side==='left'?-1:1)*(1-progress)*w;
-  ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.strokeStyle='rgba(255,255,255,.52)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();
+  const m=lampGridMemory[zone];let progress=placingLamps?1:m.display,side=m.side,drag=null;
+  if(g?.axis==='x'&&(g.y<h/2?'upper':'lower')===zone){drag=lampColumnDrag(g);progress=drag.progress;side=drag.side;}
+  if(progress<.001)continue;const width=w*progress,left=side==='left'?0:w-width;
+  ctx.save();ctx.beginPath();ctx.rect(left,top,width,h/2);ctx.clip();ctx.strokeStyle='rgba(255,255,255,.52)';ctx.lineWidth=.65;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();ctx.restore();
+  if(drag){const front=side==='left'?width:w-width;ctx.save();ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(front,top+8);ctx.lineTo(front,top+h/2-8);for(let row=1;row<4;row++){const y=top+row*h/8;ctx.moveTo(front-4,y);ctx.lineTo(front+4,y);}ctx.stroke();ctx.restore();}
  }
 }
 function updateDeck(dt,now){for(const zone of ['upper','lower','center']){deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*10));}const desired=deckVisibleGridZone()?1:0;deck.grid+=(desired-deck.grid)*(1-Math.exp(-dt*5));const ids=deckIndices().filter(i=>deckDimmable[i]);const level=ids.length?ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/ids.length:deck.lastDim;deck.lastDim=level;deckPointScale+=(.78+.4*level-deckPointScale)*(1-Math.exp(-dt*6));deckPointAlpha+=(.46+.54*level-deckPointAlpha)*(1-Math.exp(-dt*6));if(fanLevel)angleY+=dt*Math.sign(fanLevel)*Math.abs(fanLevel)*.12*(fanSilent?.5:1);if(deck.fanTimer&&Date.now()>deck.fanTimer){setFanLevel(0);deck.fanTimer=0;deckSyncSheets();deckNotify('Ventilateur · minuterie terminée');}}
@@ -1627,7 +1637,7 @@ function deckHit(x,y){let found=null;for(let i=0;i<lights.length;i++){const p=fi
 // Pure classifier: no commands until the last pointer is released.
 function classifyDeckGesture(g){
  if(g.axis==='y'&&Math.abs(g.dy)>=Math.max(52,h*.09))return {kind:'lights',target:'all',on:g.dy<0};
- if(g.axis==='x'&&Math.abs(g.dx)>=Math.max(48,w*.16))return {kind:'lights',target:g.y<h/2?'upper':'lower',on:g.x<w/2?g.dx>0:g.dx<0,side:g.x<w/2?'left':'right'};
+ if(g.axis==='x'&&Math.abs(g.dx)>=Math.max(18,w*.04))return {kind:'lights',target:g.y<h/2?'upper':'lower',on:g.x<w/2?g.dx>0:g.dx<0,side:g.x<w/2?'left':'right'};
  return null;
 }
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
@@ -1745,7 +1755,7 @@ function drawExperimentWarmth(){
 function renderExperiment(now,dt){
  clock+=dt*sphereCfg.speed;experiment.time+=dt*.25;
  if(experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
- updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);
+ updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);updateEdgeLeaf(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
  drawDayCycle();
  if(experiment.amount>.05){ctx.save();ctx.globalAlpha=experiment.amount;drawGestureGrid();ctx.restore();}
@@ -1759,9 +1769,39 @@ function renderExperiment(now,dt){
   for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=deformExperimentPoint(experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),base,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.86,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
- drawExperimentPoints();if(placingLamps)renderPlacementMarkers();
+ drawExperimentPoints();drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
  frames++;frameAcc+=dt;if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
+// The two edge leaves are visual placeholders: no fan or music command is dispatched.
+const edgeLeaf={name:null,target:0,amount:0,pointer:null,startX:0,startY:0,startAmount:0,previous:0};
+const edgeChrome=document.createElement('section');edgeChrome.id='edgeLeafChrome';edgeChrome.hidden=true;edgeChrome.setAttribute('aria-label','Feuillet de réglages');edgeChrome.style.cssText='position:fixed;z-index:12;left:22px;right:22px;display:none;align-items:center;justify-content:space-between;pointer-events:none;color:white';edgeChrome.innerHTML='<span id="edgeLeafTitle" style="font-size:11px;letter-spacing:.18em"></span><button id="edgeLeafClose" class="chip" style="pointer-events:auto" aria-label="Fermer le feuillet">×</button>';document.body.append(edgeChrome);document.getElementById('edgeLeafClose').onclick=()=>edgeLeaf.target=0;
+function edgeLeafZone(x,y){const strip=Math.max(36,w*.10);if(x>=10&&x<=strip&&y>=h/8&&y<=h*2/8)return 'fan';if(x>=w-strip&&x<=w-10&&y>=h*6/8&&y<=h*7/8)return 'music';return null;}
+function beginEdgeLeaf(e){
+ if(edgeLeaf.pointer!==null)return true;if(experiment.points.size)return false;const name=edgeLeafZone(e.clientX,e.clientY);
+ if(!name&&edgeLeaf.amount<.01)return false;
+ edgeLeaf.previous=edgeLeaf.target;
+ if(name&&name!==edgeLeaf.name){edgeLeaf.name=name;edgeLeaf.amount=0;edgeLeaf.target=0;}
+ edgeLeaf.pointer=e.pointerId;edgeLeaf.startX=e.clientX;edgeLeaf.startY=e.clientY;edgeLeaf.startAmount=edgeLeaf.amount;canvas.setPointerCapture(e.pointerId);return true;
+}
+function moveEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const inward=(edgeLeaf.name==='fan'?1:-1)*(e.clientX-edgeLeaf.startX);edgeLeaf.amount=clamp(edgeLeaf.startAmount+inward/w,0,1);return true;}
+function endEdgeLeaf(e){if(edgeLeaf.pointer!==e.pointerId)return false;const travel=Math.hypot(e.clientX-edgeLeaf.startX,e.clientY-edgeLeaf.startY);edgeLeaf.target=e.type==='pointerup'?(travel<10&&edgeLeaf.startAmount>.8?0:edgeLeaf.amount>.24?1:0):edgeLeaf.previous;edgeLeaf.pointer=null;return true;}
+function updateEdgeLeaf(dt){
+ if(edgeLeaf.pointer===null){edgeLeaf.amount+=(edgeLeaf.target-edgeLeaf.amount)*(1-Math.exp(-dt*7));if(Math.abs(edgeLeaf.amount-edgeLeaf.target)<.001)edgeLeaf.amount=edgeLeaf.target;}
+ const visible=edgeLeaf.amount>.02;edgeChrome.hidden=!visible;edgeChrome.style.display=visible?'flex':'none';edgeChrome.style.top=(edgeLeaf.name==='music'?h/2+20:Math.max(deckSafeTop+18,18))+'px';edgeChrome.style.opacity=edgeLeaf.amount;edgeChrome.style.right=edgeLeaf.name==='fan'?'112px':'22px';document.getElementById('edgeLeafTitle').textContent=edgeLeaf.name==='fan'?'VENTILATEUR':'MUSIQUE';
+}
+function drawEdgeMarks(){
+ ctx.save();ctx.strokeStyle='rgba(255,255,255,.46)';ctx.lineWidth=.8;ctx.beginPath();
+ for(let col=0;col<=6;col++){const x=clamp(w*col/6,2,w-2);ctx.moveTo(x,2);ctx.lineTo(x,9);ctx.moveTo(x,h-9);ctx.lineTo(x,h-2);}
+ for(let row=0;row<=8;row++){const y=clamp(h*row/8,2,h-2);ctx.moveTo(2,y);ctx.lineTo(9,y);ctx.moveTo(w-9,y);ctx.lineTo(w-2,y);}ctx.stroke();
+ // Double ticks identify the two reserved edge entry slots.
+ ctx.strokeStyle='rgba(255,255,255,.82)';ctx.beginPath();for(const [x,y,sign] of [[3,h*1.5/8,1],[w-3,h*6.5/8,-1]]){ctx.moveTo(x,y-5);ctx.lineTo(x+sign*12,y-5);ctx.moveTo(x,y+5);ctx.lineTo(x+sign*12,y+5);}ctx.stroke();ctx.restore();
+}
+function drawEdgeLeaf(){if(edgeLeaf.amount<.001)return;const top=edgeLeaf.name==='fan'?0:h/2,offset=(edgeLeaf.name==='fan'?-1:1)*(1-edgeLeaf.amount)*w;
+ ctx.save();ctx.beginPath();ctx.rect(0,top,w,h/2);ctx.clip();ctx.translate(offset,0);ctx.fillStyle=dayCSS(dayPalette.a,.78);ctx.fillRect(0,top,w,h/2);ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(const [x,y,u,v] of deckGridSegments()){ctx.moveTo(x,y);ctx.lineTo(u,v);}ctx.stroke();
+ ctx.strokeStyle='rgba(255,255,255,.82)';ctx.beginPath();for(let col=1;col<6;col++)for(let row=1;row<4;row++){const x=col*w/6,y=top+row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
+window.addEventListener('blur',()=>{edgeLeaf.pointer=null;edgeLeaf.target=edgeLeaf.previous;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')edgeLeaf.target=0;});
+
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
 const sphereSizeSettings=document.createElement('div');sphereSizeSettings.className='group';sphereSizeSettings.innerHTML='<div class="rowtitle">Volume de la sphère</div><div class="controls" id="sphereSizeControls"></div>';document.getElementById('sphereView').prepend(sphereSizeSettings);createControlGrid('sphereSizeControls',sphereAppearance,[['scale','Taille de la sphère',.65,1.8,.01]],()=>{try{localStorage.setItem('deck-sphere-scale',String(sphereAppearance.scale));}catch(_){}});
@@ -1810,13 +1850,13 @@ function experimentTouchStart(e){
  Object.assign(t,{id:e.pointerId,ax:sphere.x+dx*factor,ay:sphere.y+dy*factor,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:e.clientX,startY:e.clientY});
 }
 canvas.addEventListener('pointerdown',e=>{
- if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
+ if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
  canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
  if(experiment.points.size===1){experiment.active=experiment.target===1&&experiment.amount>.65;experiment.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};if(experiment.active)experimentWake();}
  if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
 },true);
 canvas.addEventListener('pointermove',e=>{
- if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;
+ if(placingLamps)return;e.stopImmediatePropagation();if(moveEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
  experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle){handle.tx=(e.clientX-handle.startX)*.8;handle.ty=(e.clientY-handle.startY)*.8;}
  if(experiment.points.size===2&&experiment.startDistance>=12){
   const p=[...experiment.points.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),ratio=d/experiment.startDistance;experiment.lastDistance=d;
@@ -1830,19 +1870,19 @@ canvas.addEventListener('pointermove',e=>{
 },true);
 function experimentLampHit(x,y){let best=null;for(let i=0;i<lights.length;i++){const p=experimentCenter(i,experiment.amount,experiment.time),d=Math.hypot(x-p.x,y-p.y);if(d<28&&(!best||d<best.d))best={index:i,d};}return best;}
 function finishExperiment(e){
- if(placingLamps)return;e.stopImmediatePropagation();if(!experiment.points.has(e.pointerId))return;
+ if(placingLamps)return;e.stopImmediatePropagation();if(endEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
  if(e.type!=='pointerup'){experimentReset(true);return;}
  const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle)handle.id=null;
  if(experiment.points.size===1&&!experiment.multi&&experiment.active){
   const g=experiment.gesture;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;
   const action=classifyDeckGesture(g);
-  if(action?.kind==='lights'){deckApply(action.target,action.on);rememberLampGrid(action.target,action.on,action.side);experiment.hasCommands=true;experimentWake();}
+  if(action?.kind==='lights'){if(g.axis==='x')commitLampColumns(g);else{deckApply(action.target,action.on);rememberLampGrid(action.target,action.on,action.side);}experiment.hasCommands=true;experimentWake();}
   else if(Math.hypot(g.dx,g.dy)<12){const hit=experimentLampHit(e.clientX,e.clientY);if(hit){deckTapLamp(hit.index,performance.now());experiment.hasCommands=true;experimentWake();}}
  }
  experiment.points.delete(e.pointerId);
  if(!experiment.points.size){if(experiment.dimmed){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});experiment.hasCommands=true;experimentWake();}experimentReset();}
 }
-canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(experiment.points.has(e.pointerId))experimentReset(true);},true);
+canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(edgeLeaf.pointer===e.pointerId)endEdgeLeaf({...e,type:'pointercancel'});if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent for the visual prototype.
 document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(experiment.target===0){experiment.target=1;experimentWake();}else experimentNeutral();}},true);
