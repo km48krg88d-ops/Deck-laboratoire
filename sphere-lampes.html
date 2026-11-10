@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 20 · Traversée de la membrane</title>
+<title>DECK — Essai 21 · Arrivées échelonnées</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E20</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E21</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 20 · Traversée de la membrane</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 21 · Arrivées échelonnées</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1736,11 +1736,14 @@ function experimentCurrentGrain(index){
  const p=particles[index],s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius};
  return deformExperimentPoint(base,base,radius,0);
 }
+// Each rear-shell light grows on its own schedule and settles during cloud traversal.
+function experimentLampTiming(index){return {arrival:.48+.22*experimentHash(index+47),growthStart:.06+.17*experimentHash(index+307)};}
+function experimentLampGrowth(index,amount){const timing=experimentLampTiming(index);return experimentEase(timing.growthStart,timing.arrival,amount);}
 function experimentCenter(index,amount,time){
  const destination=experimentControlPoint(index),particleIndex=experiment.lampIndices[index],a=experiment.departures;
  if(!a||experiment.departureParticles!==particles||particleIndex===undefined)return destination;
  if(amount===0&&experiment.target===0)return experimentCurrentGrain(particleIndex);
- const j=particleIndex*4,seed=particles[particleIndex].seed,arrival=.87+.13*experimentHash(index+47),u=clamp(amount/arrival,0,1),t=1-Math.pow(1-u,1.15+.35*experimentHash(index+59)),v=1-t;
+ const j=particleIndex*4,seed=particles[particleIndex].seed,arrival=experimentLampTiming(index).arrival,u=clamp(amount/arrival,0,1),t=1-Math.pow(1-u,1.15+.35*experimentHash(index+59)),v=1-t;
  const sphere=deckSphere(),z0=experiment.flightDepths?.[particleIndex*2]||0,k0=2.9/(2.9-z0),k1=2.9/(2.9-1.3),projection=2.9/(2.9-(z0+(1.3-z0)*t));
  const start={x:sphere.x+(a[j]-sphere.x)/k0,y:sphere.y+(a[j+1]-sphere.y)/k0},end={x:sphere.x+(destination.x-sphere.x)/k1,y:sphere.y+(destination.y-sphere.y)/k1},dx=end.x-start.x,dy=end.y-start.y,length=Math.max(1,Math.hypot(dx,dy)),bend=(experimentHash(seed*61)-.5)*Math.min(w,h)*.13*experimentCfg.curve;
  const c1={x:start.x+a[j+2]/k0*.3,y:start.y+a[j+3]/k0*.3},c2={x:end.x-dx*.18-dy/length*bend,y:end.y-dy*.18+dx/length*bend},drift=experimentDrift(seed,t),wander=experimentWander(index,time),settled=experimentEase(.75,1,u);
@@ -1815,8 +1818,8 @@ function experimentControlLevel(index){if(index<lights.length)return animatedLam
 function drawExperimentPoints(){
  if(experiment.amount<.001&&experiment.reveal<.001)return;
  for(let i=0;i<lights.length+2;i++){
-  if(experiment.lampIndices[i]===undefined)continue;const flying=experiment.amount>.001,progress=flying?.45+.55*experimentEase(0,1,experiment.amount):.45*experiment.reveal,mix=flying?1:experiment.reveal;
-  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=i>=lights.length?2:1,core=(Math.max(.4,sphereCfg.size*.35)+(experimentCfg.core*depth-Math.max(.4,sphereCfg.size*.35))*progress)*pulse,halo=experimentCfg.halo*depth*progress,alpha=mix*(.35+.65*progress)*experimentCfg.brightness*(experiment.hasCommands?1-(1-(.18+.82*experimentControlLevel(i)))*experimentEase(.65,1,experiment.amount):1);
+  if(experiment.lampIndices[i]===undefined)continue;const flying=experiment.amount>.001,timing=experimentLampTiming(i),progress=flying?experimentLampGrowth(i,experiment.amount):0,mix=flying?1:experiment.reveal;
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=i>=lights.length?2:1,core=(Math.max(.4,sphereCfg.size*.35)+(experimentCfg.core*depth-Math.max(.4,sphereCfg.size*.35))*progress)*pulse,halo=experimentCfg.halo*depth*progress,alpha=mix*(.65+.35*progress)*experimentCfg.brightness*(experiment.hasCommands?1-(1-(.18+.82*experimentControlLevel(i)))*experimentEase(timing.arrival,Math.min(1,timing.arrival+.14),experiment.amount):1);
   ctx.save();ctx.globalAlpha=alpha;
   const tint=dayTint(p.x,p.y,true);
   const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,Math.max(.01,halo));g.addColorStop(0,dayCSS(tint,.80));g.addColorStop(.12,dayCSS(tint,.54));g.addColorStop(.35,dayCSS(tint,.17));g.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
