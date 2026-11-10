@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 18 · Deux groupes lumineux</title>
+<title>DECK — Essai 19 · Lumières sous tension</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord gauche en haut pour le ventilateur, bord droit en bas pour la musique."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E18</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E19</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 18 · Deux groupes lumineux</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 19 · Lumières sous tension</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -909,7 +909,7 @@ function setupPointsGPU(){
  const vs=`precision highp float;
  attribute vec4 aPoint,aDeparture;
  attribute float aLamp;
- uniform float uDepartureMix;
+ uniform float uDepartureMix,uLampReveal;
  uniform vec2 uViewport,uCenter,uAngles;
  uniform vec4 uTouches[2];uniform vec2 uTargets[11],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
@@ -944,7 +944,7 @@ function setupPointsGPU(){
  float dustFade=1.; // Dust leaves the viewport at full opacity.
  vAlpha=min(.98,alpha*(zz<0.?.52:1.))*dustFade;
  // The nine selected grains are drawn once in Canvas, with growing cores and halos.
- if(aLamp>=0.&&uSplit>.001)vAlpha=0.;
+ if(aLamp>=0.)vAlpha*=uSplit>.001?0.:1.-uLampReveal;
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
  float diameter=uSoft>.001?max(1.25/uDpr,size)*(1.1+1.45*uSoft):size;
  gl_PointSize=max(1.,diameter*uDpr);
@@ -970,7 +970,7 @@ function setupPointsGPU(){
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
- uniforms.DepartureMix=gl.getUniformLocation(program,'uDepartureMix');
+ uniforms.DepartureMix=gl.getUniformLocation(program,'uDepartureMix');uniforms.LampReveal=gl.getUniformLocation(program,'uLampReveal');
  let uploaded=null,uploadedDeparture=null,departureCount=0,uploadedLamp=null,lampCount=0;
  return {draw(cx,cy,radius,breathe,energy){
   if(gl.isContextLost())return false;
@@ -985,6 +985,7 @@ function setupPointsGPU(){
   gl.bindBuffer(gl.ARRAY_BUFFER,lampBuffer);
   if(uploadedLamp!==lampFlags||lampCount!==particles.length){gl.bufferData(gl.ARRAY_BUFFER,lampFlags||new Float32Array(particles.length).fill(-1),gl.STATIC_DRAW);uploadedLamp=lampFlags;lampCount=particles.length;}
   gl.enableVertexAttribArray(lampAttr);gl.vertexAttribPointer(lampAttr,1,gl.FLOAT,false,0,0);
+  gl.uniform1f(uniforms.LampReveal,experiment.reveal);
   gl.uniform1f(uniforms.DepartureMix,departures?(experiment.target===1?1:experimentEase(0,.3,experiment.amount)):0);
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
@@ -1699,8 +1700,8 @@ function drawDayCycle(){
 }
 
 const EXPERIMENT_SMALL_SCALE=.012;
-const experimentCfg={softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
-const experiment={lampFlags:null,lampIndices:[],departures:null,departureParticles:null,rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
+const experimentCfg={selection:.45,softness:1.8,rupture:1.05,curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
+const experiment={preselected:false,reveal:0,lampFlags:null,lampIndices:[],departures:null,departureParticles:null,rupture:null,handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
 function experimentLampPoint(index){const p=fixedLampPoint(index),pad=Math.max(26,deckSafeTop+12),bottom=Math.max(28,deckSafeBottom+12);return {x:clamp(p.x,26,w-26),y:clamp(p.y,pad,h-bottom)};}
 function experimentDecision(start,ratio,travel){if(ratio>=1.5&&travel>=42)return 1;if(ratio<=.67&&travel>=42)return 0;return start;}
 function experimentEase(a,b,value){const t=clamp((value-a)/(b-a),0,1);return t*t*(3-2*t);}
@@ -1721,9 +1722,15 @@ function experimentControlPoint(index){
  return {x:clamp(x,48,w-48),y:clamp(y,zone==='upper'?56:h/2+40,zone==='upper'?h/2-40:h-48)};
 }
 function experimentDrift(seed,amount){const bend=Math.sin(Math.PI*amount);return {x:(Math.sin(seed*71+amount*3)-Math.sin(seed*71))*w*.035*bend,y:(Math.cos(seed*53+amount*2.4)-Math.cos(seed*53))*w*.035*bend};}
+// The chosen grains continue to follow the live, stretched shell until it tears.
+function experimentCurrentGrain(index){
+ const p=particles[index],s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius};
+ return deformExperimentPoint(base,base,radius,0);
+}
 function experimentCenter(index,amount,time){
  const destination=experimentControlPoint(index),particleIndex=experiment.lampIndices[index],a=experiment.departures;
  if(!a||experiment.departureParticles!==particles||particleIndex===undefined)return destination;
+ if(amount===0&&experiment.target===0)return experimentCurrentGrain(particleIndex);
  const j=particleIndex*4,seed=particles[particleIndex].seed,arrival=.87+.13*experimentHash(index+47),u=clamp(amount/arrival,0,1),t=1-Math.pow(1-u,1.15+.35*experimentHash(index+59)),v=1-t;
  const start={x:a[j],y:a[j+1]},dx=destination.x-start.x,dy=destination.y-start.y,length=Math.max(1,Math.hypot(dx,dy)),bend=(experimentHash(seed*61)-.5)*Math.min(w,h)*.13*experimentCfg.curve;
  const c1={x:start.x+a[j+2]*.3,y:start.y+a[j+3]*.3},c2={x:destination.x-dx*.18-dy/length*bend,y:destination.y-dy*.18+dx/length*bend},drift=experimentDrift(seed,t),wander=experimentWander(index,time),settled=experimentEase(.75,1,u);
@@ -1743,13 +1750,14 @@ function experimentPose(raw,seed,cx,cy,radius,amount,index){
  return {x:source.x+velocity.x*amount*2.2+drift.x,y:source.y+velocity.y*amount*2.2+drift.y};
 }
 // One O(N) snapshot at rupture; subsequent integration stays on the GPU.
-function captureExperimentDeparture(){
+function captureExperimentDeparture(preserveSelection=false,launch=true){
+ const keep=preserveSelection&&experiment.preselected&&experiment.departureParticles===particles&&experiment.lampIndices.length===lights.length+2;
  const s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),data=new Float32Array(particles.length*4);
  for(let i=0;i<particles.length;i++){
   const p=particles[i],radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius},point=deformExperimentPoint(base,base,radius,0);
   data.set([point.x,point.y,(point.x-s.x)*1.1+(point.x-base.x)*1.4,(point.y-s.y)*1.1+(point.y-base.y)*1.4],i*4);
  }
- experiment.departures=data;experiment.departureParticles=particles;selectExperimentLampGrains();prepareExperimentDustExit();
+ experiment.departures=data;experiment.departureParticles=particles;if(!keep)selectExperimentLampGrains();if(launch)prepareExperimentDustExit();
 }
 // Greedy directional matching: nine distinct real grains, nearest to natural outward routes.
 function selectExperimentLampGrains(){
@@ -1777,13 +1785,14 @@ function experimentTapControl(index,now){
  if(previous&&previous.index===index&&now-previous.time<420){const on=!deckIndices(target).some(i=>lampManualLevels[i]>.001);deckApply(target,on);deck.lastTap=null;}
  else deck.lastTap={index,time:now};
 }
-function beginExperimentOpening(){captureExperimentDeparture();experiment.target=1;experimentWake();}
+function beginExperimentOpening(){captureExperimentDeparture(true);experiment.reveal=1;experiment.target=1;experimentWake();}
 
+function experimentControlLevel(index){if(index<lights.length)return animatedLampLevels[index];const ids=deckIndices(index===lights.length?'upper':'lower');return ids.reduce((sum,i)=>sum+animatedLampLevels[i],0)/Math.max(1,ids.length);}
 function drawExperimentPoints(){
- if(experiment.amount<.001)return;
+ if(experiment.amount<.001&&experiment.reveal<.001)return;
  for(let i=0;i<lights.length+2;i++){
-  if(experiment.lampIndices[i]===undefined)continue;const progress=experimentEase(0,1,experiment.amount),mix=1;
-  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=i>=lights.length?2:1,core=(Math.max(.4,sphereCfg.size*.35)+(experimentCfg.core*depth-Math.max(.4,sphereCfg.size*.35))*progress)*pulse,halo=experimentCfg.halo*depth*progress,alpha=(.35+.65*progress)*experimentCfg.brightness*(experiment.hasCommands?.18+.82*(i<lights.length?animatedLampLevels[i]:(deckIndices(i===lights.length?'upper':'lower').reduce((sum,j)=>sum+animatedLampLevels[j],0)/Math.max(1,deckIndices(i===lights.length?'upper':'lower').length))):1);
+  if(experiment.lampIndices[i]===undefined)continue;const flying=experiment.amount>.001,progress=flying?.45+.55*experimentEase(0,1,experiment.amount):.45*experiment.reveal,mix=flying?1:experiment.reveal;
+  const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=i>=lights.length?2:1,core=(Math.max(.4,sphereCfg.size*.35)+(experimentCfg.core*depth-Math.max(.4,sphereCfg.size*.35))*progress)*pulse,halo=experimentCfg.halo*depth*progress,alpha=mix*(.35+.65*progress)*experimentCfg.brightness*(experiment.hasCommands?1-(1-(.18+.82*experimentControlLevel(i)))*experimentEase(.65,1,experiment.amount):1);
   ctx.save();ctx.globalAlpha=alpha;
   const tint=dayTint(p.x,p.y,true);
   const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,Math.max(.01,halo));g.addColorStop(0,dayCSS(tint,.80));g.addColorStop(.12,dayCSS(tint,.54));g.addColorStop(.35,dayCSS(tint,.17));g.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
@@ -1800,16 +1809,18 @@ function experimentDeformationHandles(){return experiment.rupture||experiment.ha
 function experimentTryRupture(){
  if(experiment.rupture||experiment.startTarget!==0||experiment.target!==0||!experiment.multi||experiment.points.size!==2||experiment.startDistance<12)return false;
  const radius=deckSphere().r*1.18,travel=experiment.lastDistance-experiment.startDistance;
- if(experiment.lastDistance/experiment.startDistance<1.25||travel<Math.max(42,radius*.45))return false;
  const [a,b]=experiment.handles,dx=b.startX-a.startX,dy=b.startY-a.startY,length=Math.hypot(dx,dy);
  if(length<12)return false;
- const stretch=((b.x-a.x)*dx+(b.y-a.y)*dy)/length;
- if(stretch<radius*experimentCfg.rupture)return false;
+ const stretch=((b.x-a.x)*dx+(b.y-a.y)*dy)/length,tension=stretch/(radius*experimentCfg.rupture);
+ if(tension>=experimentCfg.selection&&!experiment.preselected){captureExperimentDeparture(false,false);experiment.preselected=true;}
+ experiment.reveal=experiment.preselected?experimentEase(experimentCfg.selection,.85,tension):0;
+ if(experiment.lastDistance/experiment.startDistance<1.25||travel<Math.max(42,radius*.45)||tension<1)return false;
  experiment.rupture=experiment.handles.map(t=>({ax:t.ax,ay:t.ay,x:t.x,y:t.y}));
  experiment.gestureTarget=1;beginExperimentOpening();return true;
 }
 function updateExperimentTouch(dt){
  if(experiment.rupture)return;
+ if(!experiment.multi&&experiment.target===0&&experiment.amount===0){experiment.reveal*=Math.exp(-dt*12);if(experiment.reveal<.001)experiment.reveal=0;}
  const step=Math.min(dt,.025),radius=deckSphere().r*1.18;
  for(const t of experiment.handles){
   if(t.id===null){t.tx=0;t.ty=0;}
@@ -1828,6 +1839,7 @@ function advanceExperiment(dt){
  experiment.amount=experiment.target>previous?Math.min(experiment.target,previous+step):Math.max(experiment.target,previous-step);
  // The idle countdown begins after the lights have finished opening.
  if(previous<1&&experiment.amount===1){experiment.rupture=null;experimentWake();}
+ if(previous>0&&experiment.amount===0){experiment.reveal=0;experiment.preselected=false;}
 }
 function drawExperimentWarmth(){
  const glow=ctx.createRadialGradient(w*.12,h*.72,0,w*.12,h*.72,Math.max(w,h)*.9);
@@ -1848,7 +1860,7 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
+  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawExperimentPoints();drawEdgeLeaf();if(experiment.amount<.05)drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
@@ -1917,7 +1929,7 @@ document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map
 // The existing automatic-background switch controls the same clock.
 document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
 
-createControlGrid('experimentLightControls',experimentCfg,[['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
+createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=beginExperimentOpening;document.getElementById('experimentGather').onclick=experimentNeutral;
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
@@ -1932,7 +1944,9 @@ function experimentTouchStart(e){
 }
 canvas.addEventListener('pointerdown',e=>{
  if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
- canvas.setPointerCapture(e.pointerId);experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
+ canvas.setPointerCapture(e.pointerId);
+ if(!experiment.points.size&&experiment.target===0&&experiment.amount===0){experiment.preselected=false;experiment.reveal=0;experiment.lampFlags=null;experiment.lampIndices=[];experiment.departures=null;experiment.departureParticles=null;}
+ experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
  if(experiment.points.size===1){experiment.active=experiment.target===1&&experiment.amount>.65;experiment.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};if(experiment.active)experimentWake();}
  if(experiment.points.size===2){const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
 },true);
