@@ -10,7 +10,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 08 · Dispersion douce</title>
+<title>DECK — Essai 09 · Douze lumières du jour</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,9 +88,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E08</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E09</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 08 · Dispersion douce</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 09 · Douze lumières du jour</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -908,6 +908,7 @@ function setupPointsGPU(){
  uniform vec2 uViewport,uCenter,uAngles;
  uniform vec4 uTouches[2];uniform vec2 uTargets[9],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
+ uniform vec3 uDayA,uDayB;uniform vec4 uDayLight;varying vec3 vTint;
  varying float vAlpha;
  float rnd(float n){return fract(sin(n*127.1)*43758.5453123);}
  float wave(vec3 p){float f=1.-uFluid;float t=uClock;
@@ -941,11 +942,12 @@ function setupPointsGPU(){
  gl_PointSize=max(1.,diameter*uDpr);
  // Canvas fillRect uses its point as the upper-left corner when softness is zero.
  if(uSoft<=.001)pixel+=vec2(size*.5);
+ float dist=length(pixel-uDayLight.xy)/uDayLight.z;float light=pow(1.-smoothstep(0.,1.,dist),uDayLight.w);float inverseLight=clamp(.5+(light-.5)*max(uViewport.x,uViewport.y)/(uRadius*2.),0.,1.);vTint=mix(uDayB,uDayA,inverseLight);
  gl_Position=vec4(pixel/uViewport*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);
  if((uSide<.5&&zz>=0.)||(uSide>.5&&zz<0.))gl_Position=vec4(3.,3.,0.,1.);
  }`;
- const fs=`precision highp float;uniform sampler2D uDot;uniform float uSoft,uSplit;varying float vAlpha;
- void main(){float a=vAlpha*(uSoft>.001?texture2D(uDot,gl_PointCoord).a:1.);gl_FragColor=vec4(vec3(a),a);}`;
+ const fs=`precision highp float;uniform sampler2D uDot;uniform float uSoft,uSplit;varying float vAlpha;varying vec3 vTint;
+ void main(){float a=vAlpha*(uSoft>.001?texture2D(uDot,gl_PointCoord).a:1.);gl_FragColor=vec4(vTint*a,a);}`;
  const compile=(type,source)=>{const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader;};
  try{
  const program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vs));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
@@ -955,6 +957,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
+ uniforms.DayA=gl.getUniformLocation(program,'uDayA');uniforms.DayB=gl.getUniformLocation(program,'uDayB');uniforms.DayLight=gl.getUniformLocation(program,'uDayLight');
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
@@ -965,6 +968,7 @@ function setupPointsGPU(){
   gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   if(uploaded!==particles){const data=new Float32Array(particles.length*4);particles.forEach((p,i)=>data.set([p.x,p.y,p.z,p.seed],i*4));gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);uploaded=particles;}
   gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
   gl.uniform4fv(uniforms.Touches,new Float32Array(experiment.handles.flatMap(t=>[t.ax,t.ay,t.x,t.y])));
   gl.uniform2f(uniforms.Gesture,experiment.handX,experiment.handY);gl.uniform1f(uniforms.FlowTime,experiment.time);gl.uniform1f(uniforms.Twist,experiment.twist);
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
@@ -1631,6 +1635,40 @@ function classifyDeckGesture(g){
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
 // Alternative tactile study. V49 remains available at the original entry point.
+// Twelve two-hour keyframes. Exactly two colours are interpolated at every instant.
+const dayCycleDefaults=[
+ ['Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
+ ['Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
+ ['Avant l’aube','#243D60','#9AA9C5',.52,1.12,1.34,1.80],
+ ['Aube','#688BA4','#E3A17F',.48,1.08,1.20,1.25],
+ ['Matin','#92B8C2','#F2AA76',.48,1.02,1.06,1.30],
+ ['Matin lumineux','#92B8C2','#F2AA76',.38,.93,1.12,1.25],
+ ['Vers le rose','#7C9DB0','#E9A1A0',.56,.52,1.10,1.15],
+ ['Après-midi','#657D9E','#DEA0B2',.58,-.05,1.10,1.30],
+ ['Après-midi doux','#657D9E','#DEA0B2',.42,-.08,1.18,1.45],
+ ['Fin du jour','#526B91','#C592B0',.20,.14,1.14,1.65],
+ ['Soir','#2F486D','#A18FB8',-.10,.43,1.20,1.85],
+ ['Retour à la nuit','#182C50','#849BC5',.28,.56,1.12,1.80]
+].map((p,i)=>({name:p[0],hour:i*2,a:p[1],b:p[2],x:p[3],y:p[4],spread:p[5],balance:p[6]}));
+let dayCycle=dayCycleDefaults.map(p=>({...p}));
+try{const saved=JSON.parse(localStorage.getItem('deck-daycycle-v1'));if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k]))))dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));}catch(_){}
+const dayPreview={auto:true,hour:8};let dayPalette=null;
+function dayRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
+function dayMix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
+function dayPaletteAt(hour){
+ const value=((hour%24)+24)%24/2,index=Math.floor(value),next=(index+1)%12,f=value-index,t=f*f*(3-2*f),a=dayCycle[index],b=dayCycle[next];
+ return {a:dayMix(dayRGB(a.a),dayRGB(b.a),t),b:dayMix(dayRGB(a.b),dayRGB(b.b),t),x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,spread:a.spread+(b.spread-a.spread)*t,balance:a.balance+(b.balance-a.balance)*t};
+}
+function dayWeight(distance,palette=dayPalette){const t=clamp(distance,0,1),s=t*t*(3-2*t);return Math.pow(1-s,palette.balance);}
+function dayTint(x,y,inverse=false){const p=dayPalette,d=Math.hypot(x-w*p.x,y-h*p.y)/(Math.max(w,h)*p.spread),weight=dayWeight(d,p),t=inverse?clamp(.5+(weight-.5)*Math.max(w,h)/(deckSphere().r*2.36),0,1):weight;return dayMix(inverse?p.b:p.a,inverse?p.a:p.b,t).map(Math.round);}
+function dayCSS(rgb,alpha=1){return `rgba(${rgb.map(Math.round).join(',')},${alpha})`;}
+function drawDayCycle(){
+ const date=new Date(),hour=dayPreview.auto?date.getHours()+date.getMinutes()/60+date.getSeconds()/3600:dayPreview.hour;
+ dayPalette=dayPaletteAt(hour);const p=dayPalette,r=Math.max(w,h)*p.spread,gradient=ctx.createRadialGradient(w*p.x,h*p.y,0,w*p.x,h*p.y,r);
+ for(let i=0;i<=32;i++){const d=i/32;gradient.addColorStop(d,dayCSS(dayMix(p.a,p.b,dayWeight(d,p))));}
+ ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+}
+
 const EXPERIMENT_SMALL_SCALE=.012;
 const experimentCfg={curve:.9,drift:3.5,driftSpeed:.55,core:3.2,halo:24,brightness:.85};
 const experiment={handX:0,handY:0,twist:0,startMidX:0,startMidY:0,startAngle:0,startTarget:0,time:0,amount:0,target:0,points:new Map(),startDistance:0,startAmount:0,multi:false,lastDistance:0,gestureTarget:null,gesture:null,active:false,deadline:0,hasCommands:false,dimmed:false,handles:Array.from({length:2},()=>({id:null,ax:0,ay:0,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:0,startY:0}))};
@@ -1669,8 +1707,9 @@ function drawExperimentPoints(){
   const progress=experimentLampProgress(i,experiment.amount),mix=experimentEase(.72,.97,progress);if(mix<.001)continue;
   const p=experimentCenter(i,experiment.amount,experiment.time),pulse=1,depth=.75+.5*experimentHash(i+151),core=experimentCfg.core*pulse*depth,halo=experimentCfg.halo*depth,alpha=mix*experimentCfg.brightness*(experiment.hasCommands?.18+.82*animatedLampLevels[i]:1);
   ctx.save();ctx.globalAlpha=alpha;
-  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'rgba(255,255,255,.80)');g.addColorStop(.12,'rgba(255,255,255,.54)');g.addColorStop(.35,'rgba(255,255,255,.17)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
-  const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,'rgba(255,255,255,1)');nucleus.addColorStop(.6,'rgba(255,255,255,.92)');nucleus.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
+  const tint=dayTint(p.x,p.y,true);
+  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,dayCSS(tint,.80));g.addColorStop(.12,dayCSS(tint,.54));g.addColorStop(.35,dayCSS(tint,.17));g.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=g;ctx.fillRect(p.x-halo,p.y-halo,halo*2,halo*2);
+  const nucleus=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,core);nucleus.addColorStop(0,dayCSS(tint,1));nucleus.addColorStop(.6,dayCSS(tint,.92));nucleus.addColorStop(1,dayCSS(tint,0));ctx.fillStyle=nucleus;ctx.beginPath();ctx.arc(p.x,p.y,core,0,2*Math.PI);ctx.fill();ctx.restore();
  }
 }
 // The gesture chooses an endpoint; elapsed time alone drives the transition.
@@ -1705,7 +1744,7 @@ function renderExperiment(now,dt){
  if(experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
  updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
- ctx.fillStyle=deckDayColor();ctx.fillRect(0,0,w,h);ctx.save();ctx.globalAlpha=.18;drawSoftBackdrop();ctx.restore();drawExperimentWarmth();
+ drawDayCycle();
  if(experiment.amount>.05){ctx.save();ctx.globalAlpha=experiment.amount;drawGestureGrid();ctx.restore();}
  const s=deckSphere(),radius=s.r*1.18,cx=w*.5,cy=h*.5,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
  deckPointScale=1;deckPointAlpha=1;
@@ -1714,7 +1753,7 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=deformExperimentPoint(experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),base,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.86,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.drawImage(dotSprite,q.x-d/2,q.y-d/2,d,d);}else{ctx.fillStyle='#fff';ctx.fillRect(q.x,q.y,size,size);}}
+  for(const p of particles){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=deformExperimentPoint(experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount),base,radius,experiment.amount),depth=(zz+1.45)/2.9;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(1-experimentEase(.86,1,experimentLampProgress(Math.min(8,Math.floor(p.seed*9)),experiment.amount)));const size=Math.max(.65,sphereCfg.size*(.5+.65*depth));ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawExperimentPoints();if(placingLamps)renderPlacementMarkers();
@@ -1722,6 +1761,37 @@ function renderExperiment(now,dt){
 }
 const experimentSettings=document.createElement('div');experimentSettings.className='group';experimentSettings.style.cssText='padding-top:0;margin:0 0 20px';experimentSettings.innerHTML='<div class="rowtitle">Décomposition · points lumineux</div><div class="controls" id="experimentLightControls"></div><div class="presets"><button type="button" class="preset" id="experimentExpand">Déployer</button><button type="button" class="preset" id="experimentGather">Rassembler</button></div>';
 document.getElementById('sphereView').prepend(experimentSettings);
+const daySettings=document.createElement('div');daySettings.className='group';daySettings.innerHTML=`
+<div class="rowtitle">Journée · douze phases</div>
+<label style="display:block;margin:10px 0"><input id="dayLive" type="checkbox" checked> Heure réelle du téléphone</label>
+<label class="hint" for="dayScrub">Parcourir les transitions · <output id="dayTime">08:00</output></label>
+<input id="dayScrub" aria-label="Heure de prévisualisation" type="range" min="0" max="23.99" step=".01" value="8" style="width:100%;margin:16px 0">
+<label class="hint" for="dayPhase">Modifier une phase</label>
+<select id="dayPhase" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:#fff;border:1px solid #555;border-radius:12px">${dayCycle.map((p,i)=>`<option value="${i}">${String(p.hour).padStart(2,'0')}:00 · ${p.name}</option>`).join('')}</select>
+<div class="controls"><label>Bleu <input aria-label="Teinte bleue de la phase" id="dayBlue" type="color"></label><label>Lumière <input aria-label="Teinte lumineuse de la phase" id="dayLight" type="color"></label></div>
+<div id="dayPhaseControls" class="controls"></div>
+<p class="hint">Origine X : gauche → droite. Origine Y : haut → bas. Les teintes et la lumière se fondent entre les phases ; la sphère utilise le duo inversé.</p>
+<div class="presets"><button type="button" id="dayRestore" class="preset">Réinitialiser les 12 phases</button></div>`;
+document.getElementById('sphereView').prepend(daySettings);
+const dayLive=document.getElementById('dayLive'),dayScrub=document.getElementById('dayScrub'),dayPhase=document.getElementById('dayPhase'),dayBlue=document.getElementById('dayBlue'),dayLight=document.getElementById('dayLight');
+function daySave(){try{localStorage.setItem('deck-daycycle-v1',JSON.stringify(dayCycle));}catch(_){}}
+function dayReadout(){const hour=dayPreview.hour,minutes=Math.round(hour*60)%1440;document.getElementById('dayTime').textContent=String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');}
+function daySelect(index,preview=true){
+ dayPhase.value=String(index);const p=dayCycle[index];dayBlue.value=p.a;dayLight.value=p.b;
+ document.getElementById('dayPhaseControls').replaceChildren();
+ createControlGrid('dayPhaseControls',p,[['x','Origine de lumière · X',-.3,1.3,.01],['y','Origine de lumière · Y',-.3,1.3,.01],['spread','Étendue de la lumière',.4,2,.01],['balance','Répartition des teintes',.4,3,.01]],()=>{dayShowPhase();daySave();});
+ if(preview){dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=p.hour;dayScrub.value=String(p.hour);dayReadout();}
+}
+function dayShowPhase(){dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=dayCycle[Number(dayPhase.value)].hour;dayScrub.value=String(dayPreview.hour);dayReadout();}
+dayPhase.onchange=()=>daySelect(Number(dayPhase.value));
+dayScrub.oninput=()=>{dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=Number(dayScrub.value);dayReadout();const index=Math.floor(dayPreview.hour/2);if(Number(dayPhase.value)!==index)daySelect(index,false);};
+dayLive.onchange=()=>{dayPreview.auto=dayLive.checked;document.getElementById('deckAutoBackground').checked=dayLive.checked;if(dayPreview.auto){const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(Math.floor(dayPreview.hour/2),false);dayReadout();}};
+for(const [input,key] of [[dayBlue,'a'],[dayLight,'b']])input.oninput=()=>{dayCycle[Number(dayPhase.value)][key]=input.value;dayShowPhase();daySave();};
+document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map(p=>({...p}));daySave();daySelect(Number(dayPhase.value));};
+{const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(Math.floor(dayPreview.hour/2),false);dayReadout();}
+// The existing automatic-background switch controls the same clock.
+document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
+
 createControlGrid('experimentLightControls',experimentCfg,[['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',8,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=()=>{experiment.target=1;experimentWake();};document.getElementById('experimentGather').onclick=experimentNeutral;
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
