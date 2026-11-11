@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 25 · Réglages essentiels</title>
+<title>DECK — Essai 26 · Cycle et partage</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour révéler les lampes, rapprocher pour rassembler. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E25</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E26</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 25 · Réglages essentiels</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 26 · Cycle et partage</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -1669,37 +1669,36 @@ function classifyDeckGesture(g){
 function deckTapLamp(index,now){const previous=deck.lastTap;deck.target=index;deckReveal(index);if(previous&&previous.index===index&&now-previous.time<420){deckApply(index,lampManualLevels[index]===0);deck.lastTap=null;}else{deck.lastTap={index,time:now};deckNotify(deckNames[index]+' · pincer la sphère');}}
 function deckCancel(){deck.points.clear();deck.gesture=null;deck.multi=false;deck.pinch=0;deck.preview=null;}
 // Alternative tactile study. V49 remains available at the original entry point.
-// Twelve two-hour keyframes. Exactly two colours are interpolated at every instant.
+// Twelve timed keyframes; the night palette is held through 06:00.
 const dayCycleDefaults=[
- ['Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
- ['Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
- ['Avant l’aube','#243D60','#9AA9C5',.52,1.12,1.34,1.80],
- ['Aube','#688BA4','#E3A17F',.48,1.08,1.20,1.25],
- ['Matin lumineux','#9CAEB1','#F2AA76',.38,.93,1.12,1.25],
- ['Matin','#9CAEB1','#F2AA76',.48,1.02,1.06,1.30],
- ['Vers le rose','#7C9DB0','#E9A1A0',.56,.52,1.10,1.15],
- ['Après-midi','#657D9E','#DEA0B2',.58,-.05,1.10,1.30],
- ['Après-midi doux','#657D9E','#DEA0B2',.42,-.08,1.18,1.45],
- ['Fin du jour','#526B91','#C592B0',.20,.14,1.14,1.65],
- ['Soir','#2F486D','#A18FB8',-.10,.43,1.20,1.85],
- ['Retour à la nuit','#182C50','#849BC5',.28,.56,1.12,1.80]
-].map((p,i)=>({name:p[0],hour:i*2,a:p[1],b:p[2],x:p[3],y:p[4],spread:p[5],balance:p[6]}));
+ [0,'Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
+ [3,'Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
+ [6,'Fin de nuit','#182C50','#849BC5',.52,1.12,1.34,1.80],
+ [7,'Aube rose','#7C91AA','#DEA0B2',.48,1.08,1.20,1.25],
+ [9,'Matinée orange','#9CAEB1','#F2AA76',.38,.93,1.12,1.25],
+ [11,'Journée · blanc chaud','#FFF4D7','#E8BC79',.48,.70,1.06,1.30],
+ [13,'Journée · jaune doux','#FFF4D7','#E8BC79',.56,.30,1.10,1.15],
+ [15,'Après-midi doré','#FFF4D7','#E8BC79',.58,-.05,1.10,1.30],
+ [17,'Fin de journée','#FFF4D7','#E8BC79',.42,-.08,1.18,1.45],
+ [19,'Soir orangé','#526B91','#E3A17F',.20,.14,1.14,1.65],
+ [21,'Soir bleu','#2F486D','#A18FB8',-.10,.43,1.20,1.85],
+ [23,'Retour à la nuit','#182C50','#849BC5',.28,.56,1.12,1.80]
+].map(p=>({hour:p[0],name:p[1],a:p[2],b:p[3],x:p[4],y:p[5],spread:p[6],balance:p[7]}));
 let dayCycle=dayCycleDefaults.map(p=>({...p}));
-try{const saved=JSON.parse(localStorage.getItem('deck-daycycle-v1'));if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k]))))dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));}catch(_){}
-for(const i of [4,5]){if(dayCycle[i].a.toLowerCase()==='#92b8c2')dayCycle[i].a='#9CAEB1';}
-if(dayCycle[4].x===.48&&dayCycle[4].y===1.02&&dayCycle[5].x===.38&&dayCycle[5].y===.93){for(const k of ['x','y','spread','balance']){const v=dayCycle[4][k];dayCycle[4][k]=dayCycle[5][k];dayCycle[5][k]=v;}}
-const dayPreview={auto:true,hour:8};let dayPalette=null,dayChromeKey='';
+try{const saved=JSON.parse(localStorage.getItem('deck-daycycle-v2'));if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k]))))dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));}catch(_){}
+const dayPreview={auto:true,hour:8,playback:null};let dayPalette=null,dayChromeKey='';
+function dayIndexAt(hour){const h=((hour%24)+24)%24;let index=0;for(let i=1;i<dayCycle.length;i++)if(h>=dayCycle[i].hour)index=i;return index;}
 function dayRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 function dayMix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
 function dayPaletteAt(hour){
- const value=((hour%24)+24)%24/2,index=Math.floor(value),next=(index+1)%12,f=value-index,t=f*f*(3-2*f),a=dayCycle[index],b=dayCycle[next];
+ const h=((hour%24)+24)%24,index=dayIndexAt(h),next=(index+1)%dayCycle.length,a=dayCycle[index],b=dayCycle[next],span=(next===0?24:b.hour)-a.hour,f=clamp((h-a.hour)/span,0,1),t=f*f*(3-2*f);
  return {a:dayMix(dayRGB(a.a),dayRGB(b.a),t),b:dayMix(dayRGB(a.b),dayRGB(b.b),t),x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,spread:a.spread+(b.spread-a.spread)*t,balance:a.balance+(b.balance-a.balance)*t};
 }
 function dayWeight(distance,palette=dayPalette){const t=clamp(distance,0,1),s=t*t*(3-2*t);return Math.pow(1-s,palette.balance);}
 function dayTint(x,y,inverse=false){const p=dayPalette,d=Math.hypot(x-w*p.x,y-h*p.y)/(Math.max(w,h)*p.spread),weight=dayWeight(d,p),t=inverse?clamp(.5+(weight-.5)*Math.max(w,h)/(deckSphere().r*2.36),0,1):weight;return dayMix(inverse?p.b:p.a,inverse?p.a:p.b,t).map(Math.round);}
 function dayCSS(rgb,alpha=1){return `rgba(${rgb.map(Math.round).join(',')},${alpha})`;}
 function drawDayCycle(){
- const date=new Date(),hour=dayPreview.auto?date.getHours()+date.getMinutes()/60+date.getSeconds()/3600:dayPreview.hour;
+ const hour=dayCurrentHour();
  dayPalette=dayPaletteAt(hour);const p=dayPalette,r=Math.max(w,h)*p.spread,gradient=ctx.createRadialGradient(w*p.x,h*p.y,0,w*p.x,h*p.y,r);
  for(let i=0;i<=32;i++){const d=i/32;gradient.addColorStop(d,dayCSS(dayMix(p.a,p.b,dayWeight(d,p))));}
  ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
@@ -1958,33 +1957,52 @@ const sphereSizeSettings=document.createElement('div');sphereSizeSettings.classN
 const daySettings=document.createElement('div');daySettings.className='group';daySettings.innerHTML=`
 <div class="rowtitle">Journée · douze phases</div>
 <label style="display:block;margin:10px 0"><input id="dayLive" type="checkbox" checked> Heure réelle du téléphone</label>
+<div class="presets"><button type="button" class="preset" id="dayPlay">Voir les 24 h en 24 secondes</button></div>
 <label class="hint" for="dayScrub">Parcourir les transitions · <output id="dayTime">08:00</output></label>
 <input id="dayScrub" aria-label="Heure de prévisualisation" type="range" min="0" max="23.99" step=".01" value="8" style="width:100%;margin:16px 0">
 <label class="hint" for="dayPhase">Modifier une phase</label>
 <select id="dayPhase" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:#fff;border:1px solid #555;border-radius:12px">${dayCycle.map((p,i)=>`<option value="${i}">${String(p.hour).padStart(2,'0')}:00 · ${p.name}</option>`).join('')}</select>
-<div class="controls"><label>Bleu <input aria-label="Teinte bleue de la phase" id="dayBlue" type="color"></label><label>Lumière <input aria-label="Teinte lumineuse de la phase" id="dayLight" type="color"></label></div>
+<div class="controls"><label>Teinte de base <input aria-label="Teinte de base de la phase" id="dayBlue" type="color"></label><label>Lumière <input aria-label="Teinte lumineuse de la phase" id="dayLight" type="color"></label></div>
 <div id="dayPhaseControls" class="controls"></div>
 <p class="hint">Origine X : gauche → droite. Origine Y : haut → bas. Les teintes et la lumière se fondent entre les phases ; la sphère utilise le duo inversé.</p>
 <div class="presets"><button type="button" id="dayRestore" class="preset">Réinitialiser les 12 phases</button></div>`;
 document.getElementById('sphereView').prepend(daySettings);
 const dayLive=document.getElementById('dayLive'),dayScrub=document.getElementById('dayScrub'),dayPhase=document.getElementById('dayPhase'),dayBlue=document.getElementById('dayBlue'),dayLight=document.getElementById('dayLight');
-function daySave(){try{localStorage.setItem('deck-daycycle-v1',JSON.stringify(dayCycle));}catch(_){}}
+function daySave(){try{localStorage.setItem('deck-daycycle-v2',JSON.stringify(dayCycle));}catch(_){}}
 function dayReadout(){const hour=dayPreview.hour,minutes=Math.round(hour*60)%1440;document.getElementById('dayTime').textContent=String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');}
 function daySelect(index,preview=true){
+ if(preview)dayStopPlayback(false);
  dayPhase.value=String(index);const p=dayCycle[index];dayBlue.value=p.a;dayLight.value=p.b;
  document.getElementById('dayPhaseControls').replaceChildren();
  createControlGrid('dayPhaseControls',p,[['x','Origine de lumière · X',-.3,1.3,.01],['y','Origine de lumière · Y',-.3,1.3,.01],['spread','Étendue de la lumière',.4,2,.01],['balance','Répartition des teintes',.4,3,.01]],()=>{dayShowPhase();daySave();});
  if(preview){dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=p.hour;dayScrub.value=String(p.hour);dayReadout();}
 }
-function dayShowPhase(){dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=dayCycle[Number(dayPhase.value)].hour;dayScrub.value=String(dayPreview.hour);dayReadout();}
+function dayShowPhase(){dayStopPlayback(false);dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=dayCycle[Number(dayPhase.value)].hour;dayScrub.value=String(dayPreview.hour);dayReadout();}
 dayPhase.onchange=()=>daySelect(Number(dayPhase.value));
-dayScrub.oninput=()=>{dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=Number(dayScrub.value);dayReadout();const index=Math.floor(dayPreview.hour/2);if(Number(dayPhase.value)!==index)daySelect(index,false);};
-dayLive.onchange=()=>{dayPreview.auto=dayLive.checked;document.getElementById('deckAutoBackground').checked=dayLive.checked;if(dayPreview.auto){const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(Math.floor(dayPreview.hour/2),false);dayReadout();}};
+dayScrub.oninput=()=>{dayStopPlayback(false);dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;dayPreview.hour=Number(dayScrub.value);dayReadout();const index=dayIndexAt(dayPreview.hour);if(Number(dayPhase.value)!==index)daySelect(index,false);};
+dayLive.onchange=()=>{dayStopPlayback(false);dayPreview.auto=dayLive.checked;document.getElementById('deckAutoBackground').checked=dayLive.checked;if(dayPreview.auto){const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(dayIndexAt(dayPreview.hour),false);dayReadout();}};
 for(const [input,key] of [[dayBlue,'a'],[dayLight,'b']])input.oninput=()=>{dayCycle[Number(dayPhase.value)][key]=input.value;dayShowPhase();daySave();};
 document.getElementById('dayRestore').onclick=()=>{dayCycle=dayCycleDefaults.map(p=>({...p}));daySave();daySelect(Number(dayPhase.value));};
-{const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(Math.floor(dayPreview.hour/2),false);dayReadout();}
+{const date=new Date();dayPreview.hour=date.getHours()+date.getMinutes()/60;dayScrub.value=String(dayPreview.hour);daySelect(dayIndexAt(dayPreview.hour),false);dayReadout();}
 // The existing automatic-background switch controls the same clock.
-document.getElementById('deckAutoBackground').onchange=e=>{dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
+document.getElementById('deckAutoBackground').onchange=e=>{dayStopPlayback(false);dayPreview.auto=e.target.checked;dayLive.checked=e.target.checked;};
+
+function dayStopPlayback(restore=true){
+ const playback=dayPreview.playback;if(!playback)return;
+ dayPreview.playback=null;
+ if(restore){dayPreview.auto=playback.previous.auto;dayPreview.hour=playback.previous.hour;dayLive.checked=dayPreview.auto;document.getElementById('deckAutoBackground').checked=dayPreview.auto;daySyncPlaybackUI(dayCurrentHour());}
+ document.getElementById('dayPlay').textContent='Voir les 24 h en 24 secondes';
+}
+function daySyncPlaybackUI(hour){dayPreview.hour=hour;dayScrub.value=String(hour);dayReadout();const index=dayIndexAt(hour);if(Number(dayPhase.value)!==index)daySelect(index,false);}
+function dayCurrentHour(now=performance.now()){
+ const playback=dayPreview.playback;
+ if(playback){const elapsed=Math.max(0,now-playback.started);if(elapsed>=24000){dayStopPlayback(true);return dayCurrentHour(now);}const hour=elapsed/1000;if(now-playback.lastUI>=100){playback.lastUI=now;daySyncPlaybackUI(hour);}return hour;}
+ const date=new Date();return dayPreview.auto?date.getHours()+date.getMinutes()/60+date.getSeconds()/3600:dayPreview.hour;
+}
+document.getElementById('dayPlay').onclick=()=>{
+ if(dayPreview.playback){dayStopPlayback(true);return;}
+ const now=performance.now();dayPreview.playback={started:now,lastUI:now,previous:{auto:dayPreview.auto,hour:dayPreview.hour}};dayPreview.auto=false;dayLive.checked=false;document.getElementById('deckAutoBackground').checked=false;daySyncPlaybackUI(0);document.getElementById('dayPlay').textContent='Arrêter l’aperçu · 24 secondes';
+};
 
 createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',0,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
 document.getElementById('experimentExpand').onclick=beginExperimentOpening;document.getElementById('experimentGather').onclick=experimentNeutral;
@@ -2208,6 +2226,16 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
+function collectExperimentSettings(){
+ return {format:'DECK-settings-v1',version:'E26',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+}
+const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
+panel.querySelector('.heading').after(exportControls);
+document.getElementById('copySettings').onclick=async()=>{
+ const payload=JSON.stringify(collectExperimentSettings(),null,2),status=document.getElementById('copySettingsStatus'),fallback=document.getElementById('settingsCopyFallback');
+ try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(payload);fallback.hidden=true;status.textContent='Réglages copiés — tu peux les coller dans la conversation.';}
+ catch(_){fallback.value=payload;fallback.hidden=false;fallback.focus();fallback.select();fallback.setSelectionRange(0,payload.length);let copied=false;try{copied=document.execCommand('copy');}catch(_){}status.textContent=copied?'Réglages copiés — tu peux les coller dans la conversation.':'Sélectionne et copie le texte ci-dessous.';if(copied)fallback.hidden=true;}
+};
 // Only settings that drive this alternative remain available.
 const retiredSettings=document.createElement('div');retiredSettings.id='retiredAlternativeSettings';retiredSettings.hidden=true;retiredSettings.inert=true;retiredSettings.style.display='none';document.body.append(retiredSettings);
 const activeSettings=new Set([daySettings,sphereSizeSettings,experimentSettings,document.getElementById('pointPanel')]);
