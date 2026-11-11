@@ -2056,7 +2056,7 @@ function experimentTouchStart(e){
  Object.assign(t,{id:e.pointerId,ax:sphere.x+dx*factor,ay:sphere.y+dy*factor,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:e.clientX,startY:e.clientY});
 }
 canvas.addEventListener('pointerdown',e=>{
- if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
+ if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=experiment.target===1?deckBounds():deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
  canvas.setPointerCapture(e.pointerId);
  if(!experiment.points.size&&experiment.target===0&&experiment.amount===0){lampInteraction.entry='burst';experiment.preselected=false;experiment.reveal=0;experiment.lampFlags=null;experiment.lampIndices=[];experiment.departures=null;experiment.departureParticles=null;}
  experiment.points.set(e.pointerId,{x:e.clientX,y:e.clientY});experimentTouchStart(e);
