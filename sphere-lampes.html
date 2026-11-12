@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 28 · Traversée de la sphère</title>
+<title>DECK — Essai 29 · Nuée volumétrique</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour éclater, pincer pour avancer dans la sphère et retrouver les lampes. Appui : sélectionner une lampe, double appui : ON/OFF. Pincer une sélection : intensité. Sans sélection : pincer pour revenir. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E28</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E29</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 28 · Traversée de la sphère</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 29 · Nuée volumétrique</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -856,17 +856,22 @@ document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>
 document.querySelectorAll('#visibilityModes .preset').forEach(btn=>btn.addEventListener('click',()=>{programCfg.alwaysVisible=Number(btn.dataset.visible); updateVisibilityButtons();}));
 updateVisibilityButtons();
 
+// One irregular volume. There is no separate shell, grid, latitude or longitude.
 function createParticles(){
-  const count=Math.min(38000,Math.round(1600+sphereCfg.density*90));
-  const golden=Math.PI*(3-Math.sqrt(5));
-  particles=new Array(count);
-  for(let i=0;i<count;i++){
-    const y=1-(i+.5)*2/count, r=Math.sqrt(Math.max(0,1-y*y)), theta=golden*i;
-    const x=Math.cos(theta)*r, z=Math.sin(theta)*r;
-    const seed=Math.sin(i*41.783)*43758.5453;
-    const grainSeed=seed-Math.floor(seed),interior=i%3===0,volumeRadius=interior?Math.cbrt(.015+.955*grainSeed):1;
-    particles[i]={x:x*volumeRadius,y:y*volumeRadius,z:z*volumeRadius,seed:grainSeed,interior};
-  }
+ const count=Math.min(38000,Math.round(1600+sphereCfg.density*90));let state=1947281;
+ const random=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return (state>>>0)/4294967296;};
+ particles=[];
+ while(particles.length<count){
+  const x=random()*2-1,y=random()*2-1,z=random()*2-1,r=Math.hypot(x,y,z);if(r>=1)continue;
+  // Broad pockets of different density, with a soft, unstructured boundary.
+  const field=.5+.5*Math.sin(3.7*x+1.4*Math.sin(3*z))*Math.cos(3.2*y-2*z),density=(.2+.8*field)*(.35+.65*(1-Math.pow(r,8)));
+  if(random()>density)continue;particles.push({x,y,z,seed:random(),interior:true});
+ }
+}
+function cloudPosition(p,time=clock){
+ time*=.35+.65*sphereCfg.fluidity;
+ const amp=(.035+sphereCfg.deform*.32)*(1-.45*Math.min(1,Math.hypot(p.x,p.y,p.z)));
+ return {x:p.x+amp*Math.sin(4*p.y+2*p.z+time*.43)*Math.cos(2*p.z-time*.31),y:p.y+amp*Math.sin(3*p.z-2*p.x+time*.37)*Math.cos(3*p.x+time*.23),z:p.z+amp*Math.sin(3*p.x+2*p.y-time*.29)*Math.cos(2*p.y+time*.41)};
 }
 function resize(){
   // Cap internal resolution to avoid filling nine physical pixels per CSS pixel.
@@ -923,7 +928,10 @@ function setupPointsGPU(){
  float mid=.55*sin((4.4+f*4.5)*p.y+(3.3+f*3.4)*p.z-1.35*t+sin(1.2*p.x+t*.25));
  float high=f*.28*sin((9.2+f*6.8)*p.x-(7.3+f*5.1)*p.z+2.6*p.y+t*.62);
  return (low+mid+high)/1.55;}
- void main(){vec3 raw=aPoint.xyz;vec3 p=raw*(1.+uDeform*wave(raw));
+ void main(){vec3 raw=aPoint.xyz;
+ float cloudTime=uClock*(.35+.65*uFluid);
+ float cloudAmp=(.035+uDeform*.32)*(1.-.45*min(1.,length(raw)));
+ vec3 p=raw+cloudAmp*vec3(sin(4.*raw.y+2.*raw.z+cloudTime*.43)*cos(2.*raw.z-cloudTime*.31),sin(3.*raw.z-2.*raw.x+cloudTime*.37)*cos(3.*raw.x+cloudTime*.23),sin(3.*raw.x+2.*raw.y-cloudTime*.29)*cos(2.*raw.y+cloudTime*.41));
  float sy=sin(uAngles.y),cy=cos(uAngles.y),sx=sin(uAngles.x),cx=cos(uAngles.x);
  float xx=p.x*cy+p.z*sy,zz0=p.z*cy-p.x*sy,yy=p.y*cx-zz0*sx,zz=p.y*sx+zz0*cx;
  float perspective=2.9/(2.9-zz*.33);
@@ -1741,7 +1749,7 @@ function experimentControlPoint(index){return experimentLayout()[index];}
 function experimentDrift(seed,amount){const bend=Math.sin(Math.PI*amount);return {x:(Math.sin(seed*71+amount*3)-Math.sin(seed*71))*w*.035*bend,y:(Math.cos(seed*53+amount*2.4)-Math.cos(seed*53))*w*.035*bend};}
 // The chosen grains continue to follow the live, stretched shell until it tears.
 function experimentCurrentGrain(index){
- const p=particles[index],s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius};
+ const p=particles[index],s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,cloud=cloudPosition(p),x=cloud.x,y=cloud.y,z=cloud.z,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius};
  return deformExperimentPoint(base,base,radius,0);
 }
 // Each rear-shell light grows on its own schedule and settles during cloud traversal.
@@ -1788,7 +1796,7 @@ function captureExperimentDeparture(preserveSelection=false,launch=true){
  const keep=preserveSelection&&experiment.preselected&&experiment.departureParticles===particles&&experiment.lampIndices.length===lights.length+2;
  const s=deckSphere(),radius=s.r*1.18,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath,sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),data=new Float32Array(particles.length*4),depths=new Float32Array(particles.length*2);
  for(let i=0;i<particles.length;i++){
-  const p=particles[i],radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius},point=deformExperimentPoint(base,base,radius,0);
+  const p=particles[i],cloud=cloudPosition(p),x=cloud.x,y=cloud.y,z=cloud.z,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33),base={x:s.x+xx*breathe*perspective*radius,y:s.y-yy*breathe*perspective*radius},point=deformExperimentPoint(base,base,radius,0);
   depths[i*2]=zz*.33;
   data.set([point.x,point.y,(point.x-s.x)*1.1+(point.x-base.x)*1.4,(point.y-s.y)*1.1+(point.y-base.y)*1.4],i*4);
  }
@@ -1945,7 +1953,7 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,clock,sphereCfg.fluidity),x=p.x*radial,y=p.y*radial,z=p.z*radial,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;if(q.passed)continue;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth))*Math.min(48,q.scale||1);ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
+  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const cloud=cloudPosition(p),x=cloud.x,y=cloud.y,z=cloud.z,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;if(q.passed)continue;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1);const size=Math.max(.65,sphereCfg.size*(.5+.65*depth))*Math.min(48,q.scale||1);ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{ctx.fillRect(q.x,q.y,size,size);}}
   ctx.globalAlpha=1;
  }
  drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
@@ -2266,7 +2274,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E28',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E29',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,particleModel:'irregular-volume',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
