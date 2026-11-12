@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 34 · Billes mates</title>
+<title>DECK — Essai 35 · Empreinte verticale</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,10 +88,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour éclater, pincer pour avancer dans la sphère et retrouver les lampes. Appui : sélectionner une lampe, double appui : ON/OFF. Pincer une sélection : intensité. Sans sélection : pincer pour revenir. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E34</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : la coupure suit le doigt, puis les particules forment un trait plein. Toucher à côté du symbole pour recommencer. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E35</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 34 · Billes mates</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 35 · Empreinte verticale</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -911,6 +911,33 @@ function noise(x,y,z,t,fluid){
 }
 
 
+// A central stroke cuts the material locally, then gathers the same grains into a symbol.
+const symbolCut={pointer:null,startX:0,startY:0,x:0,y:0,minY:0,maxY:0,maxDrift:0,strength:0,morph:0,target:0};
+function resetSymbolCut(){symbolCut.pointer=null;symbolCut.strength=0;symbolCut.morph=0;symbolCut.target=0;}
+function symbolGeometry(){return {x:w/2,y:h/2,halfLength:h/8,halfWidth:Math.max(5,Math.min(9,w*.017)),radius:deckSphere().r*1.18};}
+function symbolCutValid(){const g=symbolGeometry();return symbolCut.maxY-symbolCut.minY>=Math.max(55,g.radius*.9)&&symbolCut.maxDrift<Math.max(24,g.radius*.4)&&symbolCut.minY<h/2+g.radius*.15&&symbolCut.maxY>h/2-g.radius*.15;}
+function startSymbolCut(e){
+ if(placingLamps||document.body.classList.contains('atelier')||experiment.amount>.001||experiment.target!==0)return false;
+ if(symbolCut.pointer!==null){cancelSymbolCut();e.preventDefault();e.stopImmediatePropagation();return true;}
+ const g=symbolGeometry();if(Math.abs(e.clientX-g.x)>Math.max(24,g.radius*.32)||Math.abs(e.clientY-g.y)>g.radius*1.35||experiment.points.size)return false;
+ if(symbolCut.morph>.02||symbolCut.target)resetSymbolCut();
+ Object.assign(symbolCut,{pointer:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,minY:e.clientY,maxY:e.clientY,maxDrift:0,strength:0,target:0});canvas.setPointerCapture(e.pointerId);e.preventDefault();e.stopImmediatePropagation();return true;
+}
+function moveSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;e.preventDefault();e.stopImmediatePropagation();symbolCut.x=e.clientX;symbolCut.y=e.clientY;symbolCut.minY=Math.min(symbolCut.minY,e.clientY);symbolCut.maxY=Math.max(symbolCut.maxY,e.clientY);symbolCut.maxDrift=Math.max(symbolCut.maxDrift,Math.abs(e.clientX-symbolCut.startX));symbolCut.strength=clamp(Math.abs(e.clientY-symbolCut.startY)/24,0,1);return true;}
+function cancelSymbolCut(){symbolCut.pointer=null;symbolCut.target=0;}
+function finishSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;moveSymbolCut(e);symbolCut.pointer=null;symbolCut.target=e.type==='pointerup'&&symbolCutValid()?1:0;return true;}
+function demoSymbolCut(){experimentNeutral();experiment.amount=0;experimentReset();const g=symbolGeometry();Object.assign(symbolCut,{pointer:null,startX:g.x,startY:g.y-g.halfLength,x:g.x,y:g.y+g.halfLength,minY:g.y-g.halfLength,maxY:g.y+g.halfLength,maxDrift:0,strength:1,morph:0,target:1});}
+function advanceSymbolCut(dt){const step=dt/1.25;symbolCut.morph=symbolCut.target?Math.min(1,symbolCut.morph+step):Math.max(0,symbolCut.morph-step);if(symbolCut.pointer===null&&!symbolCut.target)symbolCut.strength*=Math.exp(-dt*7);}
+function symbolCutPose(x,y,seed){
+ const g=symbolGeometry(),dx=symbolCut.x-symbolCut.startX,dy=symbolCut.y-symbolCut.startY,len2=dx*dx+dy*dy,t=clamp(((x-symbolCut.startX)*dx+(y-symbolCut.startY)*dy)/Math.max(1,len2),0,1),nearX=symbolCut.startX+dx*t,nearY=symbolCut.startY+dy*t;
+ const reach=1-experimentEase(8,30,Math.abs(y-nearY)),distance=x-nearX,side=distance<0?-1:1,gap=g.radius*.22*symbolCut.strength*reach;
+ x+=side*gap*(1-experimentEase(0,g.radius,Math.abs(distance)));
+ const morph=experimentEase(seed*.12,1,symbolCut.morph),along=(experimentHash(seed*173+5)*2-1)*g.halfLength,radial=Math.sqrt(experimentHash(seed*191+9))*g.halfWidth,angle=experimentHash(seed*211+7)*Math.PI*2;
+ return {x:x+(g.x+Math.cos(angle)*radial-x)*morph,y:y+(g.y+along+Math.sin(angle)*radial-y)*morph,morph};
+}
+function drawSymbolGrid(){ctx.save();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(let row=1;row<8;row++)for(let col=1;col<6;col++){const x=col*w/6,y=row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
+function drawSolidSymbol(){if(symbolCut.morph<.88)return;const g=symbolGeometry();ctx.save();ctx.globalAlpha=experimentEase(.88,1,symbolCut.morph);ctx.strokeStyle=dayCSS(dayTint(g.x,g.y,true));ctx.lineWidth=g.halfWidth*2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(g.x,g.y-g.halfLength);ctx.lineTo(g.x,g.y+g.halfLength);ctx.stroke();ctx.restore();}
+
 // Independent GPU alternative; original Canvas point renderer stays below unchanged.
 function setupPointsGPU(){
  const c=document.createElement('canvas');
@@ -922,6 +949,7 @@ function setupPointsGPU(){
  attribute vec2 aFlightDepth;
  uniform float uDepartureMix,uLampReveal,uDive,uMembrane;uniform vec2 uElectron,uGravity;
  uniform vec2 uViewport,uCenter,uAngles;
+ uniform vec4 uCutPath,uSymbol;uniform vec2 uCutState;
  uniform vec4 uTouches[2];uniform vec2 uTargets[11],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
  uniform vec3 uDayA,uDayB;uniform vec4 uDayLight;varying vec3 vTint;
@@ -962,6 +990,14 @@ function setupPointsGPU(){
   for(int j=0;j<9;j++){float d=length(pixel-uTargets[j]);if(d<nearestDistance){secondDistance=nearestDistance;nearestDistance=d;nearest=uTargets[j];found=true;}else{secondDistance=min(secondDistance,d);}}
   if(found){float gain=gravity*(1.-smoothstep(0.,uGravity.y,nearestDistance))*smoothstep(0.,uGravity.y*.4,secondDistance-nearestDistance),angle=.22*gain*sin(uFlowTime*.55+aPoint.w*6.2831853);vec2 delta=pixel-nearest;pixel=nearest+vec2(delta.x*cos(angle)-delta.y*sin(angle),delta.x*sin(angle)+delta.y*cos(angle))*(1.-.84*gain);}
  }
+ float cutDx=uCutPath.z-uCutPath.x,cutDy=uCutPath.w-uCutPath.y;
+ float cutT=clamp(dot(pixel-uCutPath.xy,vec2(cutDx,cutDy))/max(1.,cutDx*cutDx+cutDy*cutDy),0.,1.);
+ vec2 nearCut=mix(uCutPath.xy,uCutPath.zw,cutT);float cutDistance=pixel.x-nearCut.x,cutSide=cutDistance<0.?-1.:1.;
+ float cutReach=1.-smoothstep(8.,30.,abs(pixel.y-nearCut.y));
+ pixel.x+=cutSide*uRadius*.22*uCutState.x*cutReach*(1.-smoothstep(0.,uRadius,abs(cutDistance)));
+ float symbolMix=smoothstep(aPoint.w*.12,1.,uCutState.y);
+ float along=(rnd(aPoint.w*173.+5.)*2.-1.)*uSymbol.z,radial=sqrt(rnd(aPoint.w*191.+9.))*uSymbol.w,symbolAngle=rnd(aPoint.w*211.+7.)*6.2831853;
+ pixel=mix(pixel,uSymbol.xy+vec2(cos(symbolAngle)*radial,along+sin(symbolAngle)*radial),symbolMix);
  if(aLamp>=0.&&uSplit>.001){for(int j=0;j<11;j++){if(aLamp==float(j))pixel=uTargets[j];}}
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
  float scint=1.;
@@ -970,14 +1006,15 @@ function setupPointsGPU(){
  float inside=uDive*smoothstep(.55,1.,uSplit);vAlpha=min(.98,alpha*(zz<0.?.52:1.))*dustFade*mix(1.,.28,inside);
  // Opaque cloud interiors; brightness changes their colour, never their transparency.
  vAlpha=mix(1.,vAlpha,uMembrane);
+ vAlpha=mix(vAlpha,1.,symbolMix);
  // The selected grains are drawn once in Canvas.
  if(aLamp>=0.)vAlpha*=uSplit>.001?0.:1.-uLampReveal;
  float size=uSize*(.5+.65*depth)*(1.+uEnergy*.08*rim);
  float diameter=uSoft>.001?max(1.25/uDpr,size)*(1.1+1.45*uSoft):size;
- gl_PointSize=max(1.,diameter*uDpr*min(mix(48.,3.5,inside),projection));vPixelDiameter=gl_PointSize;
+ gl_PointSize=max(1.,diameter*uDpr*min(mix(48.,3.5,inside),projection));gl_PointSize=mix(gl_PointSize,max(2.,uDpr*2.5),symbolMix);vPixelDiameter=gl_PointSize;
  // Crisp circular points share the same centre in GPU and Canvas rendering.
  float dist=length(pixel-uDayLight.xy)/uDayLight.z;float light=pow(1.-smoothstep(0.,1.,dist),uDayLight.w);float inverseLight=clamp(.5+(light-.5)*max(uViewport.x,uViewport.y)/(uRadius*2.),0.,1.);vTint=mix(uDayB,uDayA,inverseLight)*mix(.25+.75*clamp(uOpacity,0.,1.),1.,uMembrane);
- gl_Position=vec4(pixel/uViewport*vec2(2.,-2.)+vec2(-1.,1.),mix(2.*cameraDistance/(1.+max(0.,cameraDistance))-1.,0.,uMembrane),1.);
+ gl_Position=vec4(pixel/uViewport*vec2(2.,-2.)+vec2(-1.,1.),mix(mix(2.*cameraDistance/(1.+max(0.,cameraDistance))-1.,0.,uMembrane),0.,symbolMix),1.);
  if(cameraDistance<=.015&&aLamp<0.)gl_Position=vec4(3.,3.,0.,1.);
  if((uSide<.5&&zz>=0.)||(uSide>.5&&zz<0.))gl_Position=vec4(3.,3.,0.,1.);
  }`;
@@ -1002,6 +1039,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
+ uniforms.CutPath=gl.getUniformLocation(program,'uCutPath');uniforms.CutState=gl.getUniformLocation(program,'uCutState');uniforms.Symbol=gl.getUniformLocation(program,'uSymbol');
  uniforms.Membrane=gl.getUniformLocation(program,'uMembrane');uniforms.Relief=gl.getUniformLocation(program,'uRelief');uniforms.Gravity=gl.getUniformLocation(program,'uGravity');uniforms.Electron=gl.getUniformLocation(program,'uElectron');uniforms.Dive=gl.getUniformLocation(program,'uDive');uniforms.DayA=gl.getUniformLocation(program,'uDayA');uniforms.DayB=gl.getUniformLocation(program,'uDayB');uniforms.DayLight=gl.getUniformLocation(program,'uDayLight');
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
@@ -1028,6 +1066,7 @@ function setupPointsGPU(){
   gl.uniform1f(uniforms.LampReveal,experiment.reveal);
   gl.uniform1f(uniforms.DepartureMix,departures?(experiment.target===1?1:experimentEase(0,.3,experiment.amount)):0);
   if(sphereModel.mode==='cloud'){gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);}else gl.disable(gl.DEPTH_TEST);
+  const symbol=symbolGeometry();gl.uniform4f(uniforms.CutPath,symbolCut.startX,symbolCut.startY,symbolCut.x,symbolCut.y);gl.uniform2f(uniforms.CutState,symbolCut.strength,symbolCut.morph);gl.uniform4f(uniforms.Symbol,symbol.x,symbol.y,symbol.halfLength,symbol.halfWidth);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
   gl.uniform4fv(uniforms.Touches,new Float32Array(experimentDeformationHandles().flatMap(t=>[t.ax,t.ay,t.x,t.y])));
@@ -1035,7 +1074,7 @@ function setupPointsGPU(){
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.Dive,lampInteraction.entry==='dive'?1:0);gl.uniform2f(uniforms.Electron,lampInteraction.electronAmplitude,lampInteraction.electronSpeed);gl.uniform2f(uniforms.Gravity,lampInteraction.gravityStrength,lampInteraction.gravityRadius);gl.uniform1f(uniforms.Relief,lampInteraction.beadRelief);gl.uniform1f(uniforms.Membrane,sphereModel.mode==='membrane'?1:0);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
   gl.uniform2fv(uniforms.Targets,new Float32Array(Array.from({length:lights.length+2},(_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];}).flat()));
   gl.uniform2f(uniforms.Viewport,w,h);gl.uniform2f(uniforms.Center,cx,cy);gl.uniform2f(uniforms.Angles,angleX,angleY);
-  const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness,Dpr:dpr};
+  const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness*(1-symbolCut.morph),Dpr:dpr};
   for(const [k,v] of Object.entries(values))gl.uniform1f(uniforms[k],v);
   for(const side of [0,1]){gl.uniform1f(uniforms.Side,side);gl.drawArrays(gl.POINTS,0,particles.length);}
   ctx.drawImage(c,0,0,w,h);return true;
@@ -1987,11 +2026,11 @@ function drawFrostedLeaf(top,offset,amount){
  ctx.save();ctx.beginPath();ctx.rect(offset,top,w-offset,h/2);ctx.clip();ctx.filter=`blur(${lampInteraction.blur}px)`;ctx.drawImage(frostedLeafCanvas,-18,-18,w+36,h+36);ctx.filter='none';ctx.fillStyle=`rgba(245,248,250,${.08*amount})`;ctx.fillRect(offset,top,w-offset,h/2);ctx.restore();
 }
 function renderExperiment(now,dt){
- clock+=dt*sphereCfg.speed;experiment.time+=dt;
+ clock+=dt*sphereCfg.speed;experiment.time+=dt;advanceSymbolCut(dt);
  if(EXPERIMENT_AUTO_RETURN&&experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
  updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);updateEdgeLeaf(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
- drawDayCycle();
+ drawDayCycle();drawSymbolGrid();
  const s=deckSphere(),radius=s.r*1.18,cx=w*.5,cy=h*.5,breathe=1+Math.sin(clock*1.8)*sphereCfg.breath;
  deckPointScale=1;deckPointAlpha=1;drawExperimentRadiance(cx,cy,radius);
  if(showGasLayer&&experiment.amount<.995&&membraneRenderer&&gasCtx){membraneTime+=dt*(.10+membraneCfg.fluidity*.85);const ready=membraneRenderer.draw(membraneTime,membraneCfg,angleX,angleY,0,0,1);if(ready){gasCtx.clearRect(0,0,512,512);gasCtx.drawImage(membraneRenderer.canvas,0,0,512,512);gasCtx.globalCompositeOperation='destination-in';gasCtx.fillStyle=gasMask;gasCtx.fillRect(0,0,512,512);gasCtx.globalCompositeOperation='source-over';ctx.save();ctx.globalAlpha=1-experiment.amount;const extent=radius*3.65;ctx.drawImage(gasCanvas,cx-extent/2,cy-extent/2,extent,extent);ctx.restore();}}
@@ -2000,10 +2039,10 @@ function renderExperiment(now,dt){
  const gpu=drawParticles&&usePointsGPU&&pointsGPU&&pointsGPU.draw(cx,cy,radius,breathe,0);
  if(drawParticles&&!gpu){
   const sx=Math.sin(angleX),cxr=Math.cos(angleX),sy=Math.sin(angleY),cyr=Math.cos(angleY),fade=1;
-  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const cloud=cloudPosition(p),x=cloud.x,y=cloud.y,z=cloud.z,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;if(q.passed)continue;const electron=electronOffset(p.seed,experiment.time,q.scale||1);q.x+=electron.x;q.y+=electron.y;const attracted=applyLampGravity({...q,seed:p.seed},experiment.time);q.x=attracted.x;q.y=attracted.y;const inside=lampInteraction.entry==='dive'?experimentEase(.55,1,experiment.amount):0;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1)*(1-.72*inside);if(sphereModel.mode==='cloud')ctx.globalAlpha=experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1;const size=Math.max(.65,sphereCfg.size*(.5+.65*depth))*Math.min(48+(3.5-48)*inside,q.scale||1);ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{drawExperimentGrain(q.x,q.y,size*.5,dayTint(q.x,q.y,true).map(v=>v*(sphereModel.mode==='cloud'?.25+.75*clamp(sphereCfg.opacity,0,1):1)));}}
+  for(let pi=0;pi<particles.length;pi++){const p=particles[pi];if(experiment.amount>.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0)continue;const cloud=cloudPosition(p),x=cloud.x,y=cloud.y,z=cloud.z,xx=x*cyr+z*sy,z0=z*cyr-x*sy,yy=y*cxr-z0*sx,zz=y*sx+z0*cxr,perspective=2.9/(2.9-zz*.33);const base={x:cx+xx*breathe*perspective*radius,y:cy-yy*breathe*perspective*radius},q=experimentPose({x:xx*breathe*perspective,y:-yy*breathe*perspective},p.seed,cx,cy,radius,experiment.amount,pi),depth=(zz+1.45)/2.9;if(q.passed)continue;const electron=electronOffset(p.seed,experiment.time,q.scale||1);q.x+=electron.x;q.y+=electron.y;const attracted=applyLampGravity({...q,seed:p.seed},experiment.time);q.x=attracted.x;q.y=attracted.y;const cutPose=symbolCutPose(q.x,q.y,p.seed);q.x=cutPose.x;q.y=cutPose.y;const inside=lampInteraction.entry==='dive'?experimentEase(.55,1,experiment.amount):0;ctx.globalAlpha=clamp((depth*.66+.18)*sphereCfg.opacity*(.68+.32*p.seed)*(zz<0?.52:1),.02,.98)*(experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1)*(1-.72*inside);if(sphereModel.mode==='cloud')ctx.globalAlpha=experiment.amount<=.001&&experiment.departureParticles===particles&&experiment.lampFlags?.[pi]>=0?1-experiment.reveal:1;ctx.globalAlpha+=(1-ctx.globalAlpha)*cutPose.morph;const originalSize=Math.max(.65,sphereCfg.size*(.5+.65*depth))*Math.min(48+(3.5-48)*inside,q.scale||1),size=originalSize+(2.5-originalSize)*cutPose.morph;ctx.fillStyle=dayCSS(dayTint(q.x,q.y,true));if(sphereCfg.softness>.001){const d=Math.max(1.25/dpr,size)*(1.1+1.45*sphereCfg.softness);ctx.beginPath();ctx.arc(q.x,q.y,d*.4,0,Math.PI*2);ctx.fill();}else{drawExperimentGrain(q.x,q.y,size*.5,dayTint(q.x,q.y,true).map(v=>v*(sphereModel.mode==='cloud'?.25+.75*clamp(sphereCfg.opacity,0,1):1)));}}
   ctx.globalAlpha=1;
  }
- drawLampCrosses();drawExperimentPoints();drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
+ drawSolidSymbol();drawExperimentPoints();drawEdgeLeaf();drawEdgeMarks();if(placingLamps)renderPlacementMarkers();
  frames++;frameAcc+=dt;if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
 // The two edge leaves are visual placeholders: no fan or music command is dispatched.
@@ -2096,7 +2135,7 @@ document.getElementById('dayPlay').onclick=()=>{
 };
 
 createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',0,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
-document.getElementById('experimentExpand').onclick=()=>beginExperimentOpening();document.getElementById('experimentGather').onclick=experimentNeutral;
+document.getElementById('experimentExpand').textContent='Tester le trait';document.getElementById('experimentGather').textContent='Reformer la sphère';document.getElementById('experimentExpand').onclick=demoSymbolCut;document.getElementById('experimentGather').onclick=()=>{resetSymbolCut();experimentNeutral();};document.getElementById('reset').addEventListener('click',resetSymbolCut);document.addEventListener('keydown',e=>{if(e.key==='Escape')resetSymbolCut();});
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
  if(cancelled&&experiment.multi&&experiment.gestureTarget===null){experiment.target=experiment.startTarget;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}}
@@ -2118,6 +2157,7 @@ function experimentTouchStart(e){
  Object.assign(t,{id:e.pointerId,ax:sphere.x+dx*factor,ay:sphere.y+dy*factor,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:e.clientX,startY:e.clientY});
 }
 canvas.addEventListener('pointerdown',e=>{
+ if(startSymbolCut(e))return;if(symbolCut.target||symbolCut.morph>.01){resetSymbolCut();e.stopImmediatePropagation();return;}
  if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=experiment.target===1?deckBounds():deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
  canvas.setPointerCapture(e.pointerId);
  if(!experiment.points.size&&experiment.target===0&&experiment.amount===0){lampInteraction.entry='burst';experiment.preselected=false;experiment.reveal=0;experiment.lampFlags=null;experiment.lampIndices=[];experiment.departures=null;experiment.departureParticles=null;}
@@ -2126,6 +2166,7 @@ canvas.addEventListener('pointerdown',e=>{
  if(experiment.points.size===2){rebaseExperimentTouches();const p=[...experiment.points.values()];experiment.startDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);experiment.lastDistance=experiment.startDistance;experiment.startTarget=experiment.target;experiment.gestureTarget=null;experiment.multi=true;experiment.dimmed=false;deck.baseLevels=[...lampManualLevels];deck.gesture=null;}
 },true);
 canvas.addEventListener('pointermove',e=>{
+ if(moveSymbolCut(e))return;
  if(placingLamps)return;e.stopImmediatePropagation();if(moveEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
  const previous=experiment.points.get(e.pointerId),next={x:e.clientX,y:e.clientY};experiment.points.set(e.pointerId,next);if(orbitExperiment(previous,next))return;const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle&&experiment.points.size===2){handle.tx=(e.clientX-handle.startX)*.8*experimentCfg.softness;handle.ty=(e.clientY-handle.startY)*.8*experimentCfg.softness;}
  if(experiment.points.size===2&&experiment.startDistance>=12){
@@ -2143,6 +2184,7 @@ canvas.addEventListener('pointermove',e=>{
 },true);
 function experimentLampHit(x,y){let best=null;for(let i=0;i<lights.length+2;i++){const p=experimentCenter(i,experiment.amount,experiment.time),d=Math.hypot(x-p.x,y-p.y),radius=i>=lights.length?34:28;if(d<radius&&(!best||d<best.d))best={index:i,d};}return best;}
 function finishExperiment(e){
+ if(finishSymbolCut(e))return;
  if(placingLamps)return;e.stopImmediatePropagation();if(endEdgeLeaf(e))return;if(!experiment.points.has(e.pointerId))return;
  if(e.type!=='pointerup'){experimentReset(true);return;}
  const handle=experiment.handles.find(t=>t.id===e.pointerId);if(handle)handle.id=null;
@@ -2154,10 +2196,10 @@ function finishExperiment(e){
  experiment.points.delete(e.pointerId);
  if(!experiment.points.size){if(experiment.dimmed){deckSave();deckCommand('lights',{target:deck.target,levels:[...lampManualLevels]});experiment.hasCommands=true;experimentWake();}experimentReset();}
 }
-canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(edgeLeaf.pointer===e.pointerId)endEdgeLeaf({...e,type:'pointercancel'});if(experiment.points.has(e.pointerId))experimentReset(true);},true);
-window.addEventListener('blur',()=>{if(experiment.points.size)experimentReset(true);});
+canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(symbolCut.pointer===e.pointerId)cancelSymbolCut();if(edgeLeaf.pointer===e.pointerId)endEdgeLeaf({...e,type:'pointercancel'});if(experiment.points.has(e.pointerId))experimentReset(true);},true);
+window.addEventListener('blur',()=>{cancelSymbolCut();if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent for the visual prototype.
-document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(experiment.target===0){beginExperimentOpening();}else experimentNeutral();}},true);
+document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(symbolCut.target||symbolCut.morph>.01)resetSymbolCut();else demoSymbolCut();}},true);
 
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
@@ -2321,7 +2363,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E34',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E35',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-cut',continuousGrid:true,assemblySeconds:1.25,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
@@ -2339,6 +2381,7 @@ createControlGrid('leafMaterialControls',lampInteraction,[['blur','Flou du feuil
 const sphereModeProfiles={cloud:{sphere:{...sphereCfg},motion:{electronAmplitude:lampInteraction.electronAmplitude,electronSpeed:lampInteraction.electronSpeed,beadRelief:lampInteraction.beadRelief,defaultEntry:lampInteraction.defaultEntry}},membrane:{sphere:{density:400,size:1.5,deform:.12,fluidity:1,speed:.47,breath:.035,opacity:1,glow:.75,softness:.65},motion:{electronAmplitude:0,electronSpeed:.7,beadRelief:0,defaultEntry:'burst'}}};
 function captureSphereModelProfile(){return {sphere:{...sphereCfg},motion:{electronAmplitude:lampInteraction.electronAmplitude,electronSpeed:lampInteraction.electronSpeed,beadRelief:lampInteraction.beadRelief,defaultEntry:lampInteraction.defaultEntry}};}
 function selectSphereModel(mode){
+ resetSymbolCut();
  if(!sphereModeProfiles[mode]||mode===sphereModel.mode)return;
  sphereModeProfiles[sphereModel.mode]=captureSphereModelProfile();sphereModel.mode=mode;
  Object.assign(sphereCfg,sphereModeProfiles[mode].sphere);Object.assign(lampInteraction,sphereModeProfiles[mode].motion);
@@ -2360,7 +2403,7 @@ for(const node of [panel.querySelector('.tabs'),document.getElementById('program
 experimentSettings.append(caps);
 retiredSettings.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled=true);
 document.getElementById('pointPanel').classList.add('group');
-panel.querySelector('.bottomline .hint').textContent='1 doigt : tourner · Écarter : éclater · Pincer : traverser la sphère · Lampe sélectionnée : pincer pour varier · Sans sélection : pincer pour revenir';
+panel.querySelector('.bottomline .hint').textContent='Tracer verticalement au centre · Relâcher pour former le trait · Toucher à côté pour recommencer';
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
