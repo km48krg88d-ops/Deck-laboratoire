@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 32 · Billes et gravité</title>
+<title>DECK — Essai 33 · Nuée ou membrane</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Sphère déployable : écarter deux doigts pour éclater, pincer pour avancer dans la sphère et retrouver les lampes. Appui : sélectionner une lampe, double appui : ON/OFF. Pincer une sélection : intensité. Sans sélection : pincer pour revenir. Au clavier : espace. Feuillets : bord droit sur la moitié haute pour le ventilateur, sur la moitié basse pour la musique. Les deux calques peuvent rester ouverts ensemble."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E32</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E33</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 32 · Billes et gravité</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 33 · Nuée ou membrane</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -227,6 +227,7 @@ document.querySelectorAll('#ambienceOptions .ambience').forEach(btn=>btn.addEven
 }));
 const sphereAppearance={scale:1.15};
 try{if(!localStorage.getItem('deck-sphere-scale-e23')){localStorage.setItem('deck-sphere-scale','1.15');localStorage.setItem('deck-sphere-scale-e23','1');}const saved=Number(localStorage.getItem('deck-sphere-scale'));if(saved>=.65&&saved<=6)sphereAppearance.scale=saved;}catch(_){}
+const sphereModel={mode:'cloud'};
 const sphereCfg={density:400,size:1.5,deform:.12,fluidity:1,speed:.47,breath:.035,opacity:1.00,glow:0,softness:0};
 const membraneCfg={fluidity:.76,softness:.81,transparency:2,reflection:2,edge:2.5,folds:2.5,breath:.230};const livingCfg={cloudDeform:.55,cloudBlend:.58,waveRelief:.82,waveFlow:.30};const livingParams=[['cloudDeform','Déformation des nuages',0,1,.01],['cloudBlend','Fusion des nuages',0,1,.01],['waveRelief','Définition des plis',0,1,.01],['waveFlow','Mouvement de l’onde',0,1,.01]];const cloudCfg={cohesion:.46,circulation:.50,diffusion:.28,gasMix:.38};const cloudParams=[['cohesion','Cohésion',0,1,.01],['circulation','Circulation',0,1,.01],['diffusion','Diffusion',0,1,.01],['gasMix','Gaz · hybride',0,1,.01]];
 let opalPreset='gaz', opalStructure='none';
@@ -858,7 +859,9 @@ updateVisibilityButtons();
 
 // One irregular volume. There is no separate shell, grid, latitude or longitude.
 function createParticles(){
- const count=Math.min(24000,Math.round(800+sphereCfg.density*45));let state=1947281;
+ const count=sphereModel.mode==='membrane'?Math.min(38000,Math.round(1600+sphereCfg.density*90)):Math.min(24000,Math.round(800+sphereCfg.density*45));
+ if(sphereModel.mode==='membrane'){const golden=Math.PI*(3-Math.sqrt(5));particles=Array.from({length:count},(_,i)=>{const y=1-(i+.5)*2/count,r=Math.sqrt(Math.max(0,1-y*y)),theta=golden*i,seed=Math.sin(i*41.783)*43758.5453;return {x:Math.cos(theta)*r,y,z:Math.sin(theta)*r,seed:seed-Math.floor(seed),interior:false};});return;}
+ let state=1947281;
  const random=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return (state>>>0)/4294967296;};
  particles=[];
  while(particles.length<count){
@@ -869,6 +872,7 @@ function createParticles(){
  }
 }
 function cloudPosition(p,time=clock){
+ if(sphereModel.mode==='membrane'){const radial=1+sphereCfg.deform*noise(p.x,p.y,p.z,time,sphereCfg.fluidity);return {x:p.x*radial,y:p.y*radial,z:p.z*radial};}
  time*=.35+.65*sphereCfg.fluidity;
  const amp=(.035+sphereCfg.deform*.32)*(1-.45*Math.min(1,Math.hypot(p.x,p.y,p.z)));
  return {x:p.x+amp*Math.sin(4*p.y+2*p.z+time*.43)*Math.cos(2*p.z-time*.31),y:p.y+amp*Math.sin(3*p.z-2*p.x+time*.37)*Math.cos(3*p.x+time*.23),z:p.z+amp*Math.sin(3*p.x+2*p.y-time*.29)*Math.cos(2*p.y+time*.41)};
@@ -916,7 +920,7 @@ function setupPointsGPU(){
  attribute vec4 aPoint,aDeparture;
  attribute float aLamp;
  attribute vec2 aFlightDepth;
- uniform float uDepartureMix,uLampReveal,uDive;uniform vec2 uElectron,uGravity;
+ uniform float uDepartureMix,uLampReveal,uDive,uMembrane;uniform vec2 uElectron,uGravity;
  uniform vec2 uViewport,uCenter,uAngles;
  uniform vec4 uTouches[2];uniform vec2 uTargets[11],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
@@ -932,6 +936,7 @@ function setupPointsGPU(){
  float cloudTime=uClock*(.35+.65*uFluid);
  float cloudAmp=(.035+uDeform*.32)*(1.-.45*min(1.,length(raw)));
  vec3 p=raw+cloudAmp*vec3(sin(4.*raw.y+2.*raw.z+cloudTime*.43)*cos(2.*raw.z-cloudTime*.31),sin(3.*raw.z-2.*raw.x+cloudTime*.37)*cos(3.*raw.x+cloudTime*.23),sin(3.*raw.x+2.*raw.y-cloudTime*.29)*cos(2.*raw.y+cloudTime*.41));
+ p=mix(p,raw*(1.+uDeform*wave(raw)),uMembrane);
  float sy=sin(uAngles.y),cy=cos(uAngles.y),sx=sin(uAngles.x),cx=cos(uAngles.x);
  float xx=p.x*cy+p.z*sy,zz0=p.z*cy-p.x*sy,yy=p.y*cx-zz0*sx,zz=p.y*sx+zz0*cx;
  float perspective=2.9/(2.9-zz*.33);
@@ -986,7 +991,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
- uniforms.Relief=gl.getUniformLocation(program,'uRelief');uniforms.Gravity=gl.getUniformLocation(program,'uGravity');uniforms.Electron=gl.getUniformLocation(program,'uElectron');uniforms.Dive=gl.getUniformLocation(program,'uDive');uniforms.DayA=gl.getUniformLocation(program,'uDayA');uniforms.DayB=gl.getUniformLocation(program,'uDayB');uniforms.DayLight=gl.getUniformLocation(program,'uDayLight');
+ uniforms.Membrane=gl.getUniformLocation(program,'uMembrane');uniforms.Relief=gl.getUniformLocation(program,'uRelief');uniforms.Gravity=gl.getUniformLocation(program,'uGravity');uniforms.Electron=gl.getUniformLocation(program,'uElectron');uniforms.Dive=gl.getUniformLocation(program,'uDive');uniforms.DayA=gl.getUniformLocation(program,'uDayA');uniforms.DayB=gl.getUniformLocation(program,'uDayB');uniforms.DayLight=gl.getUniformLocation(program,'uDayLight');
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
  uniforms.Targets=gl.getUniformLocation(program,'uTargets[0]');uniforms.Split=gl.getUniformLocation(program,'uSplit');uniforms.SmallScale=gl.getUniformLocation(program,'uSmallScale');
@@ -1015,7 +1020,7 @@ function setupPointsGPU(){
   gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
   gl.uniform4fv(uniforms.Touches,new Float32Array(experimentDeformationHandles().flatMap(t=>[t.ax,t.ay,t.x,t.y])));
   gl.uniform2f(uniforms.Gesture,experiment.handX,experiment.handY);gl.uniform1f(uniforms.FlowTime,experiment.time);gl.uniform1f(uniforms.Twist,experiment.twist);
-  gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.Dive,lampInteraction.entry==='dive'?1:0);gl.uniform2f(uniforms.Electron,lampInteraction.electronAmplitude,lampInteraction.electronSpeed);gl.uniform2f(uniforms.Gravity,lampInteraction.gravityStrength,lampInteraction.gravityRadius);gl.uniform1f(uniforms.Relief,lampInteraction.beadRelief);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
+  gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.Dive,lampInteraction.entry==='dive'?1:0);gl.uniform2f(uniforms.Electron,lampInteraction.electronAmplitude,lampInteraction.electronSpeed);gl.uniform2f(uniforms.Gravity,lampInteraction.gravityStrength,lampInteraction.gravityRadius);gl.uniform1f(uniforms.Relief,lampInteraction.beadRelief);gl.uniform1f(uniforms.Membrane,sphereModel.mode==='membrane'?1:0);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
   gl.uniform2fv(uniforms.Targets,new Float32Array(Array.from({length:lights.length+2},(_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];}).flat()));
   gl.uniform2f(uniforms.Viewport,w,h);gl.uniform2f(uniforms.Center,cx,cy);gl.uniform2f(uniforms.Angles,angleX,angleY);
   const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness,Dpr:dpr};
@@ -1343,37 +1348,7 @@ function render(now){
       const start=.055,end=.115,rayStart=.23;
       // Le trait se contracte pour libérer ses grains sans empiler deux images.
       const strokeEnd=end-(end-start)*ease;
-      if(1-ease>.002)faceLine(f,[rdx*start,rdy*start],[rdx*strokeEnd,rdy*strokeEnd],alpha*.9*(1-ease),programCfg.fanStrokeWidth,false);
-      if(ease>.001){
-        const maxLength=Math.min(1.20,programCfg.fanLength*armEnd/.95);
-        for(let i=0;i<n;i++){
-          const t=n===1?0:i/(n-1);
-          const from=start+(end-start)*t;
-          const to=rayStart+maxLength*t;
-          const rad=from+(to-from)*ease;
-          const P=screen(f,rdx*rad,rdy*rad);
-          const dotR=Math.max(.25,programCfg.fanDotWidth*.5*P.p);
-          ctx.beginPath();ctx.arc(P.x,P.y,dotR,0,Math.PI*2);
-          ctx.fillStyle=`rgba(${sphereMode==='points'?'238,240,244':'255,255,255'},${alpha*(fanSilent?.37:.98)*ease})`;ctx.fill();
-        }
-      }
-    }
-  }
-  const faceDefinitions=[{name:'front',normal:[0,0,1]},{name:'top',normal:[0,1,0]},{name:'left',normal:[-1,0,0]}];
-  function faceVisibility(face){const P=project(...face.normal); return Math.max(0,Math.min(1,(P.z+.15)/.90));}
-  function apartmentCoord(x,y){return [-.9+(x-179)/913*1.8,.9-(y-110)/966*1.8-.12]}
-  function drawFace(face,opacity){
-    if(opacity<.025) return;
-    const f=face.name, al=opacity, progress=programCfg.alwaysVisible?1:reveal[f];
-    if(f==='front'){
-      // Lampes fixes du fond : pas de projection sur la face tournante.
-    }
-    if(f==='top') drawFanMorph(al,fanReveal);
-    if(f==='left'){ const P=screen(f,0,0), r=Math.max(5,Math.min(17,radius*.105)); ctx.save(); ctx.translate(P.x,P.y); ctx.beginPath(); ctx.moveTo(-r*.36,-r*.73); ctx.lineTo(r*.86,0); ctx.lineTo(-r*.36,r*.73); ctx.closePath(); ctx.fillStyle=`rgba(255,255,255,${al*.86})`; ctx.fill(); ctx.restore(); }
-    if(progress<.002) return;
-    if(f==='front'){
-      const poly=apartmentPolyRaw.map(([x,y])=>apartmentCoord(x,y));
-      for(let i=0;i<poly.length-1;i++) faceLine(f,poly[i],poly[i+1],al*.5*progress,.65,true);
+      if(1-ease>.002)faceLine(f,[rdx*start,rdy*start],[rdx*strokeEnd…451 tokens truncated…l*.5*progress,.65,true);
       apartmentWallsRaw.forEach(([a,b])=>faceLine(f,apartmentCoord(...a),apartmentCoord(...b),al*.5*progress,.65,true));
     }
   }
@@ -2295,7 +2270,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E32',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,particleModel:'irregular-volume',particleMaterial:'shaded-beads',cameraStopsInside:true,hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E33',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'shaded-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
@@ -2304,11 +2279,27 @@ document.getElementById('copySettings').onclick=async()=>{
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(payload);fallback.hidden=true;status.textContent='Réglages copiés — tu peux les coller dans la conversation.';}
  catch(_){fallback.value=payload;fallback.hidden=false;fallback.focus();fallback.select();fallback.setSelectionRange(0,payload.length);let copied=false;try{copied=document.execCommand('copy');}catch(_){}status.textContent=copied?'Réglages copiés — tu peux les coller dans la conversation.':'Sélectionne et copie le texte ci-dessous.';if(copied)fallback.hidden=true;}
 };
-const interactionSettings=document.createElement('div');interactionSettings.className='group';interactionSettings.innerHTML='<div class="rowtitle">Lampes · gestes et calque</div><label>Animation du bouton Déployer<select id="lampEntryMode" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="dive">Avancer dans la sphère remplie</option><option value="burst">Zoom · éclatement de la sphère</option></select></label><label><input id="lampLabels" type="checkbox" checked> Noms des lampes</label><div class="controls" id="leafMaterialControls"></div>';
+const interactionSettings=document.createElement('div');interactionSettings.className='group';interactionSettings.innerHTML='<div class="rowtitle">Sphère et lampes</div><label>Type de sphère<select id="sphereModelChoice" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="cloud">Nuée · billes et gravité</option><option value="membrane">Membrane · ancienne sphère</option></select></label><label>Animation du bouton Déployer<select id="lampEntryMode" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="dive">Avancer dans la sphère remplie</option><option value="burst">Zoom · éclatement de la sphère</option></select></label><label><input id="lampLabels" type="checkbox" checked> Noms des lampes</label><div class="controls" id="leafMaterialControls"></div>';
 document.getElementById('sphereView').prepend(interactionSettings);
 document.getElementById('lampEntryMode').onchange=e=>lampInteraction.defaultEntry=e.target.value;
 document.getElementById('lampLabels').onchange=e=>lampInteraction.labels=e.target.checked;
 createControlGrid('leafMaterialControls',lampInteraction,[['blur','Flou du feuillet inférieur',0,32,1],['electronAmplitude','Agitation des points',0,24,.5],['electronSpeed','Vitesse d’agitation',.1,4,.05],['beadRelief','Relief des billes',0,1,.05],['gravityStrength','Attraction des lampes',0,1,.05],['gravityRadius','Portée de l’attraction',20,140,2]],()=>{});
+// Separate comparison profiles preserve edits while switching between representations.
+const sphereModeProfiles={cloud:{sphere:{...sphereCfg},motion:{electronAmplitude:lampInteraction.electronAmplitude,electronSpeed:lampInteraction.electronSpeed,beadRelief:lampInteraction.beadRelief,defaultEntry:lampInteraction.defaultEntry}},membrane:{sphere:{density:400,size:1.5,deform:.12,fluidity:1,speed:.47,breath:.035,opacity:1,glow:.75,softness:.65},motion:{electronAmplitude:0,electronSpeed:.7,beadRelief:0,defaultEntry:'burst'}}};
+function captureSphereModelProfile(){return {sphere:{...sphereCfg},motion:{electronAmplitude:lampInteraction.electronAmplitude,electronSpeed:lampInteraction.electronSpeed,beadRelief:lampInteraction.beadRelief,defaultEntry:lampInteraction.defaultEntry}};}
+function selectSphereModel(mode){
+ if(!sphereModeProfiles[mode]||mode===sphereModel.mode)return;
+ sphereModeProfiles[sphereModel.mode]=captureSphereModelProfile();sphereModel.mode=mode;
+ Object.assign(sphereCfg,sphereModeProfiles[mode].sphere);Object.assign(lampInteraction,sphereModeProfiles[mode].motion);
+ experimentReset();experimentNeutral();experiment.amount=0;experiment.reveal=0;experiment.preselected=false;experiment.departures=null;experiment.departureParticles=null;experiment.flightDepths=null;experiment.lampIndices=[];experiment.lampFlags=null;lampInteraction.entry=lampInteraction.defaultEntry;
+ for(const touch of experiment.handles)Object.assign(touch,{id:null,x:0,y:0,tx:0,ty:0,vx:0,vy:0});
+ createParticles();syncSphereControls();syncGrain();
+ for(const key of ['electronAmplitude','electronSpeed','beadRelief']){document.getElementById('r-leafMaterialControls-'+key).value=lampInteraction[key];document.getElementById('o-leafMaterialControls-'+key).textContent=formatValue(key,lampInteraction[key]);}
+ document.getElementById('sphereModelChoice').value=mode;document.getElementById('lampEntryMode').value=lampInteraction.defaultEntry;
+ try{localStorage.setItem('deck-sphere-model-v1',mode);}catch(_){}
+}
+document.getElementById('sphereModelChoice').onchange=e=>selectSphereModel(e.target.value);
+try{const saved=localStorage.getItem('deck-sphere-model-v1');if(saved==='membrane')selectSphereModel(saved);}catch(_){}
 // Only settings that drive this alternative remain available.
 const retiredSettings=document.createElement('div');retiredSettings.id='retiredAlternativeSettings';retiredSettings.hidden=true;retiredSettings.inert=true;retiredSettings.style.display='none';document.body.append(retiredSettings);
 const activeSettings=new Set([interactionSettings,daySettings,sphereSizeSettings,experimentSettings,document.getElementById('pointPanel')]);
