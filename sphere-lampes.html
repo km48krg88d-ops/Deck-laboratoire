@@ -1348,7 +1348,37 @@ function render(now){
       const start=.055,end=.115,rayStart=.23;
       // Le trait se contracte pour libérer ses grains sans empiler deux images.
       const strokeEnd=end-(end-start)*ease;
-      if(1-ease>.002)faceLine(f,[rdx*start,rdy*start],[rdx*strokeEnd…451 tokens truncated…l*.5*progress,.65,true);
+      if(1-ease>.002)faceLine(f,[rdx*start,rdy*start],[rdx*strokeEnd,rdy*strokeEnd],alpha*.9*(1-ease),programCfg.fanStrokeWidth,false);
+      if(ease>.001){
+        const maxLength=Math.min(1.20,programCfg.fanLength*armEnd/.95);
+        for(let i=0;i<n;i++){
+          const t=n===1?0:i/(n-1);
+          const from=start+(end-start)*t;
+          const to=rayStart+maxLength*t;
+          const rad=from+(to-from)*ease;
+          const P=screen(f,rdx*rad,rdy*rad);
+          const dotR=Math.max(.25,programCfg.fanDotWidth*.5*P.p);
+          ctx.beginPath();ctx.arc(P.x,P.y,dotR,0,Math.PI*2);
+          ctx.fillStyle=`rgba(${sphereMode==='points'?'238,240,244':'255,255,255'},${alpha*(fanSilent?.37:.98)*ease})`;ctx.fill();
+        }
+      }
+    }
+  }
+  const faceDefinitions=[{name:'front',normal:[0,0,1]},{name:'top',normal:[0,1,0]},{name:'left',normal:[-1,0,0]}];
+  function faceVisibility(face){const P=project(...face.normal); return Math.max(0,Math.min(1,(P.z+.15)/.90));}
+  function apartmentCoord(x,y){return [-.9+(x-179)/913*1.8,.9-(y-110)/966*1.8-.12]}
+  function drawFace(face,opacity){
+    if(opacity<.025) return;
+    const f=face.name, al=opacity, progress=programCfg.alwaysVisible?1:reveal[f];
+    if(f==='front'){
+      // Lampes fixes du fond : pas de projection sur la face tournante.
+    }
+    if(f==='top') drawFanMorph(al,fanReveal);
+    if(f==='left'){ const P=screen(f,0,0), r=Math.max(5,Math.min(17,radius*.105)); ctx.save(); ctx.translate(P.x,P.y); ctx.beginPath(); ctx.moveTo(-r*.36,-r*.73); ctx.lineTo(r*.86,0); ctx.lineTo(-r*.36,r*.73); ctx.closePath(); ctx.fillStyle=`rgba(255,255,255,${al*.86})`; ctx.fill(); ctx.restore(); }
+    if(progress<.002) return;
+    if(f==='front'){
+      const poly=apartmentPolyRaw.map(([x,y])=>apartmentCoord(x,y));
+      for(let i=0;i<poly.length-1;i++) faceLine(f,poly[i],poly[i+1],al*.5*progress,.65,true);
       apartmentWallsRaw.forEach(([a,b])=>faceLine(f,apartmentCoord(...a),apartmentCoord(...b),al*.5*progress,.65,true));
     }
   }
