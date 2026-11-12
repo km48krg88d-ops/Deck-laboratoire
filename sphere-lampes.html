@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 35 · Empreinte verticale</title>
+<title>DECK — Essai 36 · Attraction du trait</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,10 +88,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : la coupure suit le doigt, puis les particules forment un trait plein. Toucher à côté du symbole pour recommencer. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E35</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules sont attirées par le doigt et forment un trait plein. Toucher à côté pour les ramener progressivement dans la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E36</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 35 · Empreinte verticale</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 36 · Attraction du trait</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -911,27 +911,29 @@ function noise(x,y,z,t,fluid){
 }
 
 
-// A central stroke cuts the material locally, then gathers the same grains into a symbol.
+// The stroke attracts the same grains into a symbol; releasing it returns them to their neutral positions.
 const symbolCut={pointer:null,startX:0,startY:0,x:0,y:0,minY:0,maxY:0,maxDrift:0,strength:0,morph:0,target:0};
 function resetSymbolCut(){symbolCut.pointer=null;symbolCut.strength=0;symbolCut.morph=0;symbolCut.target=0;}
+function returnSymbol(){symbolCut.pointer=null;symbolCut.target=0;}
 function symbolGeometry(){return {x:w/2,y:h/2,halfLength:h/8,halfWidth:Math.max(5,Math.min(9,w*.017)),radius:deckSphere().r*1.18};}
 function symbolCutValid(){const g=symbolGeometry();return symbolCut.maxY-symbolCut.minY>=Math.max(55,g.radius*.9)&&symbolCut.maxDrift<Math.max(24,g.radius*.4)&&symbolCut.minY<h/2+g.radius*.15&&symbolCut.maxY>h/2-g.radius*.15;}
 function startSymbolCut(e){
  if(placingLamps||document.body.classList.contains('atelier')||experiment.amount>.001||experiment.target!==0)return false;
  if(symbolCut.pointer!==null){cancelSymbolCut();e.preventDefault();e.stopImmediatePropagation();return true;}
- const g=symbolGeometry();if(Math.abs(e.clientX-g.x)>Math.max(24,g.radius*.32)||Math.abs(e.clientY-g.y)>g.radius*1.35||experiment.points.size)return false;
- if(symbolCut.morph>.02||symbolCut.target)resetSymbolCut();
+ const g=symbolGeometry();
+ if(symbolCut.target||symbolCut.morph>.01){if(Math.abs(e.clientX-g.x)>g.halfWidth+16||Math.abs(e.clientY-g.y)>g.halfLength+16)returnSymbol();e.preventDefault();e.stopImmediatePropagation();return true;}
+if(Math.abs(e.clientX-g.x)>Math.max(24,g.radius*.32)||Math.abs(e.clientY-g.y)>g.radius*1.35||experiment.points.size)return false;
  Object.assign(symbolCut,{pointer:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,minY:e.clientY,maxY:e.clientY,maxDrift:0,strength:0,target:0});canvas.setPointerCapture(e.pointerId);e.preventDefault();e.stopImmediatePropagation();return true;
 }
-function moveSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;e.preventDefault();e.stopImmediatePropagation();symbolCut.x=e.clientX;symbolCut.y=e.clientY;symbolCut.minY=Math.min(symbolCut.minY,e.clientY);symbolCut.maxY=Math.max(symbolCut.maxY,e.clientY);symbolCut.maxDrift=Math.max(symbolCut.maxDrift,Math.abs(e.clientX-symbolCut.startX));symbolCut.strength=clamp(Math.abs(e.clientY-symbolCut.startY)/24,0,1);return true;}
+function moveSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;e.preventDefault();e.stopImmediatePropagation();symbolCut.x=e.clientX;symbolCut.y=e.clientY;symbolCut.minY=Math.min(symbolCut.minY,e.clientY);symbolCut.maxY=Math.max(symbolCut.maxY,e.clientY);symbolCut.maxDrift=Math.max(symbolCut.maxDrift,Math.abs(e.clientX-symbolCut.startX));symbolCut.strength=clamp(Math.abs(e.clientY-symbolCut.startY)/Math.max(36,symbolGeometry().radius*.8),0,1);return true;}
 function cancelSymbolCut(){symbolCut.pointer=null;symbolCut.target=0;}
 function finishSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;moveSymbolCut(e);symbolCut.pointer=null;symbolCut.target=e.type==='pointerup'&&symbolCutValid()?1:0;return true;}
 function demoSymbolCut(){experimentNeutral();experiment.amount=0;experimentReset();const g=symbolGeometry();Object.assign(symbolCut,{pointer:null,startX:g.x,startY:g.y-g.halfLength,x:g.x,y:g.y+g.halfLength,minY:g.y-g.halfLength,maxY:g.y+g.halfLength,maxDrift:0,strength:1,morph:0,target:1});}
 function advanceSymbolCut(dt){const step=dt/1.25;symbolCut.morph=symbolCut.target?Math.min(1,symbolCut.morph+step):Math.max(0,symbolCut.morph-step);if(symbolCut.pointer===null&&!symbolCut.target)symbolCut.strength*=Math.exp(-dt*7);}
 function symbolCutPose(x,y,seed){
  const g=symbolGeometry(),dx=symbolCut.x-symbolCut.startX,dy=symbolCut.y-symbolCut.startY,len2=dx*dx+dy*dy,t=clamp(((x-symbolCut.startX)*dx+(y-symbolCut.startY)*dy)/Math.max(1,len2),0,1),nearX=symbolCut.startX+dx*t,nearY=symbolCut.startY+dy*t;
- const reach=1-experimentEase(8,30,Math.abs(y-nearY)),distance=x-nearX,side=distance<0?-1:1,gap=g.radius*.22*symbolCut.strength*reach;
- x+=side*gap*(1-experimentEase(0,g.radius,Math.abs(distance)));
+ const reach=1-experimentEase(8,Math.max(30,g.radius*.45),Math.abs(y-nearY)),distance=x-nearX,pull=.92*symbolCut.strength*reach*(1-experimentEase(0,g.radius*1.8,Math.abs(distance)));
+ x+=(nearX-x)*pull;y+=(nearY-y)*pull*.18;
  const morph=experimentEase(seed*.12,1,symbolCut.morph),along=(experimentHash(seed*173+5)*2-1)*g.halfLength,radial=Math.sqrt(experimentHash(seed*191+9))*g.halfWidth,angle=experimentHash(seed*211+7)*Math.PI*2;
  return {x:x+(g.x+Math.cos(angle)*radial-x)*morph,y:y+(g.y+along+Math.sin(angle)*radial-y)*morph,morph};
 }
@@ -992,9 +994,10 @@ function setupPointsGPU(){
  }
  float cutDx=uCutPath.z-uCutPath.x,cutDy=uCutPath.w-uCutPath.y;
  float cutT=clamp(dot(pixel-uCutPath.xy,vec2(cutDx,cutDy))/max(1.,cutDx*cutDx+cutDy*cutDy),0.,1.);
- vec2 nearCut=mix(uCutPath.xy,uCutPath.zw,cutT);float cutDistance=pixel.x-nearCut.x,cutSide=cutDistance<0.?-1.:1.;
- float cutReach=1.-smoothstep(8.,30.,abs(pixel.y-nearCut.y));
- pixel.x+=cutSide*uRadius*.22*uCutState.x*cutReach*(1.-smoothstep(0.,uRadius,abs(cutDistance)));
+ vec2 nearCut=mix(uCutPath.xy,uCutPath.zw,cutT);float cutDistance=pixel.x-nearCut.x;
+ float cutReach=1.-smoothstep(8.,max(30.,uRadius*.45),abs(pixel.y-nearCut.y));
+ float pull=.92*uCutState.x*cutReach*(1.-smoothstep(0.,uRadius*1.8,abs(cutDistance)));
+ pixel+=(nearCut-pixel)*vec2(pull,pull*.18);
  float symbolMix=smoothstep(aPoint.w*.12,1.,uCutState.y);
  float along=(rnd(aPoint.w*173.+5.)*2.-1.)*uSymbol.z,radial=sqrt(rnd(aPoint.w*191.+9.))*uSymbol.w,symbolAngle=rnd(aPoint.w*211.+7.)*6.2831853;
  pixel=mix(pixel,uSymbol.xy+vec2(cos(symbolAngle)*radial,along+sin(symbolAngle)*radial),symbolMix);
@@ -2135,7 +2138,7 @@ document.getElementById('dayPlay').onclick=()=>{
 };
 
 createControlGrid('experimentLightControls',experimentCfg,[['selection','Révélation avant rupture',.15,.7,.01],['softness','Souplesse tactile',.5,3,.05],['rupture','Seuil de rupture',.15,1.6,.01],['curve','Courbure des trajectoires',0,1.5,.01],['drift','Mouvement des lumières',0,10,.1],['driftSpeed','Vitesse du mouvement',.05,1,.01],['core','Taille du point',1,7,.1],['halo','Diffusion lumineuse',0,50,1],['brightness','Éclat des lumières',.2,1,.01]],()=>{});
-document.getElementById('experimentExpand').textContent='Tester le trait';document.getElementById('experimentGather').textContent='Reformer la sphère';document.getElementById('experimentExpand').onclick=demoSymbolCut;document.getElementById('experimentGather').onclick=()=>{resetSymbolCut();experimentNeutral();};document.getElementById('reset').addEventListener('click',resetSymbolCut);document.addEventListener('keydown',e=>{if(e.key==='Escape')resetSymbolCut();});
+document.getElementById('experimentExpand').textContent='Tester le trait';document.getElementById('experimentGather').textContent='Reformer la sphère';document.getElementById('experimentExpand').onclick=demoSymbolCut;document.getElementById('experimentGather').onclick=()=>{returnSymbol();experimentNeutral();};document.getElementById('reset').addEventListener('click',returnSymbol);document.addEventListener('keydown',e=>{if(e.key==='Escape')returnSymbol();});
 panel.addEventListener('input',()=>{if(experiment.target===1)experimentWake();});
 function experimentReset(cancelled=false){
  if(cancelled&&experiment.multi&&experiment.gestureTarget===null){experiment.target=experiment.startTarget;if(experiment.dimmed){lampManualLevels.splice(0,lights.length,...deck.baseLevels);recomputeSpatialLamps();}}
@@ -2157,7 +2160,7 @@ function experimentTouchStart(e){
  Object.assign(t,{id:e.pointerId,ax:sphere.x+dx*factor,ay:sphere.y+dy*factor,x:0,y:0,vx:0,vy:0,tx:0,ty:0,startX:e.clientX,startY:e.clientY});
 }
 canvas.addEventListener('pointerdown',e=>{
- if(startSymbolCut(e))return;if(symbolCut.target||symbolCut.morph>.01){resetSymbolCut();e.stopImmediatePropagation();return;}
+ if(startSymbolCut(e))return;
  if(placingLamps)return;e.stopImmediatePropagation();if(beginEdgeLeaf(e))return;const b=experiment.target===1?deckBounds():deckGestureBounds();if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h)return;
  canvas.setPointerCapture(e.pointerId);
  if(!experiment.points.size&&experiment.target===0&&experiment.amount===0){lampInteraction.entry='burst';experiment.preselected=false;experiment.reveal=0;experiment.lampFlags=null;experiment.lampIndices=[];experiment.departures=null;experiment.departureParticles=null;}
@@ -2199,7 +2202,7 @@ function finishExperiment(e){
 canvas.addEventListener('pointerup',finishExperiment,true);canvas.addEventListener('pointercancel',finishExperiment,true);canvas.addEventListener('lostpointercapture',e=>{if(symbolCut.pointer===e.pointerId)cancelSymbolCut();if(edgeLeaf.pointer===e.pointerId)endEdgeLeaf({...e,type:'pointercancel'});if(experiment.points.has(e.pointerId))experimentReset(true);},true);
 window.addEventListener('blur',()=>{cancelSymbolCut();if(experiment.points.size)experimentReset(true);});
 // Keyboard equivalent for the visual prototype.
-document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(symbolCut.target||symbolCut.morph>.01)resetSymbolCut();else demoSymbolCut();}},true);
+document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key===' ')&&!e.target.closest('input,button,summary,select')){e.preventDefault();e.stopImmediatePropagation();if(symbolCut.target||symbolCut.morph>.01)returnSymbol();else demoSymbolCut();}},true);
 
 canvas.addEventListener('pointerdown',e=>{if(placingLamps)return;e.stopImmediatePropagation();const b=deckGestureBounds();if(!deck.points.size&&(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h))return;canvas.setPointerCapture(e.pointerId);deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.points.size===1){deck.gesture={x:e.clientX,y:e.clientY,dx:0,dy:0,axis:null};deck.multi=false;deck.preview=null;if(deck.sheet)deckSheet(null);}else{deck.multi=true;deck.preview=null;const pair=[...deck.points.values()],mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2,s=deckSphere();deck.pinch=Math.hypot(mx-s.x,my-s.y)<s.r*1.7;deck.pinchStart=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);deck.baseLevels=[...lampManualLevels];if(deck.pinch)deckReveal();}},true);
 canvas.addEventListener('pointermove',e=>{if(placingLamps)return;e.stopImmediatePropagation();if(!deck.points.has(e.pointerId))return;deck.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(deck.multi){if(deck.points.size===2&&deck.pinch&&deck.pinchStart>12){const p=[...deck.points.values()];deckDim(Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)/deck.pinchStart);}return;}const g=deck.gesture;if(!g)return;g.dx=e.clientX-g.x;g.dy=e.clientY-g.y;if(!g.axis&&Math.hypot(g.dx,g.dy)>14){deck.lastTap=null;if(Math.abs(g.dx)>Math.abs(g.dy)*1.25)g.axis='x';else if(Math.abs(g.dy)>Math.abs(g.dx)*1.25)g.axis='y';}deck.preview=classifyDeckGesture(g);},true);
@@ -2363,7 +2366,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E35',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-cut',continuousGrid:true,assemblySeconds:1.25,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E36',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assemblySeconds:1.25,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
@@ -2403,7 +2406,7 @@ for(const node of [panel.querySelector('.tabs'),document.getElementById('program
 experimentSettings.append(caps);
 retiredSettings.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled=true);
 document.getElementById('pointPanel').classList.add('group');
-panel.querySelector('.bottomline .hint').textContent='Tracer verticalement au centre · Relâcher pour former le trait · Toucher à côté pour recommencer';
+panel.querySelector('.bottomline .hint').textContent='Tracer verticalement pour attirer les points · Toucher à côté pour les ramener dans la sphère';
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
