@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 41 · Fente lumineuse</title>
+<title>DECK — Essai 42 · Profondeur de la fente</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -89,9 +89,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E41</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E42</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 41 · Fente lumineuse</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 42 · Profondeur de la fente</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -913,11 +913,12 @@ function noise(x,y,z,t,fluid){
 
 // The finger marks passed rows; each grain follows later with its own travel time.
 const symbolCut={pointer:null,startX:0,startY:0,x:0,y:0,minY:0,maxY:0,maxDrift:0,strength:0,morph:0,target:0,direction:1,engaged:false,returning:false,demo:false,elapsed:0,progress:null,arrivals:null,rows:null,lag:null,duration:null,rowArrival:null};
-const aperture={mode:'white',diffusion:0};
+const aperture={mode:'white',diffusion:0,depth:1};
+try{const d=Number(localStorage.getItem('deck-aperture-depth-v1'));if(localStorage.getItem('deck-aperture-depth-v1')!==null&&Number.isFinite(d))aperture.depth=clamp(d,0,2);}catch(_){}
 try{const saved=localStorage.getItem('deck-symbol-surface-v1');if(saved==='duo'||saved==='white')aperture.mode=saved;}catch(_){}
 const apertureGesture={points:new Map(),distance:0,base:0,multi:false,valid:false};
 function resetApertureGesture(){apertureGesture.points.clear();apertureGesture.distance=0;apertureGesture.multi=false;apertureGesture.valid=false;}
-function syncApertureUI(){const slider=document.getElementById?.('r-apertureControls-diffusion'),output=document.getElementById?.('o-apertureControls-diffusion');if(slider){slider.value=aperture.diffusion;slider.disabled=aperture.mode!=='white';}if(output)output.textContent=aperture.diffusion.toFixed(2);}
+function syncApertureUI(){const slider=document.getElementById?.('r-apertureControls-diffusion'),output=document.getElementById?.('o-apertureControls-diffusion');if(slider){slider.value=aperture.diffusion;slider.disabled=aperture.mode!=='white';}if(output)output.textContent=aperture.diffusion.toFixed(2);const depth=document.getElementById?.('r-apertureControls-depth');if(depth)depth.disabled=aperture.mode!=='white';}
 function setApertureMode(mode){if(mode!=='white'&&mode!=='duo')return;aperture.mode=mode;aperture.diffusion=0;resetApertureGesture();syncApertureUI();try{localStorage.setItem('deck-symbol-surface-v1',mode);}catch(_){};}
 function startApertureGesture(e){
  if(placingLamps||document.body.classList.contains('atelier')||aperture.mode!=='white'||!symbolCut.engaged||symbolCut.returning||symbolCut.target!==1)return false;
@@ -1009,13 +1010,13 @@ function drawSolidSymbol(){
  if(symbolSurfaceCanvas.width!==pw||symbolSurfaceCanvas.height!==ph){symbolSurfaceCanvas.width=pw;symbolSurfaceCanvas.height=ph;}
  c.clearRect(0,0,pw,ph);c.globalCompositeOperation='source-over';
  const colour=c.createLinearGradient(0,0,0,ph);
- if(aperture.mode==='white'){colour.addColorStop(0,'rgb(250,250,246)');colour.addColorStop(.46,'rgb(255,254,250)');colour.addColorStop(1,'rgb(253,250,243)');}
+ if(aperture.mode==='white'){const base=[255,254,249],d=aperture.depth;colour.addColorStop(0,dayCSS(dayMix(base,[247,247,242],d)));colour.addColorStop(.46,dayCSS(dayMix(base,[255,254,250],Math.min(1,d))));colour.addColorStop(1,dayCSS(dayMix(base,[252,247,237],d)));}
  else{colour.addColorStop(0,dayCSS(dayPalette.a));colour.addColorStop(1,dayCSS(dayPalette.b));}
  c.fillStyle=colour;c.fillRect(0,0,pw,ph);
  if(aperture.mode==='white'){
   // All shading stays inside the aperture: cool recessed edge, warm reflected light.
-  const recess=c.createLinearGradient(0,0,pw,0);recess.addColorStop(0,'rgba(57,68,84,.075)');recess.addColorStop(.14,'rgba(57,68,84,.028)');recess.addColorStop(.44,'rgba(57,68,84,0)');recess.addColorStop(.78,'rgba(120,95,63,.008)');recess.addColorStop(1,'rgba(120,95,63,.045)');c.fillStyle=recess;c.fillRect(0,0,pw,ph);
-  const bounce=c.createLinearGradient(0,0,pw,ph);bounce.addColorStop(0,'rgba(116,128,146,.018)');bounce.addColorStop(.52,'rgba(255,255,255,0)');bounce.addColorStop(1,'rgba(255,225,178,.025)');c.fillStyle=bounce;c.fillRect(0,0,pw,ph);
+  const d=aperture.depth,recess=c.createLinearGradient(0,0,pw,0);recess.addColorStop(0,'rgba(57,68,84,'+(.16*d)+')');recess.addColorStop(.16,'rgba(57,68,84,'+(.065*d)+')');recess.addColorStop(.48,'rgba(57,68,84,'+(.004*d)+')');recess.addColorStop(.78,'rgba(120,95,63,'+(.018*d)+')');recess.addColorStop(1,'rgba(120,95,63,'+(.10*d)+')');c.fillStyle=recess;c.fillRect(0,0,pw,ph);
+  const bounce=c.createLinearGradient(0,0,pw,ph);bounce.addColorStop(0,'rgba(116,128,146,'+(.018*d)+')');bounce.addColorStop(.52,'rgba(255,255,255,0)');bounce.addColorStop(1,'rgba(255,225,178,'+(.025*d)+')');c.fillStyle=bounce;c.fillRect(0,0,pw,ph);
  }
  const mask=c.createLinearGradient(0,0,0,ph);for(let i=0;i<=96;i++)mask.addColorStop(i/96,'rgba(255,255,255,'+experimentEase(.72,1,symbolRowProgress(i/96))+')');
  c.globalCompositeOperation='destination-in';c.fillStyle=mask;c.fillRect(0,0,pw,ph);c.globalCompositeOperation='source-over';
@@ -2458,7 +2459,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E41',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'subtle-recess-and-warm-bounce',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E42',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'subtle-recess-and-warm-bounce',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
@@ -2470,7 +2471,7 @@ document.getElementById('copySettings').onclick=async()=>{
 const interactionSettings=document.createElement('div');interactionSettings.className='group';interactionSettings.innerHTML='<div class="rowtitle">Sphère et lampes</div><label>Type de sphère<select id="sphereModelChoice" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="cloud">Nuée · billes et gravité</option><option value="membrane">Membrane · ancienne sphère</option></select></label><label>Animation du bouton Déployer<select id="lampEntryMode" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="dive">Avancer dans la sphère remplie</option><option value="burst">Zoom · éclatement de la sphère</option></select></label><label><input id="lampLabels" type="checkbox" checked> Noms des lampes</label><div class="controls" id="leafMaterialControls"></div>';
 document.getElementById('sphereView').prepend(interactionSettings);
 const apertureSettings=document.createElement('div');apertureSettings.innerHTML='<label>Surface du trait<select id="apertureModeChoice" style="display:block;width:100%;padding:12px;margin:12px 0;background:#29292e;color:white;border-radius:12px"><option value="white">Ouverture blanche</option><option value="duo">Duo de couleurs</option></select></label><div class="controls" id="apertureControls"></div><p class="hint">Une fois la fente formée, poser deux doigts de part et d’autre de son centre puis les rapprocher. Un simple toucher à côté referme la fente.</p>';interactionSettings.prepend(apertureSettings);
-createControlGrid('apertureControls',aperture,[['diffusion','Diffusion de l’ouverture',0,1,.01]],()=>syncApertureUI());
+createControlGrid('apertureControls',aperture,[['depth','Profondeur de la fente',0,2,.05],['diffusion','Diffusion de l’ouverture',0,1,.01]],()=>{syncApertureUI();try{localStorage.setItem('deck-aperture-depth-v1',String(aperture.depth));}catch(_){}});
 document.getElementById('apertureModeChoice').value=aperture.mode;document.getElementById('apertureModeChoice').onchange=e=>setApertureMode(e.target.value);syncApertureUI();
 document.getElementById('lampEntryMode').onchange=e=>lampInteraction.defaultEntry=e.target.value;
 document.getElementById('lampLabels').onchange=e=>lampInteraction.labels=e.target.checked;
