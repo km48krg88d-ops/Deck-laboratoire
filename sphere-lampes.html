@@ -946,12 +946,15 @@ function symbolCutPose(x,y,seed){
 
 function drawSymbolGrid(){ctx.save();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(let row=1;row<8;row++)for(let col=1;col<6;col++){const x=col*w/6,y=row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
 function symbolSurfaceTint(y){const g=symbolGeometry(),t=clamp((y-(g.y-g.halfLength))/(g.halfLength*2),0,1);return dayMix(dayPalette.a,dayPalette.b,t);}
+const symbolSurfaceCanvas=document.createElement('canvas'),symbolSurfaceContext=symbolSurfaceCanvas.getContext('2d');
 function drawSolidSymbol(){
- if(!symbolCut.engaged)return;const g=symbolGeometry(),top=g.y-g.halfLength,bottom=g.y+g.halfLength,gradient=ctx.createLinearGradient(g.x,top,g.x,bottom);
- gradient.addColorStop(0,dayCSS(symbolSurfaceTint(top)));gradient.addColorStop(1,dayCSS(symbolSurfaceTint(bottom)));
- ctx.save();ctx.fillStyle=gradient;
- for(let i=0;i<96;i++){const row=(i+.5)/96,alpha=experimentEase(.72,1,symbolRowProgress(row));if(alpha<=0)continue;ctx.globalAlpha=alpha;ctx.fillRect(g.x-g.halfWidth,top+i*(bottom-top)/96,g.halfWidth*2,(bottom-top)/96+.1);}
- ctx.restore();
+ if(!symbolCut.engaged)return;const g=symbolGeometry(),width=g.halfWidth*2,height=g.halfLength*2,c=symbolSurfaceContext,pw=Math.max(1,Math.ceil(width*dpr)),ph=Math.max(1,Math.ceil(height*dpr));
+ if(symbolSurfaceCanvas.width!==pw||symbolSurfaceCanvas.height!==ph){symbolSurfaceCanvas.width=pw;symbolSurfaceCanvas.height=ph;}
+ c.clearRect(0,0,pw,ph);c.globalCompositeOperation='source-over';
+ const colour=c.createLinearGradient(0,0,0,ph);colour.addColorStop(0,dayCSS(dayPalette.a));colour.addColorStop(1,dayCSS(dayPalette.b));c.fillStyle=colour;c.fillRect(0,0,pw,ph);
+ const mask=c.createLinearGradient(0,0,0,ph);for(let i=0;i<=96;i++)mask.addColorStop(i/96,'rgba(255,255,255,'+experimentEase(.72,1,symbolRowProgress(i/96))+')');
+ c.globalCompositeOperation='destination-in';c.fillStyle=mask;c.fillRect(0,0,pw,ph);c.globalCompositeOperation='source-over';
+ ctx.drawImage(symbolSurfaceCanvas,g.x-g.halfWidth,g.y-g.halfLength,width,height);
 }
 
 // Independent GPU alternative; original Canvas point renderer stays below unchanged.
