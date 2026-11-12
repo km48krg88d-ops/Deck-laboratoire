@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 37 · Surface du trait</title>
+<title>DECK — Essai 38 · Convergence au doigt</title>
 <style>
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
 *{box-sizing:border-box}
@@ -88,10 +88,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules forment une surface rectangulaire pendant le geste, sans attendre le relâchement. Toucher à côté pour les ramener progressivement dans la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E37</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les rangées de particules convergent vers le centre à mesure que le doigt les traverse. Une pause du doigt arrête la formation. Toucher à côté pour les ramener progressivement dans la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E38</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 37 · Surface du trait</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 38 · Convergence au doigt</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -911,36 +911,47 @@ function noise(x,y,z,t,fluid){
 }
 
 
-// The stroke gathers grains immediately; an outside tap reverses the same transition.
-const symbolCut={pointer:null,startX:0,startY:0,x:0,y:0,minY:0,maxY:0,maxDrift:0,strength:0,morph:0,target:0};
-function resetSymbolCut(){symbolCut.pointer=null;symbolCut.strength=0;symbolCut.morph=0;symbolCut.target=0;}
-function returnSymbol(){symbolCut.pointer=null;symbolCut.target=0;}
+// Finger position sweeps through stable rows: no timer completes a held gesture.
+const symbolCut={pointer:null,startX:0,startY:0,x:0,y:0,minY:0,maxY:0,maxDrift:0,strength:0,morph:0,target:0,direction:1,engaged:false,returning:false,demo:false};
+function resetSymbolCut(){Object.assign(symbolCut,{pointer:null,strength:0,morph:0,target:0,engaged:false,returning:false,demo:false});}
+function returnSymbol(){symbolCut.pointer=null;symbolCut.target=0;symbolCut.returning=symbolCut.engaged;symbolCut.demo=false;}
 function symbolGeometry(){return {x:w/2,y:h/2,halfLength:h/8,halfWidth:2.5*Math.max(5,Math.min(9,w*.017)),radius:deckSphere().r*1.18};}
-function symbolCutValid(){const g=symbolGeometry();return symbolCut.maxY-symbolCut.minY>=Math.max(55,g.radius*.9)&&symbolCut.maxDrift<Math.max(24,g.radius*.4)&&symbolCut.minY<h/2+g.radius*.15&&symbolCut.maxY>h/2-g.radius*.15;}
+function symbolCutValid(){const g=symbolGeometry();return symbolCut.morph>=.995&&symbolCut.maxY-symbolCut.minY>=Math.max(55,g.radius*.9)&&symbolCut.maxDrift<Math.max(24,g.radius*.4);}
+function symbolRowProgress(row){if(!symbolCut.engaged)return 0;const order=symbolCut.direction>0?row:1-row,r=clamp(order,.001,.999);return experimentEase(r,Math.min(1,r+.12),symbolCut.morph)*symbolCut.strength;}
 function startSymbolCut(e){
  if(placingLamps||document.body.classList.contains('atelier')||experiment.amount>.001||experiment.target!==0)return false;
  if(symbolCut.pointer!==null){cancelSymbolCut();e.preventDefault();e.stopImmediatePropagation();return true;}
  const g=symbolGeometry();
- if(symbolCut.target||symbolCut.morph>.01){if(Math.abs(e.clientX-g.x)>g.halfWidth+16||Math.abs(e.clientY-g.y)>g.halfLength+16)returnSymbol();e.preventDefault();e.stopImmediatePropagation();return true;}
-if(Math.abs(e.clientX-g.x)>Math.max(24,g.radius*.32)||Math.abs(e.clientY-g.y)>g.radius*1.35||experiment.points.size)return false;
- Object.assign(symbolCut,{pointer:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,minY:e.clientY,maxY:e.clientY,maxDrift:0,strength:0,target:0});canvas.setPointerCapture(e.pointerId);e.preventDefault();e.stopImmediatePropagation();return true;
+ if(symbolCut.engaged){if(Math.abs(e.clientX-g.x)>g.halfWidth+16||Math.abs(e.clientY-g.y)>g.halfLength+16)returnSymbol();e.preventDefault();e.stopImmediatePropagation();return true;}
+ if(Math.abs(e.clientX-g.x)>Math.max(24,g.radius*.32)||Math.abs(e.clientY-g.y)>g.radius*1.4||experiment.points.size)return false;
+ Object.assign(symbolCut,{pointer:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,minY:e.clientY,maxY:e.clientY,maxDrift:0,strength:1,morph:0,target:0,direction:e.clientY<g.y?1:-1,engaged:true,returning:false,demo:false});canvas.setPointerCapture(e.pointerId);e.preventDefault();e.stopImmediatePropagation();return true;
 }
-function moveSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;e.preventDefault();e.stopImmediatePropagation();symbolCut.x=e.clientX;symbolCut.y=e.clientY;symbolCut.minY=Math.min(symbolCut.minY,e.clientY);symbolCut.maxY=Math.max(symbolCut.maxY,e.clientY);symbolCut.maxDrift=Math.max(symbolCut.maxDrift,Math.abs(e.clientX-symbolCut.startX));symbolCut.strength=clamp(Math.abs(e.clientY-symbolCut.startY)/Math.max(36,symbolGeometry().radius*.8),0,1);if(symbolCutValid())symbolCut.target=1;return true;}
-function cancelSymbolCut(){symbolCut.pointer=null;symbolCut.target=0;}
-function finishSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;moveSymbolCut(e);symbolCut.pointer=null;symbolCut.target=e.type==='pointerup'&&symbolCutValid()?1:0;return true;}
-function demoSymbolCut(){experimentNeutral();experiment.amount=0;experimentReset();const g=symbolGeometry();Object.assign(symbolCut,{pointer:null,startX:g.x,startY:g.y-g.halfLength,x:g.x,y:g.y+g.halfLength,minY:g.y-g.halfLength,maxY:g.y+g.halfLength,maxDrift:0,strength:1,morph:0,target:1});}
-function advanceSymbolCut(dt){const travel=symbolCut.maxY-symbolCut.minY,preview=symbolCut.pointer!==null?.8*experimentEase(8,Math.max(55,symbolGeometry().radius*.9),travel):0,aim=symbolCut.target?1:preview,step=dt/.85;symbolCut.morph+=clamp(aim-symbolCut.morph,-step,step);if(symbolCut.pointer===null&&!symbolCut.target)symbolCut.strength*=Math.exp(-dt*7);}
+function moveSymbolCut(e){
+ if(symbolCut.pointer!==e.pointerId)return false;e.preventDefault();e.stopImmediatePropagation();const g=symbolGeometry();
+ symbolCut.x=e.clientX;symbolCut.y=e.clientY;symbolCut.minY=Math.min(symbolCut.minY,e.clientY);symbolCut.maxY=Math.max(symbolCut.maxY,e.clientY);symbolCut.maxDrift=Math.max(symbolCut.maxDrift,Math.abs(e.clientX-symbolCut.startX));
+ if(Math.abs(e.clientY-symbolCut.startY)>6){const row=clamp((e.clientY-g.y)/(g.radius*2.1)+.5,0,1);symbolCut.morph=symbolCut.direction>0?row:1-row;}
+ symbolCut.target=symbolCutValid()?1:0;return true;
+}
+function cancelSymbolCut(){returnSymbol();}
+function finishSymbolCut(e){if(symbolCut.pointer!==e.pointerId)return false;moveSymbolCut(e);symbolCut.pointer=null;if(e.type!=='pointerup'||!symbolCutValid())returnSymbol();return true;}
+function demoSymbolCut(){experimentNeutral();experiment.amount=0;experimentReset();const g=symbolGeometry();Object.assign(symbolCut,{pointer:null,startX:g.x,startY:g.y-g.radius*1.05,x:g.x,y:g.y-g.radius*1.05,minY:g.y-g.radius*1.05,maxY:g.y+g.radius*1.05,maxDrift:0,strength:1,morph:0,target:0,direction:1,engaged:true,returning:false,demo:true});}
+function advanceSymbolCut(dt){
+ if(symbolCut.returning){symbolCut.strength=Math.max(0,symbolCut.strength-dt/.75);if(!symbolCut.strength)resetSymbolCut();}
+ else if(symbolCut.demo){symbolCut.morph=Math.min(1,symbolCut.morph+dt/.85);if(symbolCut.morph===1){symbolCut.target=1;symbolCut.demo=false;}}
+}
 function symbolCutPose(x,y,seed){
- const g=symbolGeometry(),morph=experimentEase(seed*.12,1,symbolCut.morph),tx=g.x+(experimentHash(seed*191+9)*2-1)*Math.max(0,g.halfWidth-1.5),ty=g.y+(experimentHash(seed*173+5)*2-1)*Math.max(0,g.halfLength-1.5);
+ const g=symbolGeometry(),row=clamp((y-g.y)/(g.radius*2.1)+.5,.001,.999),morph=symbolRowProgress(row),tx=g.x+(experimentHash(seed*191+9)*2-1)*Math.max(0,g.halfWidth-1.5),ty=g.y+(row*2-1)*Math.max(0,g.halfLength-1.5);
  return {x:x+(tx-x)*morph,y:y+(ty-y)*morph,morph};
 }
 
 function drawSymbolGrid(){ctx.save();ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=.7;ctx.beginPath();for(let row=1;row<8;row++)for(let col=1;col<6;col++){const x=col*w/6,y=row*h/8;ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);}ctx.stroke();ctx.restore();}
 function symbolSurfaceTint(y){const g=symbolGeometry(),t=clamp((y-(g.y-g.halfLength))/(g.halfLength*2),0,1);return dayMix(dayPalette.a,dayPalette.b,t);}
 function drawSolidSymbol(){
- if(symbolCut.morph<.72)return;const g=symbolGeometry(),top=g.y-g.halfLength,bottom=g.y+g.halfLength,gradient=ctx.createLinearGradient(g.x,top,g.x,bottom);
+ if(!symbolCut.engaged)return;const g=symbolGeometry(),top=g.y-g.halfLength,bottom=g.y+g.halfLength,gradient=ctx.createLinearGradient(g.x,top,g.x,bottom);
  gradient.addColorStop(0,dayCSS(symbolSurfaceTint(top)));gradient.addColorStop(1,dayCSS(symbolSurfaceTint(bottom)));
- ctx.save();ctx.globalAlpha=experimentEase(.72,1,symbolCut.morph);ctx.fillStyle=gradient;ctx.fillRect(g.x-g.halfWidth,top,g.halfWidth*2,g.halfLength*2);ctx.restore();
+ ctx.save();ctx.fillStyle=gradient;
+ for(let i=0;i<96;i++){const row=(i+.5)/96,alpha=experimentEase(.72,1,symbolRowProgress(row));if(alpha<=0)continue;ctx.globalAlpha=alpha;ctx.fillRect(g.x-g.halfWidth,top+i*(bottom-top)/96,g.halfWidth*2,(bottom-top)/96+.1);}
+ ctx.restore();
 }
 
 // Independent GPU alternative; original Canvas point renderer stays below unchanged.
@@ -954,7 +965,7 @@ function setupPointsGPU(){
  attribute vec2 aFlightDepth;
  uniform float uDepartureMix,uLampReveal,uDive,uMembrane;uniform vec2 uElectron,uGravity;
  uniform vec2 uViewport,uCenter,uAngles;
- uniform vec4 uCutPath,uSymbol;uniform vec2 uCutState;
+ uniform vec4 uCutPath,uSymbol;uniform vec2 uCutState,uSweep;
  uniform vec4 uTouches[2];uniform vec2 uTargets[11],uGesture;uniform float uSplit,uSmallScale,uFlowTime,uTwist;
  uniform float uRadius,uBreath,uClock,uFluid,uDeform,uOpacity,uEnergy,uSize,uSoft,uDpr,uSide;
  uniform vec3 uDayA,uDayB;uniform vec4 uDayLight;varying vec3 vTint;
@@ -995,9 +1006,11 @@ function setupPointsGPU(){
   for(int j=0;j<9;j++){float d=length(pixel-uTargets[j]);if(d<nearestDistance){secondDistance=nearestDistance;nearestDistance=d;nearest=uTargets[j];found=true;}else{secondDistance=min(secondDistance,d);}}
   if(found){float gain=gravity*(1.-smoothstep(0.,uGravity.y,nearestDistance))*smoothstep(0.,uGravity.y*.4,secondDistance-nearestDistance),angle=.22*gain*sin(uFlowTime*.55+aPoint.w*6.2831853);vec2 delta=pixel-nearest;pixel=nearest+vec2(delta.x*cos(angle)-delta.y*sin(angle),delta.x*sin(angle)+delta.y*cos(angle))*(1.-.84*gain);}
  }
- // Grains move directly into the rectangular surface, with no preliminary stretching.
- float symbolMix=smoothstep(aPoint.w*.12,1.,uCutState.y);
- vec2 symbolTarget=uSymbol.xy+vec2((rnd(aPoint.w*191.+9.)*2.-1.)*max(0.,uSymbol.w-1.5),(rnd(aPoint.w*173.+5.)*2.-1.)*max(0.,uSymbol.z-1.5));
+ // Each row converges only after the finger has traversed it; vertical order stays stable.
+ float symbolRow=clamp((pixel.y-uSymbol.y)/(uRadius*2.1)+.5,.001,.999);
+ float sweepRow=uSweep.x>0.?symbolRow:1.-symbolRow;
+ float symbolMix=smoothstep(sweepRow,min(1.,sweepRow+.12),uCutState.y)*uCutState.x*uSweep.y;
+ vec2 symbolTarget=vec2(uSymbol.x+(rnd(aPoint.w*191.+9.)*2.-1.)*max(0.,uSymbol.w-1.5),uSymbol.y+(symbolRow*2.-1.)*max(0.,uSymbol.z-1.5));
  pixel=mix(pixel,symbolTarget,symbolMix);
  if(aLamp>=0.&&uSplit>.001){for(int j=0;j<11;j++){if(aLamp==float(j))pixel=uTargets[j];}}
  float depth=(zz+1.45)/2.9,rim=exp(-(zz*1.55)*(zz*1.55));
@@ -1040,7 +1053,7 @@ function setupPointsGPU(){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0,0,0,0);
  const uniforms={};for(const name of ['Viewport','Center','Angles','Radius','Breath','Clock','Fluid','Deform','Opacity','Energy','Size','Soft','Dpr','Side'])uniforms[name]=gl.getUniformLocation(program,'u'+name);
- uniforms.CutPath=gl.getUniformLocation(program,'uCutPath');uniforms.CutState=gl.getUniformLocation(program,'uCutState');uniforms.Symbol=gl.getUniformLocation(program,'uSymbol');
+ uniforms.Sweep=gl.getUniformLocation(program,'uSweep');uniforms.CutPath=gl.getUniformLocation(program,'uCutPath');uniforms.CutState=gl.getUniformLocation(program,'uCutState');uniforms.Symbol=gl.getUniformLocation(program,'uSymbol');
  uniforms.Membrane=gl.getUniformLocation(program,'uMembrane');uniforms.Relief=gl.getUniformLocation(program,'uRelief');uniforms.Gravity=gl.getUniformLocation(program,'uGravity');uniforms.Electron=gl.getUniformLocation(program,'uElectron');uniforms.Dive=gl.getUniformLocation(program,'uDive');uniforms.DayA=gl.getUniformLocation(program,'uDayA');uniforms.DayB=gl.getUniformLocation(program,'uDayB');uniforms.DayLight=gl.getUniformLocation(program,'uDayLight');
  uniforms.Touches=gl.getUniformLocation(program,'uTouches[0]');
  uniforms.Gesture=gl.getUniformLocation(program,'uGesture');uniforms.FlowTime=gl.getUniformLocation(program,'uFlowTime');uniforms.Twist=gl.getUniformLocation(program,'uTwist');
@@ -1067,7 +1080,7 @@ function setupPointsGPU(){
   gl.uniform1f(uniforms.LampReveal,experiment.reveal);
   gl.uniform1f(uniforms.DepartureMix,departures?(experiment.target===1?1:experimentEase(0,.3,experiment.amount)):0);
   if(sphereModel.mode==='cloud'){gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);}else gl.disable(gl.DEPTH_TEST);
-  const symbol=symbolGeometry();gl.uniform4f(uniforms.CutPath,symbolCut.startX,symbolCut.startY,symbolCut.x,symbolCut.y);gl.uniform2f(uniforms.CutState,symbolCut.strength,symbolCut.morph);gl.uniform4f(uniforms.Symbol,symbol.x,symbol.y,symbol.halfLength,symbol.halfWidth);
+  const symbol=symbolGeometry();gl.uniform2f(uniforms.Sweep,symbolCut.direction,symbolCut.engaged?1:0);gl.uniform4f(uniforms.CutPath,symbolCut.startX,symbolCut.startY,symbolCut.x,symbolCut.y);gl.uniform2f(uniforms.CutState,symbolCut.strength,symbolCut.morph);gl.uniform4f(uniforms.Symbol,symbol.x,symbol.y,symbol.halfLength,symbol.halfWidth);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.uniform3fv(uniforms.DayA,new Float32Array(dayPalette.a.map(v=>v/255)));gl.uniform3fv(uniforms.DayB,new Float32Array(dayPalette.b.map(v=>v/255)));gl.uniform4f(uniforms.DayLight,dayPalette.x*w,dayPalette.y*h,Math.max(w,h)*dayPalette.spread,dayPalette.balance);
   gl.uniform4fv(uniforms.Touches,new Float32Array(experimentDeformationHandles().flatMap(t=>[t.ax,t.ay,t.x,t.y])));
@@ -1075,7 +1088,7 @@ function setupPointsGPU(){
   gl.uniform1f(uniforms.Split,experiment.amount);gl.uniform1f(uniforms.Dive,lampInteraction.entry==='dive'?1:0);gl.uniform2f(uniforms.Electron,lampInteraction.electronAmplitude,lampInteraction.electronSpeed);gl.uniform2f(uniforms.Gravity,lampInteraction.gravityStrength,lampInteraction.gravityRadius);gl.uniform1f(uniforms.Relief,lampInteraction.beadRelief);gl.uniform1f(uniforms.Membrane,sphereModel.mode==='membrane'?1:0);gl.uniform1f(uniforms.SmallScale,EXPERIMENT_SMALL_SCALE);
   gl.uniform2fv(uniforms.Targets,new Float32Array(Array.from({length:lights.length+2},(_,i)=>{const p=experimentCenter(i,experiment.amount,experiment.time);return [p.x,p.y];}).flat()));
   gl.uniform2f(uniforms.Viewport,w,h);gl.uniform2f(uniforms.Center,cx,cy);gl.uniform2f(uniforms.Angles,angleX,angleY);
-  const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness*(1-symbolCut.morph),Dpr:dpr};
+  const values={Radius:radius,Breath:breathe,Clock:clock,Fluid:sphereCfg.fluidity,Deform:sphereCfg.deform,Opacity:sphereCfg.opacity*deckPointAlpha,Energy:energy,Size:sphereCfg.size*deckPointScale,Soft:sphereCfg.softness,Dpr:dpr};
   for(const [k,v] of Object.entries(values))gl.uniform1f(uniforms[k],v);
   for(const side of [0,1]){gl.uniform1f(uniforms.Side,side);gl.drawArrays(gl.POINTS,0,particles.length);}
   ctx.drawImage(c,0,0,w,h);return true;
@@ -2027,7 +2040,7 @@ function drawFrostedLeaf(top,offset,amount){
  ctx.save();ctx.beginPath();ctx.rect(offset,top,w-offset,h/2);ctx.clip();ctx.filter=`blur(${lampInteraction.blur}px)`;ctx.drawImage(frostedLeafCanvas,-18,-18,w+36,h+36);ctx.filter='none';ctx.fillStyle=`rgba(245,248,250,${.08*amount})`;ctx.fillRect(offset,top,w-offset,h/2);ctx.restore();
 }
 function renderExperiment(now,dt){
- clock+=dt*sphereCfg.speed;experiment.time+=dt;advanceSymbolCut(dt);
+ if(!symbolCut.engaged){clock+=dt*sphereCfg.speed;experiment.time+=dt;}advanceSymbolCut(dt);
  if(EXPERIMENT_AUTO_RETURN&&experiment.deadline&&now>=experiment.deadline&&experiment.amount===1&&!experiment.points.size&&!placingLamps&&!document.body.classList.contains('atelier'))experimentNeutral();
  updateExperimentTouch(dt);advanceExperiment(dt);smoothLampLevels(dt);updateLampGrid(dt);updateEdgeLeaf(dt);
  for(const zone of ['upper','lower','center'])deck.gridDisplay[zone]+=(deck.gridLayers[zone]-deck.gridDisplay[zone])*(1-Math.exp(-dt*8));
@@ -2364,7 +2377,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E37',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,shape:'rectangle',surface:'background-colour-duo',assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E38',exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-position',rowOrder:'preserved',shape:'rectangle',surface:'background-colour-duo',assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
@@ -2404,7 +2417,7 @@ for(const node of [panel.querySelector('.tabs'),document.getElementById('program
 experimentSettings.append(caps);
 retiredSettings.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled=true);
 document.getElementById('pointPanel').classList.add('group');
-panel.querySelector('.bottomline .hint').textContent='Tracer verticalement : le trait se forme sans relâcher · Toucher à côté : retour à la sphère';
+panel.querySelector('.bottomline .hint').textContent='Le trait suit la position du doigt · Pause : la formation s’arrête · Toucher à côté : retour à la sphère';
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
