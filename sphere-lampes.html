@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 46 · Toile bleu nuit · Fentes de lumière</title>
+<title>DECK — Essai 47 · Toile bleu nuit · Fentes de lumière</title>
 <style>
 [hidden]{display:none!important}
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
@@ -90,9 +90,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E46</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E47</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 46 · Toile bleu nuit · Fentes de lumière</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 47 · Toile bleu nuit · Fentes de lumière</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -936,7 +936,7 @@ function startDrawnLight(e){
  if(!drawnLights.enabled||placingLamps||document.body.classList.contains('atelier'))return false;e.preventDefault();e.stopImmediatePropagation();canvas.setPointerCapture(e.pointerId);
  if(drawnLights.points.size>=2)return true;drawnLights.points.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
  if(drawnLights.points.size===1){drawnLights.multi=false;drawnLights.pinch=null;drawnLights.stroke={id:e.pointerId,points:[{x:e.clientX/w,y:e.clientY/h,t:drawnLights.time}]};drawnLights.draft=null;}
- else{const [a,b]=[...drawnLights.points.values()],hits=drawnHits((a.x+b.x)/2,(a.y+b.y)/2,76),selected=hits.find(l=>l.id===drawnLights.selected),id=selected?.id??hits[0]?.id;drawnLights.multi=true;drawnLights.stroke=null;drawnLights.draft=null;drawnLights.pinch=id===undefined?null:{id,distance:Math.max(12,Math.hypot(a.x-b.x,a.y-b.y)),base:drawnLights.lamps[id].level};if(id!==undefined)selectDrawnLight(id);}
+ else{const [a,b]=[...drawnLights.points.values()],hits=drawnHits((a.x+b.x)/2,(a.y+b.y)/2,76),selected=hits.find(l=>l.id===drawnLights.selected),id=selected?.id??hits[0]?.id??drawnLights.selected??undefined;drawnLights.multi=true;drawnLights.stroke=null;drawnLights.draft=null;drawnLights.pinch=id===undefined?null:{id,distance:Math.max(12,Math.hypot(a.x-b.x,a.y-b.y)),base:drawnLights.lamps[id].level};if(id!==undefined)selectDrawnLight(id);}
  return true;
 }
 function moveDrawnLight(e){
@@ -944,12 +944,12 @@ function moveDrawnLight(e){
  if(drawnLights.multi){if(drawnLights.points.size===2&&drawnLights.pinch){const [a,b]=[...drawnLights.points.values()],distance=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y)),pinch=drawnLights.pinch;const l=drawnLights.lamps[pinch.id];l.level=clamp(pinch.base+Math.log(distance/pinch.distance)*.9,0,1);if(l.level>.01)l.lastLevel=l.level;syncDrawnSelection();}return true;}
  const stroke=drawnLights.stroke;if(!stroke||stroke.id!==e.pointerId)return true;const previous=stroke.points[stroke.points.length-1];if(Math.hypot(e.clientX-previous.x*w,e.clientY-previous.y*h)<2)return true;
  stroke.points.push({x:clamp(e.clientX/w,0,1),y:clamp(e.clientY/h,0,1),t:drawnLights.time});if(stroke.points.length>256)stroke.points=stroke.points.filter((_,i)=>i%2===0||i===stroke.points.length-1);
- const id=classifyDrawnStroke(stroke.points);drawnLights.draft=id===null?null:makeDrawnLamp(id,stroke.points,drawnLights.lamps[id]?.level??.72);return true;
+ const id=classifyDrawnStroke(stroke.points);if(id!==null&&drawnLights.lamps[id]){drawnLights.draft=null;if(drawnLights.selected!==id)selectDrawnLight(id);}else drawnLights.draft=id===null?null:makeDrawnLamp(id,stroke.points,.72);return true;
 }
 function finishDrawnLight(e){
  if(!drawnLights.enabled||!drawnLights.points.has(e.pointerId))return false;e.preventDefault();e.stopImmediatePropagation();const p=drawnLights.points.get(e.pointerId);
  if(e.type!=='pointerup'){cancelDrawnGesture();return true;}
- if(!drawnLights.multi&&drawnLights.stroke){moveDrawnLight(e);const stroke=drawnLights.stroke,id=classifyDrawnStroke(stroke.points);if(id!==null){drawnLights.lamps[id]=makeDrawnLamp(id,stroke.points,drawnLights.lamps[id]?.level??.72);selectDrawnLight(id);drawnLights.lastTap=null;saveDrawnLights();}
+ if(!drawnLights.multi&&drawnLights.stroke){moveDrawnLight(e);const stroke=drawnLights.stroke,id=classifyDrawnStroke(stroke.points);if(id!==null){if(!drawnLights.lamps[id])drawnLights.lamps[id]=makeDrawnLamp(id,stroke.points,.72);selectDrawnLight(id);drawnLights.lastTap=null;saveDrawnLights();}
   else if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12){const hits=drawnHits(e.clientX,e.clientY);if(!hits.length){selectDrawnLight(null);drawnLights.lastTap=null;}
    else if(hits.length>1){const index=hits.findIndex(l=>l.id===drawnLights.selected);selectDrawnLight(hits[(index+1)%hits.length].id);drawnLights.lastTap=null;}
    else{const id=hits[0].id,previous=drawnLights.lastTap;selectDrawnLight(id);if(previous?.id===id&&drawnLights.time-previous.t<.42){const l=drawnLights.lamps[id];setDrawnLevel(id,l.level>.01?0:l.lastLevel||.72);drawnLights.lastTap=null;}else drawnLights.lastTap={id,t:drawnLights.time};}
@@ -971,11 +971,12 @@ function drawNightCanvas(){
  if(dayChromeKey!=='night-canvas'){dayChromeKey='night-canvas';document.documentElement.style.backgroundColor='#010207';document.body.style.background='#010207';document.getElementById('deckThemeColor').setAttribute('content','#010207');}
 }
 function drawSlitSpill(lamp,g,level){
- const vertical=lamp.id===0,len=vertical?g.height:g.width,spread=drawnLook.spill;
- // Cache a smooth two-axis light field: across the fabric and along the slit.
+ const vertical=lamp.id===0,len=vertical?g.height:g.width,spread=drawnLook.spill,pad=spread*.85;
+ // A rounded light field continues past both endpoints; there is no rectangular mask.
  const cache=drawSlitSpill.cache||(drawSlitSpill.cache=[]),key=spread+':'+len;
- let field=cache[lamp.id];if(!field||field.key!==key){const surface=document.createElement('canvas');surface.width=Math.max(2,Math.ceil(spread*2));surface.height=Math.max(2,Math.ceil(len*2));const c=surface.getContext('2d'),cross=c.createLinearGradient(0,0,surface.width,0);cross.addColorStop(0,'rgba(248,249,255,0)');cross.addColorStop(.35,'rgba(248,249,255,.015)');cross.addColorStop(.7,'rgba(248,249,255,.1)');cross.addColorStop(1,'rgba(248,249,255,.48)');c.fillStyle=cross;c.fillRect(0,0,surface.width,surface.height);c.globalCompositeOperation='destination-in';const along=c.createLinearGradient(0,0,0,surface.height);along.addColorStop(0,'rgba(0,0,0,0)');along.addColorStop(.09,'rgba(0,0,0,.9)');along.addColorStop(.5,'black');along.addColorStop(.91,'rgba(0,0,0,.9)');along.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=along;c.fillRect(0,0,surface.width,surface.height);field=cache[lamp.id]={key,surface};}
- ctx.save();ctx.translate(g.x,g.y);if(!vertical)ctx.transform(0,1,1,0,0,0);ctx.globalAlpha=Math.min(1,level*drawnLook.spillStrength);ctx.drawImage(field.surface,-spread,0,spread,len);ctx.restore();
+ let field=cache[lamp.id];if(!field||field.key!==key){const surface=document.createElement('canvas'),scale=2;surface.width=Math.max(2,Math.ceil((spread+pad*.4)*scale));surface.height=Math.max(2,Math.ceil((len+pad*2)*scale));const c=surface.getContext('2d'),image=c.createImageData(surface.width,surface.height);
+ for(let y=0;y<surface.height;y++){const v=y/scale-pad,over=Math.max(0,-v,v-len),end=Math.min(Math.abs(v),Math.abs(v-len));for(let x=0;x<surface.width;x++){const u=x/scale-spread,d=Math.abs(u),r2=(d/spread)**2+(over/(spread*.72))**2,edge=Math.exp(-5*r2),ends=Math.exp(-((end/(spread*.4))**2)-(d/(spread*.5))**2),outer=Math.max(0,1-r2/1.4),side=u<=0?1:Math.min(1,over/(spread*.16))*Math.exp(-((u/(spread*.24))**2)),alpha=(.46*edge+.16*ends)*outer*outer*side;const k=(y*surface.width+x)*4;image.data[k]=248;image.data[k+1]=249;image.data[k+2]=255;image.data[k+3]=Math.round(255*Math.min(.8,alpha));}}c.putImageData(image,0,0);field=cache[lamp.id]={key,surface};}
+ ctx.save();ctx.translate(g.x,g.y);if(!vertical)ctx.transform(0,1,1,0,0,0);ctx.globalAlpha=Math.min(1,level*drawnLook.spillStrength);ctx.drawImage(field.surface,-spread,-pad,spread+pad*.4,len+pad*2);ctx.restore();
 }
 function drawLampRectangle(lamp){
  if(!(lamp.id===0?drawnLook.verticalRectangle:drawnLook.horizontalRectangle))return;
@@ -1000,7 +1001,7 @@ function drawPointLamp(lamp){
 function renderDrawnLights(dt){
  drawnLights.time+=dt;apertureAtmosphere.time+=dt;if(drawnLook.nightCanvas)drawNightCanvas();else drawDayCycle();ctx.save();if(drawnLook.nightCanvas)ctx.globalAlpha=.2;drawSymbolGrid();ctx.restore();const lamps=drawnLights.lamps.slice();if(drawnLights.draft)lamps[drawnLights.draft.id]=drawnLights.draft;
  for(const lamp of lamps)if(lamp){lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));if(lamp.id===0)drawVaporLamp(lamp,drawnLights.selected===lamp.id);else drawPointLamp(lamp);drawLampRectangle(lamp);}
- const selected=drawnLights.lamps[drawnLights.selected];if(selected){const p=drawnAt(selected,.5);ctx.save();ctx.font='11px system-ui';ctx.fillStyle='rgba(255,255,255,.85)';ctx.textAlign='center';ctx.fillText((selected.id===0?'Lampe 1':'Lampe 2')+' · '+Math.round(selected.level*100)+' %',clamp(p.x,90,w-90),clamp(selected.id===0?p.y+36:p.y+34,24,h-24));ctx.restore();}drawEdgeMarks();
+ drawEdgeMarks();
  frames++;frameAcc+=dt;if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
 function demoDrawnLights(){cancelDrawnGesture();const t=drawnLights.time-3;drawnLights.lamps=[makeDrawnLamp(0,[{x:.46,y:.30,t},{x:.46,y:.69,t}],.72),makeDrawnLamp(1,[{x:.15,y:.49,t},{x:.85,y:.49,t}],.72)];selectDrawnLight(null);saveDrawnLights();}
@@ -2589,7 +2590,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E46',drawnLights:{appearance:{...drawnLook},enabled:drawnLights.enabled,selected:drawnLights.selected,lamps:drawnLights.lamps.map(l=>l?{id:l.id,material:l.id===0?'white-vapour':'white-points',level:l.level,points:l.points.map(p=>({x:p.x,y:p.y}))}:null)},exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'animated-white-light-field',atmosphere:'continuous-white-vapour-with-rest-halo',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E47',drawnLights:{appearance:{...drawnLook},enabled:drawnLights.enabled,selected:drawnLights.selected,lamps:drawnLights.lamps.map(l=>l?{id:l.id,material:l.id===0?'white-vapour':'white-points',level:l.level,points:l.points.map(p=>({x:p.x,y:p.y}))}:null)},exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'animated-white-light-field',atmosphere:'continuous-white-vapour-with-rest-halo',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
