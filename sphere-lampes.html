@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK — Essai 51 · Toile bleu nuit · Fentes de lumière</title>
+<title>DECK — Essai 52 · Toile bleu nuit · Fentes de lumière</title>
 <style>
 [hidden]{display:none!important}
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
@@ -90,9 +90,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E51</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E52</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 51 · Toile bleu nuit · Fentes de lumière</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 52 · Toile bleu nuit · Fentes de lumière</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -981,18 +981,25 @@ function drawNightCanvas(){
  const shade=ctx.createLinearGradient(0,0,w,h);shade.addColorStop(0,'rgba(0,0,0,.67)');shade.addColorStop(.48,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,.42)');ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  if(dayChromeKey!=='night-canvas'){dayChromeKey='night-canvas';document.documentElement.style.backgroundColor='#010207';document.body.style.background='#010207';document.getElementById('deckThemeColor').setAttribute('content','#010207');}
 }
+// Finite-slit illumination: constant-angle rays converge exactly at each endpoint.
+function slitFanSample(outward,along,length,reach){
+ const distance=Math.max(.15,Math.abs(outward)),head=Math.atan2(along,distance),foot=Math.atan2(along-length,distance),opening=(head-foot)/Math.PI,over=Math.max(0,-along,along-length),range=Math.hypot(outward,over),falloff=Math.pow(Math.max(0,1-range/reach),1.65);
+ const headWeight=1/(1+Math.hypot(distance,along)/(reach*.5)),footWeight=1/(1+Math.hypot(distance,along-length)/(reach*.5));
+ const fanA=Math.sin(head*18+.5)*.045+Math.sin(head*31+1.7)*.022,fanB=Math.sin(foot*18+1.1)*.045+Math.sin(foot*29+.3)*.022;
+ const rays=1+fanA*headWeight+fanB*footWeight,side=outward>=0?1:.12*Math.pow(1-opening,1.3);
+ return clamp(.86*Math.pow(opening,.92)*falloff*rays*side,0,.9);
+}
 function drawSlitSpill(lamp,g,level){
- const vertical=lamp.id===0,len=vertical?g.height:g.width,spread=drawnLook.spill,pad=spread*.85;
- // A rounded light field continues past both endpoints; there is no rectangular mask.
- const cache=drawSlitSpill.cache||(drawSlitSpill.cache=[]),key=spread+':'+len+':'+drawnLook.edgeSoftness;
- let field=cache[lamp.id];if(!field||field.key!==key){const surface=document.createElement('canvas'),scale=2;surface.width=Math.max(2,Math.ceil((spread+pad*.4)*scale));surface.height=Math.max(2,Math.ceil((len+pad*2)*scale));const c=surface.getContext('2d'),image=c.createImageData(surface.width,surface.height);
- for(let y=0;y<surface.height;y++){const v=y/scale-pad,over=Math.max(0,-v,v-len),end=Math.min(Math.abs(v),Math.abs(v-len));for(let x=0;x<surface.width;x++){const u=x/scale-spread,d=Math.abs(u),r2=(d/spread)**2+(over/(spread*.72))**2,edge=Math.exp(-5*r2),ends=Math.exp(-((end/(spread*.4))**2)-(d/(spread*.5))**2),outer=Math.max(0,1-r2/1.4),side=u<=0?.5+.5*Math.tanh(-u/drawnLook.edgeSoftness):Math.min(1,.5*Math.exp(-((u/drawnLook.edgeSoftness)**2))+Math.min(1,over/(spread*.16))*Math.exp(-((u/(spread*.24))**2))),alpha=(.46*edge+.16*ends)*outer*outer*side;const k=(y*surface.width+x)*4;image.data[k]=248;image.data[k+1]=249;image.data[k+2]=255;image.data[k+3]=Math.round(255*Math.min(.8,alpha));}}c.putImageData(image,0,0);field=cache[lamp.id]={key,surface};}
- ctx.save();ctx.translate(vertical?g.x+g.width:g.x,vertical?g.y:g.y+g.height);if(vertical)ctx.transform(-1,0,0,1,0,0);else ctx.transform(0,-1,1,0,0,0);ctx.globalAlpha=Math.min(1,level*drawnLook.spillStrength);ctx.drawImage(field.surface,-spread,-pad,spread+pad*.4,len+pad*2);ctx.restore();
+ const vertical=lamp.id===0,len=vertical?g.height:g.width,reach=drawnLook.spill*2.6,pad=reach,back=reach*.55;
+ const cache=drawSlitSpill.cache||(drawSlitSpill.cache=[]),key=reach+':'+len;
+ let field=cache[lamp.id];if(!field||field.key!==key){const surface=document.createElement('canvas'),scale=1.5;surface.width=Math.max(2,Math.ceil((reach+back)*scale));surface.height=Math.max(2,Math.ceil((len+pad*2)*scale));const c=surface.getContext('2d'),image=c.createImageData(surface.width,surface.height);
+ for(let y=0;y<surface.height;y++){const v=y/scale-pad;for(let x=0;x<surface.width;x++){const outward=reach-x/scale,alpha=slitFanSample(outward,v,len,reach),k=(y*surface.width+x)*4;image.data[k]=246;image.data[k+1]=248;image.data[k+2]=255;image.data[k+3]=Math.round(255*alpha);}}c.putImageData(image,0,0);field=cache[lamp.id]={key,surface};}
+ ctx.save();ctx.translate(vertical?g.x+g.width:g.x,vertical?g.y:g.y+g.height);if(vertical)ctx.transform(-1,0,0,1,0,0);else ctx.transform(0,-1,1,0,0,0);ctx.globalAlpha=Math.min(1,level*drawnLook.spillStrength);ctx.drawImage(field.surface,-reach,-pad,reach+back,len+pad*2);ctx.restore();
 }
 function drawLampRectangle(lamp){
  if(!(lamp.id===0?drawnLook.verticalRectangle:drawnLook.horizontalRectangle))return;
- const base=drawnBounds(lamp),ext=drawnLook.slitLight?drawnLook.spill*.25:0,g=lamp.id===0?{...base,y:base.y-ext,height:base.height+ext*2}:{...base,x:base.x-ext,width:base.width+ext*2},level=lamp.displayLevel,ready=1;if(level<.002||ready<.001)return;
- if(drawnLook.slitLight)drawSlitSpill(lamp,base,level*ready);
+ const base=drawnBounds(lamp),ext=0,g=lamp.id===0?{...base,y:base.y-ext,height:base.height+ext*2}:{...base,x:base.x-ext,width:base.width+ext*2},level=lamp.displayLevel,ready=1;if(level<.002||ready<.001)return;
+ if(drawnLook.slitLight)drawSlitSpill(lamp,g,level*ready);
  ctx.save();ctx.globalAlpha=level*ready;
  if(drawnLook.slitLight){ctx.fillStyle='rgba(0,0,0,.85)';if(lamp.id===0)ctx.fillRect(g.x-2,g.y,2,g.height);else ctx.fillRect(g.x,g.y-2,g.width,2);}
  ctx.shadowColor='rgba(255,255,255,.4)';ctx.shadowBlur=drawnLook.slitLight?2:12;ctx.fillStyle='rgb(247,247,243)';ctx.fillRect(g.x,g.y,g.width,g.height);ctx.shadowBlur=0;
@@ -2608,7 +2615,7 @@ canvas.addEventListener('pointercancel',endPointer);
 document.getElementById('reset').addEventListener('click',()=>{angleX=.47;angleY=-.18;sceneZoom=.82;closeFan();fanReveal=0;clearLampSelection();});
 document.getElementById('toggle').addEventListener('click',()=>{if(placingLamps)finishPlaceLamps(true);deckLaboratory(panel.classList.contains('hidden'));});
 function collectExperimentSettings(){
- return {format:'DECK-settings-v1',version:'E51',drawnLights:{appearance:{...drawnLook},enabled:drawnLights.enabled,selected:drawnLights.selected,lamps:drawnLights.lamps.map(l=>l?{id:l.id,material:l.id===0?'vertical-slit':l.id===1?'horizontal-slit':l.id===2?'outward-circle':l.id===3?'quarter-circle-angle':l.id===4?'double-tap-point':'downward-chevron',level:l.level,points:l.points.map(p=>({x:p.x,y:p.y}))}:null)},exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'animated-white-light-field',atmosphere:'continuous-white-vapour-with-rest-halo',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
+ return {format:'DECK-settings-v1',version:'E52',drawnLights:{appearance:{...drawnLook},enabled:drawnLights.enabled,selected:drawnLights.selected,lamps:drawnLights.lamps.map(l=>l?{id:l.id,material:l.id===0?'vertical-slit':l.id===1?'horizontal-slit':l.id===2?'outward-circle':l.id===3?'quarter-circle-angle':l.id===4?'double-tap-point':'downward-chevron',level:l.level,points:l.points.map(p=>({x:p.x,y:p.y}))}:null)},exportedAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,sphere:{...sphereCfg,model:sphereModel.mode,profiles:{...sphereModeProfiles,[sphereModel.mode]:captureSphereModelProfile()},scale:sphereAppearance.scale,angleX,angleY,zoom:sceneZoom},lights:{...experimentCfg,positions:fixedLampPositions.map(p=>({...p})),levels:[...lampManualLevels],dimmable:[...deckDimmable]},dayCycle:dayCycle.map(p=>({...p})),preview:{automatic:dayPreview.auto,hour:dayCurrentHour(),playing:!!dayPreview.playback},animation:{durationSeconds:3.2,automaticReturn:EXPERIMENT_AUTO_RETURN,entry:lampInteraction.defaultEntry,symbolGesture:{type:'central-vertical-attraction',continuousGrid:true,assembleWhileHeld:true,drivenBy:'finger-passage-with-individual-delay',arrivalDelaySeconds:[.07,.25],travelSeconds:[.24,.66],rowOrder:'preserved',shape:'rectangle',surface:aperture.mode==='white'?'soft-white-opening':'background-colour-duo',aperture:{...aperture,interior:'animated-white-light-field',atmosphere:'continuous-white-vapour-with-rest-halo',pinch:'inward-centred-pair',exclusivePinch:true},assemblySeconds:.85,thickness:symbolGeometry().halfWidth*2},particleModel:sphereModel.mode==='membrane'?'point-membrane':'irregular-volume',particleMaterial:lampInteraction.beadRelief>.001?'opaque-matte-beads':'flat-points',cameraStopsInside:lampInteraction.defaultEntry==='dive',hapticsPlannedForNativeApp:true},lampControls:{...lampInteraction,alignedPositions:experimentLayout().map(p=>({x:p.x/w,y:p.y/h}))},layers:{fan:{...edgeLeaf.fan},music:{...edgeLeaf.music}}};
 }
 const exportControls=document.createElement('div');exportControls.className='group';exportControls.style.cssText='padding-top:0;margin-top:0;border-top:0';exportControls.innerHTML='<div class="presets" style="margin-top:0"><button type="button" class="preset" id="copySettings">Copier tous les réglages</button></div><p id="copySettingsStatus" class="hint" role="status" aria-live="polite"></p><textarea id="settingsCopyFallback" readonly hidden aria-label="Réglages à copier" style="width:100%;height:150px;background:#141418;color:#eee;font-size:11px"></textarea>';
 panel.querySelector('.heading').after(exportControls);
