@@ -91,9 +91,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 </head>
 <body>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
-<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E63.2</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
+<div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E63.3</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
-  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 63.2 · 4 commandes indépendantes</span></div>
+  <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 63.3 · 4 commandes indépendantes</span></div>
   <div class="tabs">
     <button class="tab active" data-view="sphereView">Sphère</button>
     <button class="tab" data-view="programView">Programmes</button>
@@ -973,20 +973,8 @@ function deckEnsurePreviewLights(room){
 }
 // E63 test-only visible confirmation; separate from E62 soft-light relief.
 const deckPreviewActiveIds=new Set();
-function drawDeckPreviewFeedback(){
- if(!deckPreviewActiveIds.size)return;
- const c=ctx;c.save();c.lineCap='round';c.lineJoin='round';
- for(const id of deckPreviewActiveIds){
-  const lamp=drawnLights.lamps[id];if(!lamp)continue;
-  const pts=lamp.points;if(!pts?.length)continue;
-  c.beginPath();
-  if(id===4||id===6){const x=pts[0].x*w,y=pts[0].y*h,r=id===6?12:17;c.arc(x,y,r,0,Math.PI*2);}
-  else{c.moveTo(pts[0].x*w,pts[0].y*h);for(let i=1;i<pts.length;i++)c.lineTo(pts[i].x*w,pts[i].y*h);}
-  c.globalAlpha=.85;c.shadowColor='#ffe2a0';c.shadowBlur=24;c.strokeStyle='#fff1c7';c.lineWidth=7;c.stroke();
-  c.shadowBlur=0;c.strokeStyle='#fffaf0';c.lineWidth=1.5;c.stroke();
- }
- c.restore();
-}
+function drawDeckPreviewFeedback(){/* E63.3: diagnostic glow removed; native E62 relief only. */}
+
 function activateDeckRoom(room,on){
  const label=room==='upper'?'Séjour':'Chambre';
  const ids=deckPreviewRoomIds[room]||[];
