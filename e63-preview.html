@@ -952,13 +952,36 @@ function handleDrawnTap(x,y){const now=drawnGestureNow(),previous=drawnLights.la
 function updateDrawnPinch(){const pinch=drawnLights.pinch;if(!pinch||drawnLights.points.size!==2)return;const [a,b]=[...drawnLights.points.values()],distance=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y));if(!pinch.axis){const gx=Math.abs(a.x-b.x)-pinch.spanX,gy=Math.abs(a.y-b.y)-pinch.spanY,ax=Math.abs(gx),ay=Math.abs(gy);if(Math.max(ax,ay)<8)return;if(Math.max(ax,ay)<Math.min(ax,ay)*1.35&&Math.max(ax,ay)<24)return;const axis=ay>ax?'vertical':'horizontal';if(axis==='vertical'&&distance-pinch.distance<10)return;pinch.axis=axis;pinch.id=axis==='vertical'?6:pinch.selected;if(pinch.id===undefined)return;if(axis==='vertical'&&!drawnLights.lamps[6])drawnLights.lamps[6]=makeFixedDrawnDisc(6,pinch.x,pinch.y,.15);if(!drawnLights.lamps[pinch.id])return;pinch.base=drawnLights.lamps[pinch.id].level;selectDrawnLight(pinch.id);}if(pinch.id!==undefined&&drawnLights.lamps[pinch.id])setDrawnLevel(pinch.id,clamp(pinch.base+Math.log(distance/pinch.distance)*.9,0,1));}
 
 // E63: spatial group controls; only already drawn individual lights are affected.
+// E63 preview-only symbols: E62 shapes, independent of persisted user drawings.
+const deckPreviewRoomIds={upper:[0,3,4],lower:[1,2,5,6]};
+function deckEnsurePreviewLights(room){
+ const ids=room==='all'?[0,1,2,3,4,5,6]:deckPreviewRoomIds[room]||[];
+ const centres={0:[.24,.26],1:[.37,.72],2:[.62,.72],3:[.50,.27],4:[.76,.28],5:[.23,.72],6:[.79,.72]};
+ for(const id of ids){
+  if(drawnLights.lamps[id])continue;
+  const [x,y]=centres[id],dx=.055,dy=.055,t=drawnLights.time-3;
+  let points;
+  if(id===0)points=[{x,y:y-dy,t},{x,y:y+dy,t}];
+  else if(id===1)points=[{x:x-dx,y,t},{x:x+dx,y,t}];
+  else if(id===2)points=Array.from({length:49},(_,i)=>({x:x+dx*Math.cos(i/48*Math.PI*2),y:y+dy*Math.sin(i/48*Math.PI*2),t}));
+  else if(id===3)points=[{x:x-dx,y:y-dy,t},{x:x-dx,y:y+dy,t},{x:x+dx,y:y+dy,t}];
+  else if(id===4)points=[{x,y,t},{x,y,t}];
+  else if(id===5)points=[{x:x-dx,y:y+dy,t},{x,y:y-dy,t},{x:x+dx,y:y+dy,t}];
+  else points=[{x,y,t},{x:x+.035,y,t}];
+  drawnLights.lamps[id]=makeDrawnLamp(id,points,.72);
+ }
+}
 function activateDeckRoom(room){
  const label=room==='upper'?'Séjour':room==='lower'?'Chambre':'Toutes les lampes';
+ deckEnsurePreviewLights(room);
  const indicator=document.getElementById('deckGroupFeedback');
- if(indicator){indicator.textContent=label+' · commande reçue';indicator.style.opacity='1';clearTimeout(activateDeckRoom.timer);activateDeckRoom.timer=setTimeout(()=>indicator.style.opacity='0',1800);}
- for(const lamp of drawnLights.lamps){if(!lamp||lamp.id>=7)continue;if(room!=='all'&&drawnLampGroup(lamp)!==room)continue;lamp.level=lamp.lastLevel=Math.max(.1,lamp.lastLevel||lamp.level||.72);}
- saveDrawnLights();syncDrawnSelection();
+ if(indicator){indicator.textContent=label+' · lampes allumées (test)';indicator.style.opacity='1';clearTimeout(activateDeckRoom.timer);activateDeckRoom.timer=setTimeout(()=>indicator.style.opacity='0',1800);}
+ for(const id of (room==='all'?[0,1,2,3,4,5,6]:deckPreviewRoomIds[room]||[])){
+  const lamp=drawnLights.lamps[id];if(lamp)lamp.level=lamp.lastLevel=Math.max(.1,lamp.lastLevel||lamp.level||.72);
+ }
+ syncDrawnSelection();
 }
+
 function cancelDrawnGesture(){drawnLights.points.clear();drawnLights.stroke=null;drawnLights.draft=null;drawnLights.pinch=null;drawnLights.multi=false;drawnLights.held=null;drawnLights.holdAdjust=null;drawnLights.groupGesture=null;}
 function drawnGestureNow(){return typeof performance!=='undefined'?performance.now()/1000:drawnLights.time;}
 function startDrawnLight(e){
