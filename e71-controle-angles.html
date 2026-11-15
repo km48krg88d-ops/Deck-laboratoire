@@ -1192,7 +1192,7 @@ function raisedJoinedAngleSample(px,py,segments,reach){
  const over=Math.max(0,-along,along-total),span=reach*(side<0?1.65:1);
  const falloff=Math.pow(Math.max(0,1-Math.hypot(side,over)/Math.max(.001,span)),1.35);
  const direction=nx*.55-ny*.835;
- return (side>=0?1:-1)*Math.pow(Math.max(0,opening),.72)*falloff*direction;
+ return (side/Math.hypot(side,3))*Math.pow(Math.max(0,opening),.72)*falloff*direction;
 }
 function raisedShapeSample(lamp,px,py,m,segments,reach){const cx=(m.minX+m.maxX)/2,cy=(m.minY+m.maxY)/2;
 if(lamp.id>=7){const rx=Math.max(1,(m.maxX-m.minX)/2),ry=Math.max(1,m.maxY-m.minY),base=lamp.id===7?m.maxY:m.minY,over=Math.max(0,(py-base)*(lamp.id===7?1:-1)),nx=(px-cx)/rx,ny=(py-base)/ry,radial=(Math.hypot(nx,ny)-1)*Math.min(rx,ry),out=over>0?(Math.abs(nx)-1)*rx:radial,distance=over>0?Math.hypot(Math.abs(px-cx)-rx,over):Math.abs(out),sideReach=reach*(out<0?1.65:1),gx=nx/rx,gy=ny/ry,direction=(gx*.55-gy*.835)/Math.max(.0001,Math.hypot(gx,gy));return (out>=0?1:-1)*direction*Math.pow(Math.max(0,1-distance/sideReach),1.65)*Math.exp(-over/Math.max(2,Math.min(rx,ry)*.16));}
@@ -1225,7 +1225,7 @@ float joinedAngle(vec2 q){
  float over=max(0.,max(-along,along-total)),span=reach*(side<0.?1.65:1.);
  float falloff=pow(max(0.,1.-length(vec2(side,over))/max(.001,span)),1.35);
  float direction=dot(normal,vec2(.55,-.835));
- return (side>=0.?1.:-1.)*pow(max(0.,opening),.72)*falloff*direction;
+ return (side/max(.00001,length(vec2(side,3.))))*pow(max(0.,opening),.72)*falloff*direction;
 }
 float sampleMask(vec2 q){if(kind==4||kind==6)return disc(q-centre,kind==4);if(kind==2){vec2 delta=q-centre;float dist=length(delta),dir=dot(delta,vec2(.55,-.835))/max(1.,dist),side=reach*(dir<0.?1.65:1.),profile=dist<=radius?pow(max(0.,1.-(radius-dist)/max(.001,min(radius,side))),1.2):pow(max(0.,1.-(dist-radius)/max(.001,side)),1.65);return (dist>=radius?1.:-1.)*dir*profile;}if((kind==3||kind==5)&&count==2)return joinedAngle(q);float weighted=0.,total=0.;for(int i=0;i<2;i++){if(i>=count)break;vec2 delta=q-segA[i].xy;float along=dot(delta,segA[i].zw),outv=dot(delta,segB[i].yz),len=segB[i].x;if(kind<2)return face(outv,along,len);float over=max(0.,max(-along,along-len)),distance=length(vec2(outv,over)),dir=dot(segB[i].yz,vec2(.55,-.835)),weight=1./pow(1.+distance/10.,6.);weighted+=face(outv,along,len)*sign(dir)*(.45+.55*abs(dir))*weight;total+=weight;}return total>0.?weighted/total:0.;}
 void main(){vec2 q=rect.xy+vec2(gl_FragCoord.x/pixels.x,1.-gl_FragCoord.y/pixels.y)*rect.zw;float value=sampleMask(q),noise=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5,alpha=clamp(min(.94,abs(value)*.94*(value<0.?shadow/1.65:1.))+noise/255.,0.,1.),white=value>=0.?1.:0.;gl_FragColor=vec4(vec3(white*alpha),alpha);}`;
