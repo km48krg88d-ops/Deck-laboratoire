@@ -1297,8 +1297,8 @@ float joinedAngle(vec2 q){
  vec2 foot=mix(q0,q1,k),vn=mix(segB[0].yz,segB[1].yz,k);
  vec2 normal=vn/max(.00001,length(vn));
  float side=dot(q-foot,normal),distance=min(d0,d1);
- float radius=clamp(reach*.26,34.,52.);
- float falloff=exp(-pow(distance/radius,1.65));
+ float edgeRadius=clamp(reach*.26,34.,52.);
+ float falloff=exp(-pow(distance/edgeRadius,1.65));
  float along=mix(u0,l0+u1,k),total=l0+l1;
  float d=max(.15,abs(side)),opening=(atan(along,d)-atan(along-total,d))/3.141592653589793;
  float direction=dot(normal,vec2(.55,-.835));
