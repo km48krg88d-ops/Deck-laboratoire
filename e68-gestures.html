@@ -11,7 +11,7 @@
 <meta name="description" content="DECK — Laboratoire de sphère vivante">
 <!-- Independent experiment: leave the V49 app manifest and entry point unchanged. -->
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>DECK E68 · Groupe et donut</title>
+<title>DECK E68.1 · Double-tap corrigé</title>
 <style>
 [hidden]{display:none!important}
 :root{color-scheme:dark;--fg:#e7e7e7;--muted:#8c8c91;--hair:#29292b;--panel:#111113}
@@ -947,26 +947,40 @@ function removeDrawnLight(id){const old=drawnLights.lamps[id];if(old){old.offAt=
 function setDrawnLevel(id,value){if(id>=7){setDrawnGroupLevel(id===7?'upper':'lower',value);return;}const l=drawnLights.lamps[id];if(!l)return;value=clamp(value,0,1);if(value===0){if(l.level>0)l.lastLevel=l.level;l.level=0;}else{l.level=clamp(value,.1,1);l.lastLevel=l.level;}syncDrawnSelection();if(!drawnLights.points.size)saveDrawnLights();}
 function makeFixedDrawnDisc(id,x,y,level=.35){const t=drawnLights.time,r=Math.min(w*.12,52),points=[{x:clamp(x/w,0,1),y:clamp(y/h,0,1),t},{x:clamp(x/w,0,1)+r/w,y:clamp(y/h,0,1),t}];const lamp=makeDrawnLamp(id,points,level);if(drawRaisedBackground.cache)drawRaisedBackground.cache[id]=null;lamp.fixedDisc=true;return lamp;}
 function createDrawnDisc(x,y,level=.35){const created=!drawnLights.lamps[6];if(created)drawnLights.lamps[6]=makeFixedDrawnDisc(6,x,y,level);selectDrawnLight(6);saveDrawnLights();return created;}
-function createDrawnSpot(x,y){if(!drawnLights.lamps[4])drawnLights.lamps[4]=makeFixedDrawnDisc(4,x,y,.5);selectDrawnLight(4);saveDrawnLights();}
+function createDrawnSpot(x,y){
+ const existing=drawnLights.lamps[4];
+ if(existing?.level>0)return false;
+ // An unlit donut can be placed at a NEW double-tap location.
+ const level=clamp(existing?.lastLevel||.5,.1,1);
+ drawnLights.lamps[4]=makeFixedDrawnDisc(4,x,y,level);
+ selectDrawnLight(4);
+ saveDrawnLights();
+ return true;
+}
 function handleDrawnTap(x,y){
  const now=drawnGestureNow(),previous=drawnLights.lastTap;
+ // Ignore stored but currently unlit geometries in hit testing.
+ const hits=drawnHits(x,y).filter(hit=>drawnLights.lamps[hit.id]?.level>0);
+ const selected=hits.find(hit=>hit.id===drawnLights.selected);
+ const id=(selected||hits[0])?.id??null;
  const doubleTap=previous&&now-previous.wall>=0&&now-previous.wall<.43&&Math.hypot(x-previous.x,y-previous.y)<26;
  drawnLights.lastTap=null;
  if(doubleTap){
-  const donut=drawnLights.lamps[4];
-  if(!donut)createDrawnSpot(x,y);
-  else{
-   setDrawnLevel(4,donut.level>.001?0:Math.max(.1,donut.lastLevel||.5));
-   selectDrawnLight(4);
-   saveDrawnLights();
+  // Both taps must have targeted the same lamp, or both an empty area.
+  if(previous.targetId!==id)return;
+  if(id!==null){
+   // Double-tap ON a lit lamp: OFF only that lamp (including the donut).
+   if(deckSetLampPower(id,false)){syncDrawnSelection();saveDrawnLights();}
+  }else{
+   // Double-tap outside all lit lamps: create / relocate donut only if OFF.
+   createDrawnSpot(x,y);
   }
   return;
  }
- const hits=drawnHits(x,y);
  if(!hits.length)selectDrawnLight(null);
- else if(hits.length>1){const index=hits.findIndex(l=>l.id===drawnLights.selected);selectDrawnLight(hits[(index+1)%hits.length].id);}
- else selectDrawnLight(hits[0].id);
- drawnLights.lastTap={x,y,wall:now};
+ else if(hits.length>1){const index=hits.findIndex(hit=>hit.id===drawnLights.selected);selectDrawnLight(hits[(index+1)%hits.length].id);}
+ else selectDrawnLight(id);
+ drawnLights.lastTap={x,y,wall:now,targetId:id};
 }
 function updateDrawnPinch(){const pinch=drawnLights.pinch;if(!pinch||drawnLights.points.size!==2)return;const [a,b]=[...drawnLights.points.values()],distance=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y));if(!pinch.axis){const gx=Math.abs(a.x-b.x)-pinch.spanX,gy=Math.abs(a.y-b.y)-pinch.spanY,ax=Math.abs(gx),ay=Math.abs(gy);if(Math.max(ax,ay)<8)return;if(Math.max(ax,ay)<Math.min(ax,ay)*1.35&&Math.max(ax,ay)<24)return;const axis=ay>ax?'vertical':'horizontal';if(axis==='vertical'&&distance-pinch.distance<10)return;pinch.axis=axis;pinch.id=axis==='vertical'?6:pinch.selected;if(pinch.id===undefined)return;if(axis==='vertical'&&!drawnLights.lamps[6])drawnLights.lamps[6]=makeFixedDrawnDisc(6,pinch.x,pinch.y,.15);if(!drawnLights.lamps[pinch.id])return;pinch.base=drawnLights.lamps[pinch.id].level;selectDrawnLight(pinch.id);}if(pinch.id!==undefined&&drawnLights.lamps[pinch.id])setDrawnLevel(pinch.id,clamp(pinch.base+Math.log(distance/pinch.distance)*.9,0,1));}
 
