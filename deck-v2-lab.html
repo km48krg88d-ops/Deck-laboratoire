@@ -207,6 +207,7 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <div id="lampPlacementBar" hidden><span id="lampPlacementStatus">Déplacez ou pincez une lampe pour la dimensionner</span><label id="lampScaleLabel" style="display:none;align-items:center;gap:7px;flex:1 1 160px">Taille <input type="range" id="lampScaleRange" min="0.40" max="2.50" step="0.01" value="1" style="flex:1;min-width:70px"><output id="lampScaleValue">100 %</output></label><button type="button" id="saveLampPositions">Enregistrer</button><button type="button" id="cancelLampPositions">Annuler</button></div>
 <div class="immersive-hint" id="immersiveHint">Toucher le ventilateur · Écarter : ouvrir · Rapprocher : fermer</div>
 <div id="deckControls"></div><div id="deckNotice" role="status" aria-live="polite"></div>
+<details id="v2Panel" open><summary>DECK V2 · Test individuel · toucher pour réduire</summary><div id="v2LampButtons"></div><small>Touches actives : formes E62 existantes uniquement. Aucune sauvegarde automatique V2.</small></details>
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('stage');let ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
@@ -2770,6 +2771,6 @@ deckV2.refresh();
 // V2 test runs without registering or changing the installed app service worker.
 })();
 </script>
-<details id="v2Panel" open><summary>DECK V2 · Test individuel · toucher pour réduire</summary><div id="v2LampButtons"></div><small>Touches actives : formes E62 existantes uniquement. Aucune sauvegarde automatique V2.</small></details>
+
 </body>
 </html>
