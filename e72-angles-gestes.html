@@ -1219,7 +1219,7 @@ function drawAngleLamp(lamp){
  // A single continuous path: no triangular mask, no double lighting at the elbow.
  const path=()=>{ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);};
  if(drawnLook.slitLight){
-  for(const layer of [{width:28,alpha:.035,blur:18},{width:12,alpha:.065,blur:8},{width:3,alpha:.17,blur:2}]){
+  for(const layer of [{width:48,alpha:.15,blur:24},{width:22,alpha:.13,blur:12},{width:5,alpha:.22,blur:2}]){
    ctx.globalAlpha=level*layer.alpha*drawnLook.spillStrength;
    ctx.filter='blur('+layer.blur+'px)';
    ctx.strokeStyle='rgb(245,247,251)';
@@ -1260,11 +1260,14 @@ function raisedJoinedAngleSample(px,py,segments,reach){
  const vx=a.normal.x*(1-k)+b.normal.x*k,vy=a.normal.y*(1-k)+b.normal.y*k;
  const ln=Math.max(.00001,Math.hypot(vx,vy)),nx=vx/ln,ny=vy/ln;
  const side=(px-qx)*nx+(py-qy)*ny;
+ // Use actual distance to the polyline instead of projected distance to a
+ // blended phantom segment, which used to fill the entire inner corner.
+ const distance=d0*(1-k)+d1*k;
  const along=t0*(1-k)+(a.len+t1)*k,total=a.len+b.len;
  const d=Math.max(.15,Math.abs(side));
  const opening=(Math.atan2(along,d)-Math.atan2(along-total,d))/Math.PI;
- const over=Math.max(0,-along,along-total),span=reach*(side<0?1.65:1);
- const falloff=Math.pow(Math.max(0,1-Math.hypot(side,over)/Math.max(.001,span)),1.35);
+ const span=reach*(side<0?1.65:1);
+ const falloff=Math.pow(Math.max(0,1-distance/Math.max(.001,span)),1.65);
  const direction=nx*.55-ny*.835;
  return (side/Math.hypot(side,3))*Math.pow(Math.max(0,opening),.72)*falloff*direction;
 }
@@ -1294,10 +1297,10 @@ float joinedAngle(vec2 q){
  float k=smoothstep(-blend,blend,d0-d1);
  vec2 foot=mix(q0,q1,k),vn=mix(segB[0].yz,segB[1].yz,k);
  vec2 normal=vn/max(.00001,length(vn));
- float side=dot(q-foot,normal),along=mix(u0,l0+u1,k),total=l0+l1;
+ float side=dot(q-foot,normal),distance=mix(d0,d1,k),along=mix(u0,l0+u1,k),total=l0+l1;
  float d=max(.15,abs(side)),opening=(atan(along,d)-atan(along-total,d))/3.141592653589793;
- float over=max(0.,max(-along,along-total)),span=reach*(side<0.?1.65:1.);
- float falloff=pow(max(0.,1.-length(vec2(side,over))/max(.001,span)),1.35);
+ float span=reach*(side<0.?1.65:1.);
+ float falloff=pow(max(0.,1.-distance/max(.001,span)),1.65);
  float direction=dot(normal,vec2(.55,-.835));
  return (side/max(.00001,length(vec2(side,3.))))*pow(max(0.,opening),.72)*falloff*direction;
 }
