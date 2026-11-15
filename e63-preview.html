@@ -987,15 +987,17 @@ function drawDeckPreviewFeedback(){
  }
  c.restore();
 }
-function activateDeckRoom(room){
- const label=room==='upper'?'Séjour':room==='lower'?'Chambre':'Toutes les lampes';
- deckEnsurePreviewLights(room);
- for(const id of (room==='all'?[0,1,2,3,4,5,6]:deckPreviewRoomIds[room]||[]))deckPreviewActiveIds.add(id);
- const indicator=document.getElementById('deckGroupFeedback');
- if(indicator){indicator.textContent=label+' · lampes allumées (test)';indicator.style.opacity='1';clearTimeout(activateDeckRoom.timer);activateDeckRoom.timer=setTimeout(()=>indicator.style.opacity='0',1800);}
- for(const id of (room==='all'?[0,1,2,3,4,5,6]:deckPreviewRoomIds[room]||[])){
-  const lamp=drawnLights.lamps[id];if(lamp)lamp.level=lamp.lastLevel=Math.max(.1,lamp.lastLevel||lamp.level||.72);
+function activateDeckRoom(room,on){
+ const label=room==='upper'?'Séjour':'Chambre';
+ const ids=deckPreviewRoomIds[room]||[];
+ if(on)deckEnsurePreviewLights(room);
+ for(const id of ids){
+  if(on)deckPreviewActiveIds.add(id);else deckPreviewActiveIds.delete(id);
+  const lamp=drawnLights.lamps[id];
+  if(lamp){if(on)lamp.level=lamp.lastLevel=Math.max(.1,lamp.lastLevel||.72);else{lamp.lastLevel=Math.max(.1,lamp.level||lamp.lastLevel||.72);lamp.level=0;}}
  }
+ const indicator=document.getElementById('deckGroupFeedback');
+ if(indicator){indicator.textContent=label+' · '+(on?'allumé':'éteint')+' (test)';indicator.style.opacity='1';clearTimeout(activateDeckRoom.timer);activateDeckRoom.timer=setTimeout(()=>indicator.style.opacity='0',1800);}
  syncDrawnSelection();
 }
 
@@ -1018,7 +1020,7 @@ function moveDrawnLight(e){
 function finishDrawnLight(e){
  if(!drawnLights.enabled||!drawnLights.points.has(e.pointerId))return false;e.preventDefault();e.stopImmediatePropagation();const p=drawnLights.points.get(e.pointerId);
  if(e.type!=='pointerup'){cancelDrawnGesture();return true;}
- if(drawnLights.groupGesture){const g=drawnLights.groupGesture;if(e.pointerId===g.mobileId){g.dx=e.clientX-g.startX;g.dy=e.clientY-g.startY;const ax=Math.abs(g.dx),ay=Math.abs(g.dy);if(!g.invalid&&Math.max(ax,ay)>45&&Math.max(ax,ay)>Math.min(ax,ay)*1.5){if(ay>ax)activateDeckRoom(g.dy<0?'upper':'lower');else if(g.dx<0)activateDeckRoom('all');}}drawnLights.points.delete(e.pointerId);if(!drawnLights.points.size)cancelDrawnGesture();return true;}
+ if(drawnLights.groupGesture){const g=drawnLights.groupGesture;if(e.pointerId===g.mobileId){g.dx=e.clientX-g.startX;g.dy=e.clientY-g.startY;const ax=Math.abs(g.dx),ay=Math.abs(g.dy);if(!g.invalid&&ay>45&&ay>ax*1.5){activateDeckRoom(g.startY<h/2?'upper':'lower',g.dy<0);}}drawnLights.points.delete(e.pointerId);if(!drawnLights.points.size)cancelDrawnGesture();return true;}
  updateHeldLamp();if(drawnLights.holdAdjust&&drawnGestureNow()-(drawnLights.holdAdjust.wallStart??drawnLights.holdAdjust.start)>.4){saveDrawnLights();cancelDrawnGesture();return true;}if(drawnLights.held?.active){if(drawnLights.draft?.id===6&&!drawnLights.lamps[6])drawnLights.lamps[6]=drawnLights.draft;selectDrawnLight(6);drawnLights.lastTap=null;saveDrawnLights();cancelDrawnGesture();return true;}
  if(!drawnLights.multi&&drawnLights.stroke){moveDrawnLight(e);const stroke=drawnLights.stroke,group=classifyGroupArc(stroke.points);if(group){const aid=group==='upper'?7:8;if(!drawnLights.lamps[aid])drawnLights.lamps[aid]=makeDrawnLamp(aid,stroke.points,.72);setDrawnGroupLevel(group,drawnLights.lamps[aid].level);selectDrawnLight(aid);cancelDrawnGesture();return true;}const id=classifyDrawnStroke(stroke.points);if(id!==null){if(!drawnLights.lamps[id]||drawnLights.lamps[id].level===0)drawnLights.lamps[id]=makeDrawnLamp(id,stroke.points,.72);if(stroke.holdLevel)drawnLights.lamps[id].level=drawnLights.lamps[id].lastLevel=stroke.holdLevel;selectDrawnLight(id);drawnLights.lastTap=null;saveDrawnLights();}
   else if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12)handleDrawnTap(e.clientX,e.clientY);
