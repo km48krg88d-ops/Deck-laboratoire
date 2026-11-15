@@ -1081,7 +1081,7 @@ function updateTwoFingerMotion(){
  const distance=Math.hypot(a.x-b.x,a.y-b.y);
  // Both fingers must have moved, regardless of their order.
  // A single moving finger is reserved for a room/global command on release.
- if(ma>9&&mb>9&&Math.abs(distance-initial)>10){
+ if(ma>=12&&mb>=12&&Math.abs(distance-initial)>10){
   g.mode='pinch';
   updateDrawnPinch();
  }
