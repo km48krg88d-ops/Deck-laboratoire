@@ -1,13 +1,13 @@
 # DECK — Laboratoire interactif
 
 **État de référence : [DECK_ETAT.md](./DECK_ETAT.md)**  
-**Passation vers la prochaine conversation : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md)** — reprend E84 et détaille l'essai 3D E85 à créer.  
-**Dernière expérience : [E84 — Douceur de contour réglable](./e84-douceur-contour.html)** (16 novembre 2026 ; curseur 0–100 %, tests numériques réussis, iPhone à valider).
+**Passation de référence : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md)** — contexte de la reprise E84 → E85.  
+**Dernière expérience : [E85 — Micro-relief 3D](./e85-microrelief-3d.html)** (16 novembre 2026 ; hauteur et raccord réglables ; validation Safari/iPhone en attente). [Essayer E85](https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html). [Retour E84](./e84-douceur-contour.html).
 
 ## Reprendre le développement
 
 1. Lire [DECK_ETAT.md](./DECK_ETAT.md) : décisions validées, neuf luminaires, gestes, état du prototype et sujets ouverts.
-2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e84-douceur-contour.html`.
+2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e85-microrelief-3d.html`.
 3. Créer une nouvelle expérience pour chaque modification majeure sans écraser la précédente ; mettre à jour le document d'état dans le même travail.
 
 **Attention :** `index.html` est l'application principale distincte (titre actuel E63.6). Ne pas la remplacer automatiquement par E84. Le code et les réglages conservés sur le navigateur iPhone ne sont pas la même chose : les données `localStorage` ne sont pas enregistrées par GitHub.
