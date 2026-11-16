@@ -32,7 +32,8 @@ Ce fichier avait initialement servi à vérifier que les modifications directes 
 | E78 | [e78-extinction-naturelle.html](./e78-extinction-naturelle.html) | Fondu sans onde ; rendu encore perçu comme une transition numérique |
 | E79 | [e79-membrane-lignes.html](./e79-membrane-lignes.html) | Première membrane physique sur les deux barres, convaincante mais trop rapide selon le retour utilisateur |
 | E80 | [e80-membrane-ralentie.html](./e80-membrane-ralentie.html) | Membrane 2,6 s ; capture iPhone montrant des barres striées et des triangles lumineux gênants |
-| **E81** | **[e81-apparence-restauree.html](./e81-apparence-restauree.html)** | **Dernier essai : apparence allumée restaurée depuis E78 ; relâchement ralenti seulement à l'extinction des lignes ; syntaxe et logique vérifiées, rendu iPhone à valider** |
+| E81 | [e81-apparence-restauree.html](./e81-apparence-restauree.html) | Apparence allumée restaurée depuis E78 ; relâchement de membrane sur les lignes |
+| **E82** | **[e82-gestes-relief.html](./e82-gestes-relief.html)** | **Dernier essai web : aucun tracé fantôme ; angles 65–115° avec minimum par branche ; donut harmonisé, bords plus nets et relief extérieur renforcé ; rendu iPhone à valider** |
 
 Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres caractéristiques ne sont pas récapitulées ici.
 
@@ -40,6 +41,6 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 
 - `index.html` : application principale distincte (titre actuel E63.6) ; ne pas écraser sans instruction.
 - Les fichiers `eXX-*.html` : expérimentations autonomes et points de retour.
-- **Dernière version de travail au 16/11/2026 : E81**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
+- **Dernière version de travail au 16/11/2026 : E82**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
 
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
