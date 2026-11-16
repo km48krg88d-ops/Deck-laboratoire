@@ -1455,6 +1455,7 @@ function renderDrawnLights(dt){
  if(drawnLights.draft)lamps[drawnLights.draft.id]=drawnLights.draft;
  if(!drawnLook.nightCanvas){
   for(const lamp of lamps)if(lamp){
+   if(lamp.offAt!==undefined&&drawnLights.lamps[lamp.id]===lamp&&drawnLights.time-lamp.offAt>=DRAWN_EXTINGUISH_SECONDS){delete lamp.offAt;delete lamp.offLevel;lamp.displayLevel=0;}
    if(lamp.offAt!==undefined){
     lamp.displayLevel=lamp.offLevel*(1-experimentEase(DRAWN_EXTINGUISH_SECONDS*.83,DRAWN_EXTINGUISH_SECONDS,drawnLights.time-lamp.offAt));
     ctx.save();clipDrawnWaveOutside(lamp);drawRaisedBackground(lamp);ctx.restore();
@@ -1466,6 +1467,9 @@ function renderDrawnLights(dt){
  }
  const main=ctx,scale=Math.min(2,dpr||1),layers=renderDrawnLights.layers||(renderDrawnLights.layers=[]);
  for(const lamp of lamps)if(lamp){
+  // A finished wave must not force a full layer redraw forever (battery/FPS).
+  // Retiring copies keep offAt until the retirement filter removes them.
+  if(lamp.offAt!==undefined&&drawnLights.lamps[lamp.id]===lamp&&drawnLights.time-lamp.offAt>=DRAWN_EXTINGUISH_SECONDS){delete lamp.offAt;delete lamp.offLevel;lamp.displayLevel=0;}
   if(lamp.offAt!==undefined)lamp.displayLevel=lamp.offLevel*(1-experimentEase(DRAWN_EXTINGUISH_SECONDS*.84,DRAWN_EXTINGUISH_SECONDS,drawnLights.time-lamp.offAt));
   else lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));
   let layer=layers[lamp.id];if(!layer)layer=layers[lamp.id]=document.createElement('canvas');
