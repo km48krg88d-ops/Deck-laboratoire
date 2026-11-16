@@ -48,3 +48,5 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 - **Dernière version de travail au 16/11/2026 : E85**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
 
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
+
+**Correctif E85 du 16/11 :** restauration de la prévisualisation et du rendu animé E84 pour disque et donut, masque diurne E84 récupéré, micro-relief indépendant plafonné à 320² pixels, sans modification des gestes. La vérification visuelle en Safari reste en attente.
