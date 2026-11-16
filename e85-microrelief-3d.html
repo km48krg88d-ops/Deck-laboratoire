@@ -1533,14 +1533,15 @@ function e85ReliefProfile(distance,radius,ring,fold,height){
   return height*opening*rise;
 }
 function e85Relief(lamp){
- if(!lamp||(lamp.id!==4&&lamp.id!==6))return;
+ if(!lamp||(lamp.id!==4&&lamp.id!==6)||drawnLights.draft===lamp)return;
  const level=lamp.offAt!==undefined?drawnReliefRelease(lamp).level:lamp.displayLevel;
  if(level<.001||e85Params.height<.001)return;
  const radius=drawnDiscRadius(lamp),p=lamp.points[0],x=p.x*w,y=p.y*h;
  const ring=lamp.id===4,fold=Math.min(e85Params.fold,radius*(ring?.19:.7));
  const margin=fold+3,side=Math.ceil(2*(radius+margin));
- const resolution=Math.min(2,Math.max(1,dpr||1));
- const pxSize=Math.max(1,Math.ceil(side*resolution));
+ // Bounded offscreen raster: avoid blocking iPhone gestures on large discs.
+ const resolution=Math.min(1.5,Math.max(1,dpr||1));
+ const pxSize=Math.max(1,Math.min(320,Math.ceil(side*resolution)));
  const key=[lamp.id,Math.round(radius*10)/10,fold,e85Params.height,pxSize].join(':');
  let patch=e85Relief.cache.get(key);
  if(!patch){
