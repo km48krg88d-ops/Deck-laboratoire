@@ -35,7 +35,9 @@ Ce fichier avait initialement servi à vérifier que les modifications directes 
 | E81 | [e81-apparence-restauree.html](./e81-apparence-restauree.html) | Apparence allumée restaurée depuis E78 ; relâchement de membrane sur les lignes |
 | E82 | [e82-gestes-relief.html](./e82-gestes-relief.html) | Gestes stricts, contour du donut suréchantillonné ; captures iPhone : relief circulaire encore trop franc, premier côté du chevron non prévisualisé |
 | E83 | [e83-masques-souples-chevron.html](./e83-masques-souples-chevron.html) | Disque et donut fortement adoucis ; retour utilisateur : adoucissement trop important, souhaite un réglage continu |
-| **E84** | **[e84-douceur-contour.html](./e84-douceur-contour.html)** | **Dernier essai web : « Douceur du contour » de 0 à 100 %, effet immédiat sur le pli des masques du disque et du donut ; tests numériques et code réussis, esthétique iPhone à valider** |
+| E84 | [e84-douceur-contour.html](./e84-douceur-contour.html) | Douceur du contour réglable, jugée comme un flou ; version de retour |
+
+| **E85** | **[e85-microrelief-3d.html](./e85-microrelief-3d.html)** | **Champ de hauteur 3D disque/donut, normales et éclairage de pente ; hauteur et largeur du raccord réglables ; syntaxe JS vérifiée, test iPhone en attente** |
 
 Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres caractéristiques ne sont pas récapitulées ici.
 
@@ -43,6 +45,6 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 
 - `index.html` : application principale distincte (titre actuel E63.6) ; ne pas écraser sans instruction.
 - Les fichiers `eXX-*.html` : expérimentations autonomes et points de retour.
-- **Dernière version de travail au 16/11/2026 : E84**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
+- **Dernière version de travail au 16/11/2026 : E85**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
 
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
