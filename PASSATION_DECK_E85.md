@@ -115,3 +115,7 @@ Groupes : **haut/séjour [0,3,4,8]**, **bas/chambre [1,2,5,6,7]**. Attention : c
 
 ---
 **Statut actuel :** E85 créée, syntaxe JavaScript vérifiée, aucune validation iPhone de ce nouveau relief. Essai : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html Les décisions antérieures qui ne sont pas reprises ici restent détaillées dans DECK_ETAT.md.
+
+### Correctif après retour iPhone du 16/11/2026
+
+E85 a d’abord présenté trois régressions : objets invisibles pendant le geste, animations absentes, donut apparemment inopérant. Les fonctions E84 `drawOrbLamp` et `drawSpotLamp`, supprimées du chemin de rendu E85, ont été restaurées ; le rendu d’origine pour le fond alternatif a lui aussi été restauré. Le micro-relief devient une couche complémentaire protégée contre les exceptions, ignorée pour les brouillons en cours de tracé afin de ne pas dégrader leur prévisualisation ; image raster 3D bornée à 320×320. Les fonctions de gestes et de dessin disque/donut ont été comparées à E84 : identiques ; syntaxe JS valide. Il reste à confirmer visuellement et tactilement sur iPhone la correction et les FPS. Lien : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=4 .
