@@ -2,15 +2,16 @@
 
 > **Source de vérité pour reprendre DECK après un changement de conversation.**  
 > Mise à jour : **16 novembre 2026** · Projet MOBILIER / DECK III  
-> **Dernière version expérimentale : E77** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
+> **Dernière version expérimentale : E78** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
 
 ## 1. Où reprendre
 
-- **Code expérimental à poursuivre : [e77-effacement-progressif.html](./e77-effacement-progressif.html)** — « DECK E77 · Extinction progressive ».
-- Point de retour immédiat : [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html) — E76 inchangée.
+- **Code expérimental à poursuivre : [e78-extinction-naturelle.html](./e78-extinction-naturelle.html)** — « DECK E78 · Extinction naturelle ».
+- Point de retour immédiat : [e77-effacement-progressif.html](./e77-effacement-progressif.html) — E77 inchangée.
+- Autre point de retour : [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html) — E76 inchangée.
 - Version antérieure : [e75-angle-pilote.html](./e75-angle-pilote.html) — E75, inchangée.
 - Autre référence graphique : [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) (E74, deux branches indépendantes).
-- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76 et E77.
+- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76, E77 et E78.
 - **Application principale indépendante : [index.html](./index.html)**, qui porte encore le titre E63.6. **Ne pas la remplacer par une expérience sans décision explicite.**
 - La série E est un laboratoire : les fichiers HTML sont conservés individuellement pour pouvoir revenir à une version antérieure.
 - [README.md](./README.md) = porte d'entrée ; [DECK_VERSIONS.md](./DECK_VERSIONS.md) = index historique ; **ce fichier** = état courant et décisions.
@@ -19,7 +20,7 @@
 
 DECK est une interface tactile et gestuelle, expérimentée sur iPhone via une interface web, destinée à commander des lampes, le ventilateur et la musique. Les symboles lumineux sont des **abstractions du comportement de chaque luminaire**, pas des pictogrammes littéraux. Direction esthétique : toile bleu nuit, formes comme des **poinçonnements ou retraits de matière**, léger relief inversé, lumière diffuse et non objets posés dessus.
 
-Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E77**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
+Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E78**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
 
 ## 3. Les 9 lampes et leur répartition — décisions de conception
 
@@ -57,7 +58,7 @@ Les autres expérimentations (sphère à particules, cube/ventilateur, fente lum
 - **La direction droite comme fonction propre à un groupe reste libre/non attribuée**. Ne pas y ajouter une commande différente.
 - **Le geste individuel de la lampe étoile reste en suspens** ; aucune attribution automatique.
 
-## 5. Ce que contiennent effectivement E75 à E77 (à distinguer de la cible)
+## 5. Ce que contiennent effectivement E75 à E78 (à distinguer de la cible)
 
 Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à deux lignes »** :
 - E74 : rendu de l'angle par **deux lignes indépendantes**, sans jonction forcée ; résultat graphique préféré lors du retour utilisateur, avant essai E75.
@@ -87,6 +88,16 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - **Portée du rendu :** masque à bord progressif sur la toile bleu nuit (mode habituel) ; dans le mode de fond alternatif, une découpe radiale sans le même flou est utilisée comme secours. Validation visuelle et performances requises sur iPhone.
 - **Stockage E77 indépendant** pour formes et curseurs, avec lecture initiale des clés E76 si E77 n'a encore rien enregistré. Ni E76 ni `index.html` modifiés.
 
+**E78 — « Extinction naturelle », dérivée de E77 (16/11/2026)**
+- **Décision utilisateur :** aucune onde ou effet de transition perceptible. La disparition doit être **la plus naturelle possible** ; abandonner l'idée d'une cicatrisation ou d'un effet graphique ajouté.
+- Les lampes perdent simplement leur lumière **par atténuation continue et douce**. Le centre commence à diminuer **très légèrement avant la périphérie**, avec des courbes de fondu fortement superposées. **Aucun front mobile, disque qui grandit, contraction de la forme ni changement de silhouette.**
+- Durée de disparition : **environ 1,08 s**, écart maximal de **0,11 s** entre centre et périphérie ; pour le mode nuit habituel, un dégradé radial d'opacité très large est appliqué sur le calque individuel qui porte **à la fois lumière et contour**.
+- Les traits non reconnus conservent leur disparition douce (~0,95 s) mais **sans couches lumineuses supplémentaires ou animation de halo** : seule l'opacité d'une empreinte discrète diminue. Les taps simples ne créent aucune trace.
+- Pour le **fond alternatif non nocturne**, l'effet antérieur à découpe circulaire est supprimé ; le relief suit un simple fondu doux uniforme (différence admise pour le prototype, à juger sur iPhone).
+- Les commandes et affectations de groupe, l'angle E76, les masques GPU et l'application principale restent inchangés. Sauvegardes expérimentales **E78 distinctes** (avec lecture initiale de E77).
+- **Statut :** vérification syntaxique et numérique réussie ; aucun rendu iPhone ni contrôle WebGL/performances en conditions réelles confirmé.
+
+
 
 ## 6. Validation, sujets ouverts et prochaine étape
 
@@ -95,9 +106,10 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - E75 : **40 tests logiques réussis** ; **validation iPhone non encore confirmée**.
 - E76 : **10 assertions de structure/régression vérifiées** au moment de la création ; relecture du fichier publié GitHub, compilation syntaxique JS, vérification des chemins CPU/GPU, conservation des gestes et de la séparation E75/E76. **Test numérique CPU sur 441 positions** : raccord visible dans un rayon de 8 et 20 px, aucun changement au-delà du rayon de 8 px, aucune inversion de signe, aucune valeur non finie. **Sur iPhone, l'utilisateur ne voit pas de différence esthétique** ; sujet suspendu.
 - E77 : **11 assertions de structure et de non-régression réussies** avant enregistrement ; fichier relu sur GitHub, JavaScript compilable ; **tests fonctionnels isolés réussis** : déclenchement et interruption de l'extinction, progression monotone du rayon sur 7 instants, rejet des micro-tracés et enregistrement temporaire des tracés invalides. Affectations des groupes et moteur shader E76 comparés, inchangés. **Rendu iPhone, FPS, gestes tactiles et publication Pages non encore validés.**
+- E78 : **11 vérifications de structure et de non-régression réussies** ; compilation syntaxique du JavaScript et tests numériques de l'opacité à 7 instants : opacité monotone, centre toujours légèrement plus atténué que la périphérie entre les extrêmes, extinction complète au terme. **Essai iPhone, performance et rendu visuel non encore vérifiés.**
 
-**À faire pour valider E77 (avant toute E78 ou promotion) :**
-1. Tester E77 **sur iPhone** : dessiner une forme non reconnue et observer son effacement sur ~0,95 s ; éteindre une barre, un angle, le cercle, le donut et le disque, en vérifiant que la disparition progresse effectivement **du centre vers l'extérieur**.
+**À faire pour valider E78 (avant toute E79 ou promotion) :**
+1. Tester E78 **sur iPhone** : tracer une forme non reconnue et observer une extinction sans effet ; éteindre une barre, un angle, un cercle, le donut et le disque pour vérifier un **fondu naturel sans front ni contraction**. La priorité esthétique est la discrétion de la transition.
 2. Vérifier les performances (FPS), que l'extinction n'efface pas les lampes voisines, que le rallumage interrompt correctement l'animation et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
 3. Consigner les résultats concrets : ce qui marche, ce qui est à modifier, les réglages de curseur retenus.
 4. Ne décider **ni du geste de l'étoile ni d'une fonction de groupe à droite** sans demande nouvelle.
@@ -107,7 +119,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 ## 7. Protocole anti-perte pour les prochaines conversations
 
 1. **Au début d'une nouvelle conversation :** lire **ce fichier**, puis le fichier expérimental indiqué en section 1. Annoncer **la version exacte** et **les sujets en suspens** ; ne pas réinventer les décisions.
-2. **À chaque itération de code :** créer un **nouveau fichier E78, E79…** plutôt que remplacer E77 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
+2. **À chaque itération de code :** créer un **nouveau fichier E79, E80…** plutôt que remplacer E78 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
 3. **Avec chaque version importante :** mettre à jour **dans le même travail** les sections 1, 5, 6 et le journal ci-dessous ; actualiser si nécessaire le tableau et les gestes, et mettre à jour `DECK_VERSIONS.md`.
 4. **Toujours distinguer** : (a) décidé par l'utilisateur, (b) implémenté, (c) testé par logique, (d) validé sur iPhone, (e) idée à confirmer. Ne jamais transformer une hypothèse en décision acquise.
 5. **Avant une modification sensible :** demander ou utiliser l'export **« Copier tous les réglages »** si des réglages du navigateur importent ; GitHub ne contient ni `localStorage` ni les observations de test non consignées.
@@ -127,7 +139,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 ### B. Toujours développer d'abord dans une version test
 
-1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e78-…html`, puis E79, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
+1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e79-…html`, puis E80, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
 2. Les changements d'interface, d'animations, de gestes, de moteur graphique, de sauvegarde ou de performances restent d'abord dans cette version test.
 3. **Interdiction de promouvoir automatiquement en application définitive**, y compris vers `index.html`, `sw.js`, `manifest.webmanifest` ou les ressources de production. Seul un accord explicite de l'utilisateur, **après test**, autorise cette étape.
 4. Si une nouvelle version test ne fonctionne pas, revenir à la précédente sans affecter l'application principale.
@@ -179,6 +191,7 @@ Remettre **un lien vers la nouvelle version expérimentale** et, en texte court 
 - **16 novembre 2026 — Protocole qualité** — Ajout d'une procédure obligatoire de contrôle avant livraison, de développement en version test indépendante et d'intégration en production **uniquement après validation explicite**. Aucun code applicatif modifié.
 - **16 novembre 2026 — E76** — Raccord lumineux local sur un trait strictement orthogonal, sans mélange lumière/ombre ; E75 et application principale préservées ; contrôles statiques et test numérique CPU réussis, WebGL/iPhone à valider. L'utilisateur ne voit pas de différence ; sujet suspendu.
 - **16 novembre 2026 — E77** — Tracés non reconnus dissipés en 0,95 s, extinction radiale par calque en 1,18 s, contours et lumière retirés du centre vers la périphérie ; 11 contrôles statiques + essais fonctionnels isolés réussis ; iPhone à valider.
+- **16 novembre 2026 — E78** — Retrait de l'onde visible : extinction purement progressive, quasi uniforme, centre à peine prioritaire. Les tracés non reconnus perdent naturellement leur opacité. Code syntaxiquement valide ; tests numériques réussis ; iPhone à valider.
 
 ---
 **Règle de conservation :** aucune ancienne décision validée n'est annulée par une nouvelle expérimentation, sauf modification explicite. En cas de contradiction entre ce document et une décision ultérieure de l'utilisateur, actualiser ce fichier en citant la décision et la date.
