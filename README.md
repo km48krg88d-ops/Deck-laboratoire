@@ -1,15 +1,15 @@
 # DECK — Laboratoire interactif
 
 **État de référence : [DECK_ETAT.md](./DECK_ETAT.md)**  
-**Dernière expérience : [E75 — Angle droit pilote](./e75-angle-pilote.html)** (16 novembre 2026 ; validation iPhone en attente).
+**Dernière expérience : [E76 — Raccord orthogonal pilote](./e76-raccord-orthogonal.html)** (16 novembre 2026 ; vérifications JS et CPU réussies, rendu iPhone à valider).
 
 ## Reprendre le développement
 
 1. Lire [DECK_ETAT.md](./DECK_ETAT.md) : décisions validées, neuf luminaires, gestes, état du prototype et sujets ouverts.
-2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e75-angle-pilote.html`.
+2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e76-raccord-orthogonal.html`.
 3. Créer une nouvelle expérience pour chaque modification majeure sans écraser la précédente ; mettre à jour le document d'état dans le même travail.
 
-**Attention :** `index.html` est l'application principale distincte (titre actuel E63.6). Ne pas la remplacer automatiquement par E75. Le code et les réglages conservés sur le navigateur iPhone ne sont pas la même chose : les données `localStorage` ne sont pas enregistrées par GitHub.
+**Attention :** `index.html` est l'application principale distincte (titre actuel E63.6). Ne pas la remplacer automatiquement par E76. Le code et les réglages conservés sur le navigateur iPhone ne sont pas la même chose : les données `localStorage` ne sont pas enregistrées par GitHub.
 
 Voir [DECK_VERSIONS.md](./DECK_VERSIONS.md) pour l'index historique.
 
