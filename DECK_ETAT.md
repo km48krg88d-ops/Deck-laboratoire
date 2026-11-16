@@ -167,6 +167,8 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 
 **E85 — « Micro-relief 3D » (16/11/2026), dérivée d’E84**
+- **Correctif E85 (16/11/2026) :** retour utilisateur : le panneau fixe empêchait de dessiner. Le panneau est désormais fermé au chargement, accessible par un petit bouton « 3D · Réglages », avec fermeture ×. Les événements pointer du panneau ne remontent pas à la toile. Syntaxe JS vérifiée ; interaction Safari/iPhone toujours à confirmer.
+
 
 - Nouvelle expérience indépendante : [e85-microrelief-3d.html](./e85-microrelief-3d.html) ; [lien de test GitHub Pages](https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html), publication effective non vérifiée sur iPhone.
 - Disque (ID 6) : champ de hauteur avec plateau circulaire et raccord cubique lisse. Donut (ID 4) : couronne à deux pentes arrondies, intérieur dégagé. Normales issues des dérivées numériques du champ et lumière fixe en haut à gauche. Le réglage ne change pas le simple flou d’un contour.
