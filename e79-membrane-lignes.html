@@ -1289,7 +1289,7 @@ function drawDeckMembraneLine(lamp){
  const start=vertical?m.minY:m.minX,span=vertical?m.maxY-m.minY:m.maxX-m.minX;
  if(span<1)return true;
  const axis=vertical?(m.minX+m.maxX)/2:(m.minY+m.maxY)/2;
- const bands=Math.min(100,Math.max(12,Math.ceil(span/6)));
+ const bands=Math.min(72,Math.max(12,Math.ceil(span/9)));
  const unit=span/bands;
  ctx.save();
  for(let i=0;i<bands;i++){
@@ -1305,8 +1305,8 @@ function drawDeckMembraneLine(lamp){
   const linear=vertical
    ?ctx.createLinearGradient(centre-reach,0,centre+reach,0)
    :ctx.createLinearGradient(0,centre-reach,0,centre+reach);
-  for(let k=0;k<=20;k++){
-   const fraction=k/20,n=(fraction*2-1)*reach;
+  for(let k=0;k<=12;k++){
+   const fraction=k/12,n=(fraction*2-1)*reach;
    const {highlight,shadow}=deckMembraneProfile(depth,n);
    const opacity=clamp(highlight+shadow,0,.92);
    const reflect=highlight+shadow>1e-7?highlight/(highlight+shadow):.5;
