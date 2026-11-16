@@ -119,3 +119,7 @@ Groupes : **haut/séjour [0,3,4,8]**, **bas/chambre [1,2,5,6,7]**. Attention : c
 ### Correctif après retour iPhone du 16/11/2026
 
 E85 a d’abord présenté trois régressions : objets invisibles pendant le geste, animations absentes, donut apparemment inopérant. Les fonctions E84 `drawOrbLamp` et `drawSpotLamp`, supprimées du chemin de rendu E85, ont été restaurées ; le rendu d’origine pour le fond alternatif a lui aussi été restauré. Le micro-relief devient une couche complémentaire protégée contre les exceptions, ignorée pour les brouillons en cours de tracé afin de ne pas dégrader leur prévisualisation ; image raster 3D bornée à 320×320. Les fonctions de gestes et de dessin disque/donut ont été comparées à E84 : identiques ; syntaxe JS valide. Il reste à confirmer visuellement et tactilement sur iPhone la correction et les FPS. Lien : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=4 .
+
+### Correctif volet 3D du 16/11/2026
+
+Après rétablissement des animations, l’utilisateur constate que « 3D · Réglages » ne s’ouvre pas. Le bouton piloté par JavaScript est remplacé dans E85 par un élément natif HTML `<details>`/`<summary>`, fermé initialement et ouvrable sans écouteur de clic. Le panneau ne couvre que l'entête quand il est fermé ; les deux curseurs restent opérationnels. Le JavaScript a été vérifié syntaxiquement, test tactile réel non encore confirmé. URL d'essai : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=5 .
