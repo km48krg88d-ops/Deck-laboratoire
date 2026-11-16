@@ -3401,8 +3401,6 @@ document.getElementById('pointPanel').classList.add('group');
 panel.querySelector('.bottomline .hint').textContent='Tracer : former l’ouverture · Pincer son centre : diffuser la lumière · Toucher à côté : retour à la sphère';
 syncDrawnModeUI();
 // E66 experimental page does not change the installed app service worker.
-})();
-
 // E85: persistent compact micro-relief controls, independent from E84.
 const e85Params={height:1.6,fold:9};
 try{const v=JSON.parse(localStorage.getItem('deck-e85-relief-v1'));if(Number.isFinite(v?.height))e85Params.height=clamp(v.height,0,3.2);if(Number.isFinite(v?.fold))e85Params.fold=clamp(v.fold,2,22);}catch(_){}
@@ -3426,6 +3424,9 @@ document.getElementById('e85ReliefReset').addEventListener('click',()=>{
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
 e85UpdateControls();
+
+
+})();
 
 </script>
 </body>
