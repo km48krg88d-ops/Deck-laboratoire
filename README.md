@@ -1,6 +1,7 @@
 # DECK — Laboratoire interactif
 
 **État de référence : [DECK_ETAT.md](./DECK_ETAT.md)**  
+**Passation vers la prochaine conversation : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md)** — reprend E84 et détaille l'essai 3D E85 à créer.  
 **Dernière expérience : [E84 — Douceur de contour réglable](./e84-douceur-contour.html)** (16 novembre 2026 ; curseur 0–100 %, tests numériques réussis, iPhone à valider).
 
 ## Reprendre le développement
