@@ -86,19 +86,36 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 #deckControls,#deckNotice{display:none!important}
 #stage:focus{outline:none}
 #e66GestureStatus{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);max-width:85vw;z-index:99999;pointer-events:none;background:rgba(15,20,28,.76);color:#fff;border-radius:10px;padding:8px 12px;font:12px -apple-system,sans-serif;text-align:center;opacity:.75}
-#e85Open{position:fixed;top:calc(env(safe-area-inset-top) + 60px);right:12px;z-index:35;border:1px solid #ffffff42;border-radius:18px;background:#0a1322dc;color:#e6ecf6;padding:8px 12px;font:11px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px #0005;cursor:pointer}
-#e85Widget{position:fixed;top:calc(env(safe-area-inset-top) + 58px);right:12px;z-index:35;width:min(242px,calc(100vw - 30px));padding:12px 14px 14px;border:1px solid #ffffff33;border-radius:15px;background:#0a1322db;backdrop-filter:blur(16px);box-shadow:0 8px 26px #0007;color:#e6ecf6;font-size:12px;touch-action:pan-y}
+/* E85 native details: open/close works even if the drawing engine is busy. */
+#e85Widget{position:fixed;top:calc(env(safe-area-inset-top) + 58px);right:12px;z-index:100001;width:min(250px,calc(100vw - 24px));color:#e6ecf6;font:12px -apple-system,BlinkMacSystemFont,sans-serif;background:rgba(10,19,34,.95);border:1px solid #ffffff40;border-radius:15px;box-shadow:0 8px 26px #0007;touch-action:manipulation}
+#e85Widget:not([open]){width:auto;background:transparent;border:0;box-shadow:none;pointer-events:none}
+#e85Widget summary{display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none;min-height:38px;padding:10px 13px;cursor:pointer;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:#0a1322;border:1px solid #ffffff55;border-radius:18px}
+#e85Widget summary::-webkit-details-marker{display:none}
+#e85Widget[open] summary{background:rgba(255,255,255,.06);border:0;border-bottom:1px solid #ffffff2e;border-radius:15px 15px 0 0;font-weight:600}
+#e85Widget[open] summary::after{content:"×";font-size:19px;line-height:12px}
+#e85Widget .e85Panel{padding:10px 14px 14px;touch-action:pan-y}
 #e85Widget .e85Head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;font-size:10px;letter-spacing:.09em}
 #e85Widget button{background:#ffffff18;border:1px solid #ffffff35;border-radius:8px;padding:6px;color:#eff4fc;font-size:10px;cursor:pointer}
 #e85Widget label{display:flex;justify-content:space-between;margin:8px 0 4px;gap:10px}
-#e85Widget input{width:100%;accent-color:#cad6ed;height:21px;touch-action:pan-x}
+#e85Widget input{width:100%;accent-color:#cad6ed;height:23px;touch-action:pan-x}
 #e85Widget .e85Marks{display:flex;justify-content:space-between;color:#a7b8d0;font-size:9px}
-@media(max-height:550px){#e85Widget{top:calc(env(safe-area-inset-top) + 4px)}}
+@media(max-height:550px){#e85Widget{top:calc(env(safe-area-inset-top) + 6px)}}
 </style>
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
 </head>
 <body>
-<button id="e85Open" type="button" aria-expanded="false" aria-controls="e85Widget">3D · Réglages</button><aside id="e85Widget" aria-label="Réglages du relief 3D" hidden><div class="e85Head"><strong>E85 · RELIEF 3D</strong><button id="e85Close" type="button" aria-label="Fermer les réglages 3D">×</button><button id="e85ReliefReset" type="button">Réinitialiser</button></div><label for="e85Height">Hauteur <output id="e85HeightOut">1.6</output></label><input type="range" id="e85Height" min="0" max="3.2" step="0.1" value="1.6"><div class="e85Marks"> <span>Plat</span><span>1</span><span>2</span><span>3</span></div><label for="e85Fold">Largeur du raccord <output id="e85FoldOut">9</output></label><input type="range" id="e85Fold" min="2" max="22" step="1" value="9"><div class="e85Marks"><span>Serré</span><span>Arrondi</span></div></aside>
+<details id="e85Widget" aria-label="Réglages du relief 3D">
+<summary id="e85Summary">3D · Réglages</summary>
+<div class="e85Panel">
+  <div class="e85Head"><strong>E85 · RELIEF 3D</strong><button id="e85ReliefReset" type="button">Réinitialiser</button></div>
+  <label for="e85Height">Hauteur <output id="e85HeightOut">1.6</output></label>
+  <input type="range" id="e85Height" min="0" max="3.2" step="0.1" value="1.6">
+  <div class="e85Marks"><span>Plat</span><span>1</span><span>2</span><span>3</span></div>
+  <label for="e85Fold">Largeur du raccord <output id="e85FoldOut">9</output></label>
+  <input type="range" id="e85Fold" min="2" max="22" step="1" value="9">
+  <div class="e85Marks"><span>Serré</span><span>Arrondi</span></div>
+</div>
+</details>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
 <div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E62</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
@@ -3428,15 +3445,11 @@ document.getElementById('e85ReliefReset').addEventListener('click',()=>{
 e85UpdateControls();
 
 
-// E85 controls stay collapsed during drawing: only their opener overlaps canvas.
-const e85Widget=document.getElementById('e85Widget'),e85Open=document.getElementById('e85Open');
-function e85Toggle(open){e85Widget.hidden=!open;e85Open.hidden=open;e85Open.setAttribute('aria-expanded',String(open));}
-e85Open.addEventListener('click',()=>e85Toggle(true));
-document.getElementById('e85Close').addEventListener('click',()=>e85Toggle(false));
+// E85 native details has no JS dependency for opening and closing.
+const e85Widget=document.getElementById('e85Widget');
 e85Widget.addEventListener('pointerdown',e=>e.stopPropagation());
 e85Widget.addEventListener('pointermove',e=>e.stopPropagation());
 e85Widget.addEventListener('pointerup',e=>e.stopPropagation());
-e85Toggle(false);
 })();
 
 </script>
