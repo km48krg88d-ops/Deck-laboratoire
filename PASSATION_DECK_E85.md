@@ -24,7 +24,9 @@ DECK est une interface web tactile utilisée sur iPhone pour des lampes, puis ve
 
 ### 3. Prochaine étape : E85, prototype web de micro-relief 3D
 
-**À faire, pas encore réalisé :**
+**Créé le 16 novembre 2026 :** E85 a été ajoutée comme fichier autonome [e85-microrelief-3d.html](./e85-microrelief-3d.html), sans modification d’E84 ni de `index.html`. Les contrôles hauteur et raccord agissent sur le champ de hauteur et ses normales. La syntaxe JS a été vérifiée ; la fluidité et l’apparence sur iPhone restent à valider.
+
+**Cahier des charges initial (gardé pour comparaison) :**
 
 1. Créer un **nouveau fichier autonome E85** à partir du contenu réel de E84, avec un nom explicite, par exemple e85-microrelief-3d.html. Ne modifier ni E84, ni E83, ni index.html.
 2. Limiter d'abord les changements au **disque plein (lampe logique 6)** et au **donut/anneau (lampe logique 4)**. Conserver la barre verticale, l'horizontale, le chevron, les angles et tous les gestes de E84.
@@ -55,7 +57,7 @@ DECK est une interface web tactile utilisée sur iPhone pour des lampes, puis ve
 - **E82 :** suppression du tracé fantôme des gestes non reconnus, reconnaissance des angles plus stricte, contour du donut et suréchantillonnage retravaillés.
 - **E83 :** masques du disque et du donut adoucis et **prévisualisation du premier côté du chevron restaurée**.
 - **E84 :** curseur de **« Douceur du contour » de 0 à 100 %**, 35 % initial, agissant en direct sur la largeur du raccord lumineux du disque/donut (calcul CPU et GPU) et sur leurs contours. **Retour utilisateur : cela ressemble encore à un simple flou, et le besoin est désormais un vrai modelé 3D.**
-- **E85 :** **NON ENCORE CRÉÉE** au moment de cette passation.
+- **E85 :** créée depuis E84 ; expérimentation 3D non encore validée sur iPhone.
 
 ### 5. Neuf luminaires : décisions à ne pas réinventer
 
@@ -112,4 +114,4 @@ Groupes : **haut/séjour [0,3,4,8]**, **bas/chambre [1,2,5,6,7]**. Attention : c
 > Reprends DECK III depuis le dépôt GitHub km48krg88d-ops/Deck-laboratoire. Lis d'abord PASSATION_DECK_E85.md, DECK_ETAT.md et le code e84-douceur-contour.html. Nous devons créer E85 comme une nouvelle version web expérimentale : un véritable micro-relief 3D du disque et du donut, inspiré de la photo de panneaux blancs avec les trois plus petits plots. Deux paramètres de test : hauteur et largeur du raccord. Normales et ombres issues du volume, sans effet de flou. Préserve les gestes, E84 et index.html ; vérifie avant de publier et actualise les documents de suivi.
 
 ---
-**Statut à la remise :** fichier de passation pour E85 ; **E85 non développée**, aucune validation iPhone de ce futur relief. Les décisions antérieures qui ne sont pas reprises ici restent détaillées dans DECK_ETAT.md.
+**Statut actuel :** E85 créée, syntaxe JavaScript vérifiée, aucune validation iPhone de ce nouveau relief. Essai : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html Les décisions antérieures qui ne sont pas reprises ici restent détaillées dans DECK_ETAT.md.
