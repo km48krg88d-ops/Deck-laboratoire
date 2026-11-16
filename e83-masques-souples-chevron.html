@@ -1370,7 +1370,7 @@ function drawnDiscRadius(lamp){if(lamp.id===4)return Math.min(w*.12,52);if(lamp.
  // continuity belongs to the relief mask, not to a post-processing opacity effect.
 function raisedDiscSample(dx,dy,radius,reach,annulus=false){
  const dist=Math.hypot(dx,dy),dir=(-dx*.55-dy*.835)/Math.max(1,dist),inner=radius*.57;
- const soft=Math.max(4,Math.min(10,radius*.13));
+ const soft=Math.max(5,Math.min(15,radius*.24));
  const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
  const outerBlend=smooth((dist-radius+soft)/(2*soft));
  const fall=Math.pow(Math.max(0,1-Math.max(0,dist-radius)/Math.max(.001,reach*(dir<0?.85:.58))),1.8);
@@ -1442,7 +1442,7 @@ float face(float outv,float along,float len){float d=max(.15,abs(outv)),opening=
 float soft01(float v){v=clamp(v,0.,1.);return v*v*(3.-2.*v);}
 float disc(vec2 delta,bool ring){
  float dist=length(delta),dir=dot(delta,vec2(-.55,-.835))/max(1.,dist),inner=radius*.57;
- float soft=max(4.,min(10.,radius*.13));
+ float soft=max(5.,min(15.,radius*.24));
  float outerBlend=soft01((dist-radius+soft)/(2.*soft));
  float fall=pow(max(0.,1.-max(0.,dist-radius)/max(.001,reach*(dir<0.?.85:.58))),1.8);
  float lip=ring ? .14*pow(max(0.,1.-max(0.,dist-radius)/max(1.,reach*.24)),1.75) : 0.;
