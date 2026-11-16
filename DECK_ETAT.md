@@ -2,13 +2,14 @@
 
 > **Source de vérité pour reprendre DECK après un changement de conversation.**  
 > Mise à jour : **16 novembre 2026** · Projet MOBILIER / DECK III  
-> **Dernière version expérimentale : E75** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
+> **Dernière version expérimentale : E76** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
 
 ## 1. Où reprendre
 
-- **Code expérimental à poursuivre : [e75-angle-pilote.html](./e75-angle-pilote.html)** — « DECK E75 · Angle droit pilote ».
-- Référence graphique précédente : [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) (E74).
-- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74 et E75.
+- **Code expérimental à poursuivre : [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html)** — « DECK E76 · Raccord orthogonal pilote ».
+- Point de retour et version source : [e75-angle-pilote.html](./e75-angle-pilote.html) — E75, inchangée.
+- Autre référence graphique : [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) (E74, deux branches indépendantes).
+- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75 et E76.
 - **Application principale indépendante : [index.html](./index.html)**, qui porte encore le titre E63.6. **Ne pas la remplacer par une expérience sans décision explicite.**
 - La série E est un laboratoire : les fichiers HTML sont conservés individuellement pour pouvoir revenir à une version antérieure.
 - [README.md](./README.md) = porte d'entrée ; [DECK_VERSIONS.md](./DECK_VERSIONS.md) = index historique ; **ce fichier** = état courant et décisions.
@@ -17,7 +18,7 @@
 
 DECK est une interface tactile et gestuelle, expérimentée sur iPhone via une interface web, destinée à commander des lampes, le ventilateur et la musique. Les symboles lumineux sont des **abstractions du comportement de chaque luminaire**, pas des pictogrammes littéraux. Direction esthétique : toile bleu nuit, formes comme des **poinçonnements ou retraits de matière**, léger relief inversé, lumière diffuse et non objets posés dessus.
 
-Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E75**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
+Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E76**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
 
 ## 3. Les 9 lampes et leur répartition — décisions de conception
 
@@ -55,7 +56,7 @@ Les autres expérimentations (sphère à particules, cube/ventilateur, fente lum
 - **La direction droite comme fonction propre à un groupe reste libre/non attribuée**. Ne pas y ajouter une commande différente.
 - **Le geste individuel de la lampe étoile reste en suspens** ; aucune attribution automatique.
 
-## 5. Ce que contient effectivement E75 (à distinguer de la cible)
+## 5. Ce que contiennent effectivement E75 et E76 (à distinguer de la cible)
 
 Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à deux lignes »** :
 - E74 : rendu de l'angle par **deux lignes indépendantes**, sans jonction forcée ; résultat graphique préféré lors du retour utilisateur, avant essai E75.
@@ -68,15 +69,24 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - Les commandes de groupe ciblent les **lampes présentes dans l'état dessiné** ; ne pas déduire de la présence des noms dans le code que toutes les neuf lampes sont déjà dessinées ou connectées à du matériel.
 - Pour le système physique, un premier fonctionnement **ON/OFF** reste prévu ; la variation réelle des luminaires est une évolution distincte à étudier. L'intensité dans le prototype ne prouve pas la disponibilité d'un variateur sur la lampe réelle.
 
+**E76 — « Raccord orthogonal pilote », dérivée de E75 (16/11/2026)**
+- **But :** résoudre le défaut de raccord lumière/ombre des deux lignes à 90° **sans grande zone triangulaire**. Le trait visible conserve **deux branches rectilignes et un sommet strictement orthogonal** ; le raccord ne doit **jamais arrondir la géométrie**.
+- Le curseur **« Raccord de lumière » 0–20 px** affecte **uniquement le masque de lumière**, dans un périmètre local (au plus le rayon choisi, limité à 30 % de chaque longueur de branche). À 0, on retrouve le masque des deux lignes indépendantes.
+- La fusion locale est autorisée **seulement entre deux contributions de même signe** (lumière avec lumière ou ombre avec ombre), pas entre la lumière d'une branche et l'ombre de l'autre ; le masque ne les additionne pas. Cela vise à empêcher le triangle parasite.
+- Le calcul JS de secours et le shader WebGL portent la même logique. Les réglages de raccord et les tracés E76 utilisent des clés locales **distinctes** de E75, avec **lecture initiale** des valeurs E75 en absence d'une valeur E76.
+- Gestes, intensité à la longueur, affectations séjour/chambre et autres formes **non modifiés**. **Aucun code de production** touché.
+- **Limite :** l'effet visuel réel, le shader WebGL sur iPhone et les FPS restent **à vérifier par l'utilisateur** ; la correction est encore une hypothèse graphique à valider.
+
 ## 6. Validation, sujets ouverts et prochaine étape
 
 **Tests annoncés lors de la création des versions (historique conversationnel ; non relancés pour la rédaction de cette note) :**
 - E74 : **29 tests logiques réussis** ; rendu à valider sur iPhone.
 - E75 : **40 tests logiques réussis** ; **validation iPhone non encore confirmée**.
+- E76 : **10 assertions de structure/régression vérifiées** au moment de la création ; relecture du fichier publié GitHub, compilation syntaxique JS, vérification des chemins CPU/GPU, conservation des gestes et de la séparation E75/E76. **Test numérique CPU sur 441 positions** : raccord visible dans un rayon de 8 et 20 px, aucun changement au-delà du rayon de 8 px, aucune inversion de signe, aucune valeur non finie. **Compilation du shader dans un navigateur WebGL et rendu iPhone non vérifiés.**
 
-**À faire avant E76 :**
-1. Tester E75 **sur iPhone** et comparer l'angle E75 (curseurs de longueur et raccord) à l'aspect préféré d'E74.
-2. Vérifier à la main les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
+**À faire pour valider E76 (avant toute E77 ou promotion) :**
+1. Tester E76 **sur iPhone** et comparer le raccord orthogonal E76 à l'aspect E74 et à l'essai E75 ; vérifier surtout qu'aucune grande zone triangulaire n'apparaît.
+2. Vérifier le masque WebGL sur iPhone, le curseur de raccord en direct (0–20 px), la fluidité (FPS) et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
 3. Consigner les résultats concrets : ce qui marche, ce qui est à modifier, les réglages de curseur retenus.
 4. Ne décider **ni du geste de l'étoile ni d'une fonction de groupe à droite** sans demande nouvelle.
 
@@ -85,7 +95,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 ## 7. Protocole anti-perte pour les prochaines conversations
 
 1. **Au début d'une nouvelle conversation :** lire **ce fichier**, puis le fichier expérimental indiqué en section 1. Annoncer **la version exacte** et **les sujets en suspens** ; ne pas réinventer les décisions.
-2. **À chaque itération de code :** créer un **nouveau fichier E76, E77…** plutôt que remplacer E75 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
+2. **À chaque itération de code :** créer un **nouveau fichier E77, E78…** plutôt que remplacer E76 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
 3. **Avec chaque version importante :** mettre à jour **dans le même travail** les sections 1, 5, 6 et le journal ci-dessous ; actualiser si nécessaire le tableau et les gestes, et mettre à jour `DECK_VERSIONS.md`.
 4. **Toujours distinguer** : (a) décidé par l'utilisateur, (b) implémenté, (c) testé par logique, (d) validé sur iPhone, (e) idée à confirmer. Ne jamais transformer une hypothèse en décision acquise.
 5. **Avant une modification sensible :** demander ou utiliser l'export **« Copier tous les réglages »** si des réglages du navigateur importent ; GitHub ne contient ni `localStorage` ni les observations de test non consignées.
@@ -105,7 +115,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 ### B. Toujours développer d'abord dans une version test
 
-1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e76-…html`, puis E77, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
+1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e77-…html`, puis E78, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
 2. Les changements d'interface, d'animations, de gestes, de moteur graphique, de sauvegarde ou de performances restent d'abord dans cette version test.
 3. **Interdiction de promouvoir automatiquement en application définitive**, y compris vers `index.html`, `sw.js`, `manifest.webmanifest` ou les ressources de production. Seul un accord explicite de l'utilisateur, **après test**, autorise cette étape.
 4. Si une nouvelle version test ne fonctionne pas, revenir à la précédente sans affecter l'application principale.
@@ -155,6 +165,7 @@ Remettre **un lien vers la nouvelle version expérimentale** et, en texte court 
 - **16 novembre 2026 — E75** — Angle pilote, intensité à la longueur, raccord 0–20 px, pas d'intensité par maintien ; 40 tests logiques signalés, essai iPhone restant.
 - **16 novembre 2026 — Documentation** — Création de la source de vérité pour limiter les pertes entre conversations. **Code E75 inchangé.**
 - **16 novembre 2026 — Protocole qualité** — Ajout d'une procédure obligatoire de contrôle avant livraison, de développement en version test indépendante et d'intégration en production **uniquement après validation explicite**. Aucun code applicatif modifié.
+- **16 novembre 2026 — E76** — Raccord lumineux local sur un trait strictement orthogonal, sans mélange lumière/ombre ; E75 et application principale préservées ; contrôles statiques et test numérique CPU réussis, WebGL/iPhone à valider.
 
 ---
 **Règle de conservation :** aucune ancienne décision validée n'est annulée par une nouvelle expérimentation, sauf modification explicite. En cas de contradiction entre ce document et une décision ultérieure de l'utilisateur, actualiser ce fichier en citant la décision et la date.
