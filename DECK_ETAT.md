@@ -2,12 +2,13 @@
 
 > **Source de vérité pour reprendre DECK après un changement de conversation.**  
 > Mise à jour : **16 novembre 2026** · Projet MOBILIER / DECK III  
-> **Dernière version expérimentale : E82** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
+> **Dernière version expérimentale : E83** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
 
 ## 1. Où reprendre
 
-- **Code expérimental à poursuivre : [e82-gestes-relief.html](./e82-gestes-relief.html)** — « DECK E82 · Gestes et relief affiné ».
-- Point de retour immédiat : [e81-apparence-restauree.html](./e81-apparence-restauree.html) — E81 inchangée.
+- **Code expérimental à poursuivre : [e83-masques-souples-chevron.html](./e83-masques-souples-chevron.html)** — « DECK E83 · Masques souples · Chevron ».
+- Point de retour immédiat : [e82-gestes-relief.html](./e82-gestes-relief.html) — E82 inchangée.
+- Autre point de retour : [e81-apparence-restauree.html](./e81-apparence-restauree.html) — E81 inchangée.
 - Autre point de retour : [e80-membrane-ralentie.html](./e80-membrane-ralentie.html) — E80 inchangée.
 - Autre point de retour : [e79-membrane-lignes.html](./e79-membrane-lignes.html) — E79 inchangée.
 - Autre point de retour : [e78-extinction-naturelle.html](./e78-extinction-naturelle.html) — E78 inchangée.
@@ -15,7 +16,7 @@
 - Autre point de retour : [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html) — E76 inchangée.
 - Version antérieure : [e75-angle-pilote.html](./e75-angle-pilote.html) — E75, inchangée.
 - Autre référence graphique : [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) (E74, deux branches indépendantes).
-- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76, E77, E78, E79, E80, E81 et E82.
+- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76, E77, E78, E79, E80, E81, E82 et E83.
 - **Application principale indépendante : [index.html](./index.html)**, qui porte encore le titre E63.6. **Ne pas la remplacer par une expérience sans décision explicite.**
 - La série E est un laboratoire : les fichiers HTML sont conservés individuellement pour pouvoir revenir à une version antérieure.
 - [README.md](./README.md) = porte d'entrée ; [DECK_VERSIONS.md](./DECK_VERSIONS.md) = index historique ; **ce fichier** = état courant et décisions.
@@ -24,7 +25,7 @@
 
 DECK est une interface tactile et gestuelle, expérimentée sur iPhone via une interface web, destinée à commander des lampes, le ventilateur et la musique. Les symboles lumineux sont des **abstractions du comportement de chaque luminaire**, pas des pictogrammes littéraux. Direction esthétique : toile bleu nuit, formes comme des **poinçonnements ou retraits de matière**, léger relief inversé, lumière diffuse et non objets posés dessus.
 
-Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E82**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
+Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E83**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
 
 ## 3. Les 9 lampes et leur répartition — décisions de conception
 
@@ -62,7 +63,7 @@ Les autres expérimentations (sphère à particules, cube/ventilateur, fente lum
 - **La direction droite comme fonction propre à un groupe reste libre/non attribuée**. Ne pas y ajouter une commande différente.
 - **Le geste individuel de la lampe étoile reste en suspens** ; aucune attribution automatique.
 
-## 5. Ce que contiennent effectivement E75 à E82 (à distinguer de la cible)
+## 5. Ce que contiennent effectivement E75 à E83 (à distinguer de la cible)
 
 Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à deux lignes »** :
 - E74 : rendu de l'angle par **deux lignes indépendantes**, sans jonction forcée ; résultat graphique préféré lors du retour utilisateur, avant essai E75.
@@ -142,6 +143,15 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - **Code et navigation :** E81 reste disponible, sauvegarde locale isolée sous les clés E82 avec reprise initiale des données E81 ; groupes, pincement, commandes générales et durée réglable des lignes hérités de E81.
 - **Validation technique uniquement :** syntaxe JavaScript, contrôles statiques, **12 cas de reconnaissance isolés réussis** (barres, crochet, angles courts, angles non droits, chevron, gribouillage), dégradé du donut testé sur des diffusions de **8 à 180 px** sans stops inversés. **Le rendu Safari réel, la compilation du shader WebGL sur iPhone, les FPS et l'aspect esthétique restent à valider sur téléphone.** Ne pas déclarer les halos définitivement corrigés avant cet essai.
 
+**E83 — « Masques souples · Chevron », dérivée de E82 (16/11/2026)**
+
+- **Retour utilisateur, captures iPhone E82 :** le disque plein et le donut présentent encore des **bordures de relief trop franches et des plages très uniformes** malgré le suréchantillonnage ; l'hypothèse pertinente est que **le masque de relief lui-même**, non sa seule résolution, doit être adouci. Le chevron reconnaît mieux la forme complète, mais **l'aperçu du premier côté** a disparu avec la suppression des traces libres.
+- **Correction des masques circulaires :** pour disque (id 6) et anneau (id 4), CPU et shader WebGL utilisent désormais des **raccords progressifs par smoothstep de part et d'autre du rayon**. Largeur de lissage cible `max(5 px,min(15 px, rayon × 0,24))` ; le donut possède deux raccords souples (extérieur et intérieur) et un dégradé discret sur la matière entre eux. Le disque reçoit une faible pente de lumière intérieure afin de ne plus sembler plaqué. Cela concerne **la continuité du relief**, pas une nouvelle animation.
+- Les contours vectoriels de l'anneau deviennent moins lumineux et légèrement adoucis. Le suréchantillonnage sélectif mis en place en E82 est conservé.
+- **Premier côté du chevron :** prévisualisation provisoire uniquement tant que le doigt est en mouvement, et **seulement pour une première branche oblique ascendante, suffisamment longue (30 px) et presque rectiligne**. Cette branche reste visible avant le retour du deuxième côté. À la validation, le **chevron complet reste soumis aux contraintes strictes de E82** ; si le dessin ne donne aucune commande, aucune empreinte résiduelle.
+- Maintien des seuils d'angles et de chevrons E82, groupes, gestes, rendu des barres et extinction membrane réglable. Sauvegardes expérimentales E83 distinctes, avec lecture initiale de E82.
+- **Tests techniques :** fichier enregistré et JavaScript compilable, cohérence du lissage CPU/GPU vérifiée par lecture du code ; trois balayages numériques de profils traversant les deux bordures d'anneau et le disque, variation sur 2 px inférieure à 0,2 dans les scénarios testés (≈0,143 à 0,145). Six tests de première branche (valide, courte, horizontale, descendante, ondulée, puis avec seconde branche amorcée) conformes. **Rendu Safari/iPhone et FPS non vérifiés** ; ne pas déclarer l'aliasing visuellement résolu avant retour utilisateur.
+
 ## 6. Validation, sujets ouverts et prochaine étape
 
 **Tests annoncés lors de la création des versions (historique conversationnel ; non relancés pour la rédaction de cette note) :**
@@ -154,10 +164,11 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - E80 : **12 vérifications de structure et tests numériques isolés réussis**. Le contrôle de durée affecte le relâchement et la fin de son nettoyage ; E79 et l'application principale sont inchangées. La fluidité et le résultat esthétique sur iPhone restent à vérifier.
 - E81 : **12 vérifications de code et d'état réussies** : tracé des lignes et des angles et shader statique identiques à E78, 5 instants de relâchement testés, centre avant extrémités, durée 2,6 s, E78 et application principale intacts. **Aucun rendu ou FPS E81 validé sur iPhone**.
 - E82 : **14 vérifications structurelles**, **12 simulations de reconnaissance** avec résultat attendu, **7 contrôles de dégradé** à différentes intensités de diffusion, vérification du script et conservation des affectations. **Aucune validation de rendu réel ni garantie FPS sur iPhone**.
+- E83 : **6 scénarios de prévisualisation du premier côté du chevron réussis**, **3 balayages numériques des bords circulaires** sous le seuil de variation retenu, compilation syntaxique JS réussie, groupes/gestes et absence de tracés invalides conservés. Shader WebGL non testé dans Safari ; visuel et FPS non validés.
 
-**À faire pour valider E82 (avant toute E83 ou promotion) :**
-1. Tester E82 **sur iPhone** : dessiner une courbe libre non reconnue (aucune empreinte), un petit crochet sur une barre (pas d'angle), un vrai angle court mais suffisamment grand, un angle légèrement oblique et un chevron. Vérifier le donut pendant son allumage et son extinction : contours nets, dégradé extérieur continu, relief discret.
-2. Vérifier la qualité des bords et halos (sans pixelisation), les performances **FPS** avec plusieurs lampes en extinction, le rendu dans les deux fonds, la préservation des lampes voisines et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
+**À faire pour valider E83 (avant toute E84 ou promotion) :**
+1. Tester E83 **sur iPhone** : comparer la netteté du donut et du disque à E82, particulièrement la transition entre leur relief et la membrane environnante. Tracer un chevron doucement : **sa première branche doit être visible pendant le geste**, puis la deuxième ; un tracé invalide ne doit rien laisser après relâchement.
+2. Contrôler la douceur des **masques circulaires** (aucune bordure plate ou marche visible), les performances **FPS**, les deux fonds, la préservation des lampes voisines et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
 3. Consigner les résultats concrets : ce qui marche, ce qui est à modifier, les réglages de curseur retenus.
 4. Ne décider **ni du geste de l'étoile ni d'une fonction de groupe à droite** sans demande nouvelle.
 
@@ -166,7 +177,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 ## 7. Protocole anti-perte pour les prochaines conversations
 
 1. **Au début d'une nouvelle conversation :** lire **ce fichier**, puis le fichier expérimental indiqué en section 1. Annoncer **la version exacte** et **les sujets en suspens** ; ne pas réinventer les décisions.
-2. **À chaque itération de code :** créer un **nouveau fichier E83, E84…** plutôt que remplacer E82 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
+2. **À chaque itération de code :** créer un **nouveau fichier E84, E85…** plutôt que remplacer E83 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
 3. **Avec chaque version importante :** mettre à jour **dans le même travail** les sections 1, 5, 6 et le journal ci-dessous ; actualiser si nécessaire le tableau et les gestes, et mettre à jour `DECK_VERSIONS.md`.
 4. **Toujours distinguer** : (a) décidé par l'utilisateur, (b) implémenté, (c) testé par logique, (d) validé sur iPhone, (e) idée à confirmer. Ne jamais transformer une hypothèse en décision acquise.
 5. **Avant une modification sensible :** demander ou utiliser l'export **« Copier tous les réglages »** si des réglages du navigateur importent ; GitHub ne contient ni `localStorage` ni les observations de test non consignées.
@@ -186,7 +197,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 ### B. Toujours développer d'abord dans une version test
 
-1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e83-…html`, puis E84, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
+1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e84-…html`, puis E85, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
 2. Les changements d'interface, d'animations, de gestes, de moteur graphique, de sauvegarde ou de performances restent d'abord dans cette version test.
 3. **Interdiction de promouvoir automatiquement en application définitive**, y compris vers `index.html`, `sw.js`, `manifest.webmanifest` ou les ressources de production. Seul un accord explicite de l'utilisateur, **après test**, autorise cette étape.
 4. Si une nouvelle version test ne fonctionne pas, revenir à la précédente sans affecter l'application principale.
@@ -242,7 +253,8 @@ Remettre **un lien vers la nouvelle version expérimentale** et, en texte court 
 - **16 novembre 2026 — E79** — Test physique limité aux deux barres : profil de membrane dont la profondeur diminue et la pente se détend ; disparition du masque d'opacité pour ces barres. Calculs et contrôles isolés réussis, validation iPhone en attente. Retour : effet prometteur mais trop rapide.
 - **16 novembre 2026 — E80** — Ralentissement de l'essai de membrane à 2,6 s par défaut, curseur 1,2–4,0 s ; matériau et gestes inchangés. Capture utilisateur : la nouvelle apparence est striée et les grands triangles du chevron restent problématiques.
 - **16 novembre 2026 — E81** — Correction de la régression de E79/E80 : retour au dessin E78 lorsque les lampes sont allumées ; relâchement approximé seulement pendant l'extinction des deux barres ; durée E80 conservée. Essai visuel sur iPhone à valider.
-- **16 novembre 2026 — E82** — Aucun tracé pour les gestes invalides, critères d'angle et chevron plus stricts, rendu du donut harmonisé et suréchantillonné, contour des barres +10 %. 12 essais de reconnaissance et validations des dégradés réussis ; Safari/WebGL/FPS à valider sur iPhone.
+- **16 novembre 2026 — E82** — Aucun tracé pour les gestes invalides, critères d'angle et chevron plus stricts, rendu du donut harmonisé et suréchantillonné, contour des barres +10 %. 12 essais de reconnaissance et validations des dégradés réussis ; captures iPhone : contours circulaires encore trop francs et aperçu du premier côté du chevron absent.
+- **16 novembre 2026 — E83** — Lissage des masques de relief intérieur et extérieur du donut/disque, continuité de la matière, et retour du premier côté du chevron pendant le geste uniquement. Tests numériques et de reconnaissance ciblés réussis, iPhone à valider.
 
 ---
 **Règle de conservation :** aucune ancienne décision validée n'est annulée par une nouvelle expérimentation, sauf modification explicite. En cas de contradiction entre ce document et une décision ultérieure de l'utilisateur, actualiser ce fichier en citant la décision et la date.
