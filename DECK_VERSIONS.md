@@ -30,7 +30,8 @@ Ce fichier avait initialement servi à vérifier que les modifications directes 
 | E76 | [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html) | Raccord orthogonal, différence visuelle non constatée sur iPhone ; sujet mis de côté |
 | E77 | [e77-effacement-progressif.html](./e77-effacement-progressif.html) | Tracés invalides dissipés ; onde d'extinction radiale, abandonnée au profit d'un fondu discret |
 | E78 | [e78-extinction-naturelle.html](./e78-extinction-naturelle.html) | Fondu sans onde ; rendu encore perçu comme une transition numérique |
-| **E79** | **[e79-membrane-lignes.html](./e79-membrane-lignes.html)** | **Dernier essai : retrait d'un support sous membrane pour les deux barres ; profondeur et pente recalculées, ombre et reflet déplacés ; contrôles de code réussis, rendu iPhone à valider** |
+| E79 | [e79-membrane-lignes.html](./e79-membrane-lignes.html) | Première membrane physique sur les deux barres, convaincante mais trop rapide selon le retour utilisateur |
+| **E80** | **[e80-membrane-ralentie.html](./e80-membrane-ralentie.html)** | **Dernier essai : même membrane, 2,6 s par défaut, durée réglable de 1,2 à 4 s ; syntaxe et tests de durée vérifiés ; essai iPhone à valider** |
 
 Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres caractéristiques ne sont pas récapitulées ici.
 
@@ -38,6 +39,6 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 
 - `index.html` : application principale distincte (titre actuel E63.6) ; ne pas écraser sans instruction.
 - Les fichiers `eXX-*.html` : expérimentations autonomes et points de retour.
-- **Dernière version de travail au 16/11/2026 : E79**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
+- **Dernière version de travail au 16/11/2026 : E80**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
 
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
