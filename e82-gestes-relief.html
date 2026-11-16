@@ -1556,7 +1556,7 @@ function renderDrawnLights(dt){
   if(lamp.offAt!==undefined)lamp.displayLevel=lamp.offLevel; // keep native brightness; the shared layer mask fades it spatially
   else lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));
   let layer=layers[lamp.id];if(!layer)layer=layers[lamp.id]=document.createElement('canvas');
-  const scale=Math.min(lamp.id===4||lamp.offAt!==undefined?3:2,Math.max(1,dpr||1));
+  const scale=Math.min(lamp.id===4?3:lamp.offAt!==undefined?2.5:2,Math.max(1,dpr||1));
   const width=Math.ceil(w*scale),height=Math.ceil(h*scale);
   if(layer.width!==width||layer.height!==height){layer.width=width;layer.height=height;}
   const light=layer.getContext('2d'),signature=[width,height,JSON.stringify(drawnLook),drawnLook.nightCanvas?null:JSON.stringify(dayPalette),...lamps.filter(Boolean).map(l=>l.id+':'+l.displayLevel.toFixed(3)+':'+JSON.stringify(l.points)),lamp.offAt].join('|');
