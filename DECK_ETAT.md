@@ -92,12 +92,69 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 6. **Changer de chat avant saturation** (repère pratique : après ~30 à 50 échanges substantiels) ; pour reprendre : « Reprends DECK depuis `DECK_ETAT.md` et la dernière version E indiquée. »
 7. Ne jamais prétendre qu'un commit, un test ou une publication fonctionne sans l'avoir constaté.
 
-## 8. Journal
+## 8. Protocole obligatoire pour l'assistant — développement, vérifications et publication
+
+**Ces étapes sont des obligations de travail de l'assistant, pas des tâches à déléguer à l'utilisateur.** Elles s'appliquent dans toute nouvelle conversation DECK, même si l'utilisateur demande simplement « corrige ceci ». Ne pas sauter une étape en raison d'une reprise de chat. Ne pas déclarer « testé » un point qui n'a pas réellement été vérifié.
+
+### A. Avant toute modification
+
+1. **Relire** `DECK_ETAT.md`, le fichier source de la dernière version expérimentale et les parties du code concernées. Contrôler le numéro de version exact dans GitHub.
+2. **Identifier** ce qui doit changer, les décisions déjà validées à préserver et les fonctions susceptibles d'être affectées. Ne pas interpréter un texte ancien du code comme une nouvelle décision.
+3. **Préserver le point de retour** : conserver la version précédente sans modification et repérer le SHA du fichier GitHub source. Les réglages `localStorage` sur iPhone sont distincts et, si nécessaires à l'essai, réclament un export dédié.
+4. **Limiter le changement** à la demande. Ni refonte collatérale, ni nouveaux gestes, ni réglages modifiés sans demande.
+
+### B. Toujours développer d'abord dans une version test
+
+1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e76-…html`, puis E77, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
+2. Les changements d'interface, d'animations, de gestes, de moteur graphique, de sauvegarde ou de performances restent d'abord dans cette version test.
+3. **Interdiction de promouvoir automatiquement en application définitive**, y compris vers `index.html`, `sw.js`, `manifest.webmanifest` ou les ressources de production. Seul un accord explicite de l'utilisateur, **après test**, autorise cette étape.
+4. Si une nouvelle version test ne fonctionne pas, revenir à la précédente sans affecter l'application principale.
+
+### C. Vérifier avant de remettre une version test
+
+**Checklist de l'assistant :**
+- [ ] Relire ou récupérer le fichier **réellement enregistré** sur GitHub et contrôler son titre, son numéro de version, son intégrité et son contenu attendu.
+- [ ] Comparer avec la version source (diff) : les changements correspondent à la demande ; aucune suppression ou régression involontaire détectable.
+- [ ] Vérifier la syntaxe HTML / CSS / JavaScript par les moyens disponibles, le chargement des scripts, les références de fonctions/éléments et les erreurs évidentes de logique.
+- [ ] Exécuter les tests automatisés disponibles ; ajouter des tests ciblés lorsque c'est pertinent, sans confondre assertions logiques avec essai tactile réel.
+- [ ] Vérifier les interactions concernées : tracé et apparition, tap sélection/désélection, double tap extinction/donut, pincement/intensité, geste disque, ancre fixe + doigt mobile, séparation séjour/chambre, commandes générales et extinction sans effacement.
+- [ ] Vérifier l'absence de conflit manifeste entre gestes et la conservation des réglages / états locaux ; surveiller les régressions des fonctions non modifiées (sphère, ventilateur, musique, graphiques) lorsqu'elles partagent du code.
+- [ ] Vérifier l'URL de test GitHub Pages et son accessibilité **si cela est techniquement possible** ; sinon annoncer clairement que cette vérification manque.
+- [ ] Vérifier que les **fichiers de production sont inchangés** (sauf autorisation de promotion explicite).
+- [ ] Consigner précisément les contrôles **réellement réussis, échoués et non exécutés**. Ne jamais écrire « tous les tests passent » sans compte rendu vérifiable.
+
+**Limite impérative :** une vérification de syntaxe, une simulation de gestes ou des tests de logique sur ordinateur **ne valident pas** le tactile, le rendu, les performances (FPS) ou la sauvegarde sur l'iPhone réel. Ces aspects doivent être notés **« en attente de validation iPhone »** tant que l'utilisateur ne les a pas confirmés.
+
+### D. Livraison de la version test à l'utilisateur
+
+Remettre **un lien vers la nouvelle version expérimentale** et, en texte court :
+- la version de départ et la nouvelle version ;
+- les modifications exactes apportées ;
+- les vérifications réellement effectuées et leur résultat ;
+- les tests à faire sur iPhone, et les points incertains ;
+- confirmation que **la version définitive n'a pas été modifiée**.
+
+**Ne pas annoncer que la version est validée simplement parce qu'elle est publiée sur GitHub.** Attendre le retour de l'utilisateur et conserver les corrections dans de nouvelles versions de test si nécessaire.
+
+### E. Intégration dans la version définitive, uniquement après validation
+
+1. Attendre une demande explicite du type **« cette version est validée, intègre-la »** ; l'absence d'objection ne vaut pas accord.
+2. Avant la modification, relever le commit/SHA et conserver un retour possible à l'ancien `index.html` ; vérifier quelles ressources de production doivent réellement changer.
+3. Intégrer **uniquement la version validée** et contrôler la version enregistrée et, dans la mesure du possible, la publication chargée via GitHub Pages ; tenir compte de l'éventuel cache Safari / service worker.
+4. Effectuer les contrôles de non-régression de la version définitive. En cas d'échec, privilégier le retour immédiat à la version de production précédente.
+5. Signaler explicitement ce qui a été intégré et ce qui reste à vérifier sur l'appareil.
+
+### F. Mise à jour et traçabilité obligatoires
+
+À chaque livraison importante, mettre à jour **dans la même séquence de travail** : `DECK_ETAT.md` (version courante, changements, état des validations, prochain essai), `DECK_VERSIONS.md` (nouvelle entrée) et, si nécessaire, `README.md`. Conserver un journal daté des décisions, sans écraser les versions antérieures. **Si une étape est inaccessible ou échoue, le signaler : ne pas prétendre qu'elle est faite.**
+
+## 9. Journal
 
 - **15 novembre 2026** — Répartition séjour/chambre, associations des neuf luminaires et langage graphique abstrait ; étoile et direction droite réservées.
 - **16 novembre 2026 — E74** — Angle à deux lignes ; 29 tests logiques signalés ; essai visuel iPhone restant.
 - **16 novembre 2026 — E75** — Angle pilote, intensité à la longueur, raccord 0–20 px, pas d'intensité par maintien ; 40 tests logiques signalés, essai iPhone restant.
 - **16 novembre 2026 — Documentation** — Création de la source de vérité pour limiter les pertes entre conversations. **Code E75 inchangé.**
+- **16 novembre 2026 — Protocole qualité** — Ajout d'une procédure obligatoire de contrôle avant livraison, de développement en version test indépendante et d'intégration en production **uniquement après validation explicite**. Aucun code applicatif modifié.
 
 ---
 **Règle de conservation :** aucune ancienne décision validée n'est annulée par une nouvelle expérimentation, sauf modification explicite. En cas de contradiction entre ce document et une décision ultérieure de l'utilisateur, actualiser ce fichier en citant la décision et la date.
