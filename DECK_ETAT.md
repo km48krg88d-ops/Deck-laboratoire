@@ -2,13 +2,13 @@
 
 > **Source de vérité pour reprendre DECK après un changement de conversation.**  
 > Mise à jour : **16 novembre 2026** · Projet MOBILIER / DECK III  
-> **Dernière version expérimentale : E84** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
+> **Dernière version expérimentale : E85** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
 
 ## 1. Où reprendre
 
-**Passation autonome pour la prochaine conversation : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md).** Dernière version effectivement créée : **E84** ; **E85 est un essai 3D à réaliser**, pas un fichier déjà publié.
+**Passation autonome pour la prochaine conversation : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md).** Dernière version effectivement créée : **E85**, essai 3D créé et non validé sur iPhone.
 
-- **Code expérimental à poursuivre : [e84-douceur-contour.html](./e84-douceur-contour.html)** — « DECK E84 · Douceur de contour réglable ».
+- **Code expérimental à poursuivre : [e85-microrelief-3d.html](./e85-microrelief-3d.html)** — E85, micro-relief 3D. Retour : [E84](./e84-douceur-contour.html).
 - Point de retour immédiat : [e83-masques-souples-chevron.html](./e83-masques-souples-chevron.html) — E83 inchangée.
 - Autre point de retour : [e82-gestes-relief.html](./e82-gestes-relief.html) — E82 inchangée.
 - Autre point de retour : [e81-apparence-restauree.html](./e81-apparence-restauree.html) — E81 inchangée.
@@ -164,6 +164,16 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - Sauvegarde indépendante **`deck-e84-contour-softness-v1`** ; formes et réglages E84 sous clés dédiées, relisant initialement E83. Le slider est dans le panneau **Réglages** de la version web.
 - **Contrôles techniques :** JavaScript compilable ; cohérence des paramètres CPU/GPU et des clés de cache vérifiée ; profils numériques vérifiés pour **0, 10, 35, 55, 75 et 100 %** sur **disque et donut**, sans valeur non finie. À rayon identique, la variation maximale par pixel mesurée sur le profil extérieur passe d'environ **0,56 à 0,045** sur le disque entre 0 et 100 % : l'effet de réglage est donc effectivement prononcé.
 - **Statut :** test iPhone, fluidité lors du déplacement continu du curseur, rendu du shader WebGL sur Safari et esthétique à **valider avec l'utilisateur**. Ne pas affirmer que la sensation de membrane souhaitée est atteinte avant ce retour.
+
+
+**E85 — « Micro-relief 3D » (16/11/2026), dérivée d’E84**
+
+- Nouvelle expérience indépendante : [e85-microrelief-3d.html](./e85-microrelief-3d.html) ; [lien de test GitHub Pages](https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html), publication effective non vérifiée sur iPhone.
+- Disque (ID 6) : champ de hauteur avec plateau circulaire et raccord cubique lisse. Donut (ID 4) : couronne à deux pentes arrondies, intérieur dégagé. Normales issues des dérivées numériques du champ et lumière fixe en haut à gauche. Le réglage ne change pas le simple flou d’un contour.
+- Deux contrôles toujours visibles : hauteur 0–3,2 (initial 1,6, repères 1/2/3) et largeur du raccord 2–22 (initial 9), plus réinitialisation. Champ recalculé seulement si paramètres, rayon ou résolution changent ; rendu sur une petite zone dédiée à la forme, jusqu’à DPR 2.
+- Rendu de relief sur Canvas2D local par normales et ombres ; il remplace l’ancien masque circulaire E84 et désactive ses halos lumineux directs, mais ne touche pas aux autres formes, aux gestes ou aux shaders utilisés ailleurs. En mode jour, le rendu est expérimental et doit être vérifié séparément.
+- Les sauvegardes des formes et angles portent désormais les clés E85, avec lecture initiale d’E84. E84 et l’application principale restent intactes.
+- **Contrôle statique :** syntaxe JavaScript vérifiée dans un moteur JS. **Non vérifié sur iPhone :** comportement tactile, netteté, composition visuelle, vitesse, RAM, publication Pages, fidélité perceptuelle à la photo.
 
 ## 6. Validation, sujets ouverts et prochaine étape
 
