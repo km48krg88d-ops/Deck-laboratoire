@@ -6,6 +6,8 @@
 
 ## 1. Où reprendre
 
+**Passation autonome pour la prochaine conversation : [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md).** Dernière version effectivement créée : **E84** ; **E85 est un essai 3D à réaliser**, pas un fichier déjà publié.
+
 - **Code expérimental à poursuivre : [e84-douceur-contour.html](./e84-douceur-contour.html)** — « DECK E84 · Douceur de contour réglable ».
 - Point de retour immédiat : [e83-masques-souples-chevron.html](./e83-masques-souples-chevron.html) — E83 inchangée.
 - Autre point de retour : [e82-gestes-relief.html](./e82-gestes-relief.html) — E82 inchangée.
@@ -164,6 +166,8 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - **Statut :** test iPhone, fluidité lors du déplacement continu du curseur, rendu du shader WebGL sur Safari et esthétique à **valider avec l'utilisateur**. Ne pas affirmer que la sensation de membrane souhaitée est atteinte avant ce retour.
 
 ## 6. Validation, sujets ouverts et prochaine étape
+
+**Nouvelle décision du 16 novembre 2026 :** le curseur E84 de « douceur du contour » est perçu comme un simple flou. L'utilisateur souhaite désormais un **véritable micro-relief 3D du disque et du donut** : carte de hauteur, normales et éclairage provenant du volume, **pas d'un masque flouté**. Référence : photo transmise de panneaux blancs à plots cylindriques, en ne retenant **que les trois plus petites hauteurs** ; voir [PASSATION_DECK_E85.md](./PASSATION_DECK_E85.md) pour la description et les étapes. **E85 non encore créée.**
 
 **Tests annoncés lors de la création des versions (historique conversationnel ; non relancés pour la rédaction de cette note) :**
 - E74 : **29 tests logiques réussis** ; rendu à valider sur iPhone.
