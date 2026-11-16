@@ -2,16 +2,17 @@
 
 > **Source de vérité pour reprendre DECK après un changement de conversation.**  
 > Mise à jour : **16 novembre 2026** · Projet MOBILIER / DECK III  
-> **Dernière version expérimentale : E78** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
+> **Dernière version expérimentale : E79** · Statut : **prototype à tester sur iPhone**, non considéré comme validé en situation réelle.
 
 ## 1. Où reprendre
 
-- **Code expérimental à poursuivre : [e78-extinction-naturelle.html](./e78-extinction-naturelle.html)** — « DECK E78 · Extinction naturelle ».
-- Point de retour immédiat : [e77-effacement-progressif.html](./e77-effacement-progressif.html) — E77 inchangée.
+- **Code expérimental à poursuivre : [e79-membrane-lignes.html](./e79-membrane-lignes.html)** — « DECK E79 · Membrane des lignes ».
+- Point de retour immédiat : [e78-extinction-naturelle.html](./e78-extinction-naturelle.html) — E78 inchangée.
+- Version antérieure : [e77-effacement-progressif.html](./e77-effacement-progressif.html) — E77 inchangée.
 - Autre point de retour : [e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html) — E76 inchangée.
 - Version antérieure : [e75-angle-pilote.html](./e75-angle-pilote.html) — E75, inchangée.
 - Autre référence graphique : [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) (E74, deux branches indépendantes).
-- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76, E77 et E78.
+- Autres jalons disponibles dans le dépôt : E63, E65 à E73, puis E74, E75, E76, E77, E78 et E79.
 - **Application principale indépendante : [index.html](./index.html)**, qui porte encore le titre E63.6. **Ne pas la remplacer par une expérience sans décision explicite.**
 - La série E est un laboratoire : les fichiers HTML sont conservés individuellement pour pouvoir revenir à une version antérieure.
 - [README.md](./README.md) = porte d'entrée ; [DECK_VERSIONS.md](./DECK_VERSIONS.md) = index historique ; **ce fichier** = état courant et décisions.
@@ -20,7 +21,7 @@
 
 DECK est une interface tactile et gestuelle, expérimentée sur iPhone via une interface web, destinée à commander des lampes, le ventilateur et la musique. Les symboles lumineux sont des **abstractions du comportement de chaque luminaire**, pas des pictogrammes littéraux. Direction esthétique : toile bleu nuit, formes comme des **poinçonnements ou retraits de matière**, léger relief inversé, lumière diffuse et non objets posés dessus.
 
-Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E78**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
+Les autres expérimentations (sphère à particules, cube/ventilateur, fente lumineuse, variations temporelles, etc.) restent des branches fonctionnelles du laboratoire ; **ne pas confondre leur historique avec le chantier actuel E79**, centré sur les lampes dessinées et leurs gestes. N'ajouter aucune commande mécanique sans nouvelle décision.
 
 ## 3. Les 9 lampes et leur répartition — décisions de conception
 
@@ -58,7 +59,7 @@ Les autres expérimentations (sphère à particules, cube/ventilateur, fente lum
 - **La direction droite comme fonction propre à un groupe reste libre/non attribuée**. Ne pas y ajouter une commande différente.
 - **Le geste individuel de la lampe étoile reste en suspens** ; aucune attribution automatique.
 
-## 5. Ce que contiennent effectivement E75 à E78 (à distinguer de la cible)
+## 5. Ce que contiennent effectivement E75 à E79 (à distinguer de la cible)
 
 Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à deux lignes »** :
 - E74 : rendu de l'angle par **deux lignes indépendantes**, sans jonction forcée ; résultat graphique préféré lors du retour utilisateur, avant essai E75.
@@ -99,6 +100,17 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 
 
+**E79 — « Membrane des lignes », dérivée de E78 (16/11/2026)**
+
+- **Demande :** un test concret sur **la barre verticale (id 0) et la barre horizontale (id 1)**, pour obtenir l'impression d'un élément sous une membrane qui est retiré, **pas une disparition PowerPoint**.
+- Les deux barres reçoivent un **rendu de membrane dédié** qui remplace pour elles la fente lumineuse et son ancien contour ; les autres formes et leur extinction restent celles de E78.
+- Modèle expérimental : profil transversal **gaussien de hauteur**, pente calculée en fonction de la profondeur, avec **reflet clair d'un côté et ombre sombre de l'autre**. En se relâchant, la **profondeur diminue**, le **profil s'élargit légèrement** et les reflets se déplacent selon la pente. Le centre se relâche **un peu plus tôt** que les extrémités ; durée de référence **1,32 seconde**.
+- **Pas de masque d'effacement ni de fondu global indépendant** sur les deux barres ; le trait, son reflet et son ombre proviennent du même profil de relief. Les lampes peuvent être rallumées et leur géométrie demeure mémorisée.
+- Dessin par bandes et dégradés Canvas 2D (réglés à une densité limitée en vue de l'iPhone). En mode nuit, les bandes de membrane sont compositées de façon à rendre visible **l'ombre**, impossible avec l'ancien assemblage par écran seul. Le mode clair emploie le même profil simplifié.
+- Le rendu des **autres** lampes, la grammaire gestuelle, le calcul GPU des autres reliefs et l'application principale **n'ont pas été modifiés**.
+- Stockage local E79 distinct, récupérant initialement l'état E78 si aucun état E79 n'existe.
+- **Statut : essai non validé visuellement sur iPhone.** Ne pas affirmer que la sensation de membrane est atteinte ; les performances et l'absence d'artefacts doivent être testées sur appareil.
+
 ## 6. Validation, sujets ouverts et prochaine étape
 
 **Tests annoncés lors de la création des versions (historique conversationnel ; non relancés pour la rédaction de cette note) :**
@@ -107,10 +119,11 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 - E76 : **10 assertions de structure/régression vérifiées** au moment de la création ; relecture du fichier publié GitHub, compilation syntaxique JS, vérification des chemins CPU/GPU, conservation des gestes et de la séparation E75/E76. **Test numérique CPU sur 441 positions** : raccord visible dans un rayon de 8 et 20 px, aucun changement au-delà du rayon de 8 px, aucune inversion de signe, aucune valeur non finie. **Sur iPhone, l'utilisateur ne voit pas de différence esthétique** ; sujet suspendu.
 - E77 : **11 assertions de structure et de non-régression réussies** avant enregistrement ; fichier relu sur GitHub, JavaScript compilable ; **tests fonctionnels isolés réussis** : déclenchement et interruption de l'extinction, progression monotone du rayon sur 7 instants, rejet des micro-tracés et enregistrement temporaire des tracés invalides. Affectations des groupes et moteur shader E76 comparés, inchangés. **Rendu iPhone, FPS, gestes tactiles et publication Pages non encore validés.**
 - E78 : **11 vérifications de structure et de non-régression réussies** ; compilation syntaxique du JavaScript et tests numériques de l'opacité à 7 instants : opacité monotone, centre toujours légèrement plus atténué que la périphérie entre les extrêmes, extinction complète au terme. **Essai iPhone, performance et rendu visuel non encore vérifiés.**
+- E79 : **12 vérifications de structure et 14 vérifications fonctionnelles isolées réussies** avant optimisation des bandes (syntaxe recontrôlée après). Tests de progression du relief sur 8 instants : décroissance monotone, centre avant extrémités, profondeur nulle à 1,32 s. Calcul des reflets/ombres à deux profondeurs, rendu simulé des deux barres par Canvas factice ; affectations de groupes, gestes, source E78 et application principale contrôlés. **Pas de rendu matériel iPhone, de mesure réelle des FPS ni d'essai complet navigateur effectué.**
 
-**À faire pour valider E78 (avant toute E79 ou promotion) :**
-1. Tester E78 **sur iPhone** : tracer une forme non reconnue et observer une extinction sans effet ; éteindre une barre, un angle, un cercle, le donut et le disque pour vérifier un **fondu naturel sans front ni contraction**. La priorité esthétique est la discrétion de la transition.
-2. Vérifier les performances (FPS), que l'extinction n'efface pas les lampes voisines, que le rallumage interrompt correctement l'animation et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
+**À faire pour valider E79 (avant toute E80 ou promotion) :**
+1. Tester E79 **sur iPhone**, de préférence sur une ligne verticale et une horizontale déjà dessinées. Les éteindre séparément, puis comparer avec E78 : les **ombres et reflets se détendent-ils avec la membrane** ou l'ensemble donne-t-il encore l'impression d'un fondu numérique ?
+2. Vérifier la qualité des bords (aucune bande visible), les performances (FPS), le rendu dans les deux fonds, que l'extinction n'altère pas les lampes voisines, que le rallumage interrompt correctement le relâchement et les conflits de gestes : sélection/tap, double tap, pincement, ancre + doigt mobile, limites entre moitiés d'écran.
 3. Consigner les résultats concrets : ce qui marche, ce qui est à modifier, les réglages de curseur retenus.
 4. Ne décider **ni du geste de l'étoile ni d'une fonction de groupe à droite** sans demande nouvelle.
 
@@ -119,7 +132,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 ## 7. Protocole anti-perte pour les prochaines conversations
 
 1. **Au début d'une nouvelle conversation :** lire **ce fichier**, puis le fichier expérimental indiqué en section 1. Annoncer **la version exacte** et **les sujets en suspens** ; ne pas réinventer les décisions.
-2. **À chaque itération de code :** créer un **nouveau fichier E79, E80…** plutôt que remplacer E78 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
+2. **À chaque itération de code :** créer un **nouveau fichier E80, E81…** plutôt que remplacer E79 ; ne toucher à `index.html` qu'avec autorisation. Garder un lien vers la version précédente.
 3. **Avec chaque version importante :** mettre à jour **dans le même travail** les sections 1, 5, 6 et le journal ci-dessous ; actualiser si nécessaire le tableau et les gestes, et mettre à jour `DECK_VERSIONS.md`.
 4. **Toujours distinguer** : (a) décidé par l'utilisateur, (b) implémenté, (c) testé par logique, (d) validé sur iPhone, (e) idée à confirmer. Ne jamais transformer une hypothèse en décision acquise.
 5. **Avant une modification sensible :** demander ou utiliser l'export **« Copier tous les réglages »** si des réglages du navigateur importent ; GitHub ne contient ni `localStorage` ni les observations de test non consignées.
@@ -139,7 +152,7 @@ Version **E75 — « Angle droit pilote »**, dérivée de **E74 — « Angle à
 
 ### B. Toujours développer d'abord dans une version test
 
-1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e79-…html`, puis E80, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
+1. Créer un **nouveau fichier expérimental** avec numéro incrémenté (`e80-…html`, puis E81, etc.) et URL indépendante. Ne pas écraser le fichier de référence E75, une expérience précédente ou `index.html`.
 2. Les changements d'interface, d'animations, de gestes, de moteur graphique, de sauvegarde ou de performances restent d'abord dans cette version test.
 3. **Interdiction de promouvoir automatiquement en application définitive**, y compris vers `index.html`, `sw.js`, `manifest.webmanifest` ou les ressources de production. Seul un accord explicite de l'utilisateur, **après test**, autorise cette étape.
 4. Si une nouvelle version test ne fonctionne pas, revenir à la précédente sans affecter l'application principale.
@@ -192,6 +205,7 @@ Remettre **un lien vers la nouvelle version expérimentale** et, en texte court 
 - **16 novembre 2026 — E76** — Raccord lumineux local sur un trait strictement orthogonal, sans mélange lumière/ombre ; E75 et application principale préservées ; contrôles statiques et test numérique CPU réussis, WebGL/iPhone à valider. L'utilisateur ne voit pas de différence ; sujet suspendu.
 - **16 novembre 2026 — E77** — Tracés non reconnus dissipés en 0,95 s, extinction radiale par calque en 1,18 s, contours et lumière retirés du centre vers la périphérie ; 11 contrôles statiques + essais fonctionnels isolés réussis ; iPhone à valider.
 - **16 novembre 2026 — E78** — Retrait de l'onde visible : extinction purement progressive, quasi uniforme, centre à peine prioritaire. Les tracés non reconnus perdent naturellement leur opacité. Code syntaxiquement valide ; tests numériques réussis ; iPhone à valider.
+- **16 novembre 2026 — E79** — Test physique limité aux deux barres : profil de membrane dont la profondeur diminue et la pente se détend ; disparition du masque d'opacité pour ces barres. Calculs et contrôles isolés réussis, validation iPhone en attente.
 
 ---
 **Règle de conservation :** aucune ancienne décision validée n'est annulée par une nouvelle expérimentation, sauf modification explicite. En cas de contradiction entre ce document et une décision ultérieure de l'utilisateur, actualiser ce fichier en citant la décision et la date.
