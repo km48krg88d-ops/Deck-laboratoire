@@ -1,15 +1,15 @@
 # DECK — Laboratoire interactif
 
 **État de référence : [DECK_ETAT.md](./DECK_ETAT.md)**  
-**Dernière expérience : [E81 — Apparence restaurée](./e81-apparence-restauree.html)** (16 novembre 2026 ; correction du rendu E80, essai iPhone à valider).
+**Dernière expérience : [E82 — Gestes et relief affiné](./e82-gestes-relief.html)** (16 novembre 2026 ; tests de logique réussis, rendu Safari/iPhone à valider).
 
 ## Reprendre le développement
 
 1. Lire [DECK_ETAT.md](./DECK_ETAT.md) : décisions validées, neuf luminaires, gestes, état du prototype et sujets ouverts.
-2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e81-apparence-restauree.html`.
+2. Ouvrir la dernière expérience E indiquée dans ce document, actuellement `e82-gestes-relief.html`.
 3. Créer une nouvelle expérience pour chaque modification majeure sans écraser la précédente ; mettre à jour le document d'état dans le même travail.
 
-**Attention :** `index.html` est l'application principale distincte (titre actuel E63.6). Ne pas la remplacer automatiquement par E81. Le code et les réglages conservés sur le navigateur iPhone ne sont pas la même chose : les données `localStorage` ne sont pas enregistrées par GitHub.
+**Attention :** `index.html` est l'application principale distincte (titre actuel E63.6). Ne pas la remplacer automatiquement par E82. Le code et les réglages conservés sur le navigateur iPhone ne sont pas la même chose : les données `localStorage` ne sont pas enregistrées par GitHub.
 
 Voir [DECK_VERSIONS.md](./DECK_VERSIONS.md) pour l'index historique.
 
