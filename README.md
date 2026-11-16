@@ -17,3 +17,5 @@ Voir [DECK_VERSIONS.md](./DECK_VERSIONS.md) pour l'index historique.
 ## Historique de recherche
 
 Le laboratoire explore une sphère de particules, des interfaces lumineuses en creux, les commandes gestuelles des lampes, du ventilateur et de la musique. Les versions antérieures comprennent notamment l'expérience **V17 « Opale »** : volume blanc laiteux, lumière rose-corail organique et moteurs d'affichage distincts.
+
+**Correctif E85 après essai tactile :** restitution des animations du disque et du donut issues d’E84 ; relief 3D superposé et coût borné. [Ouvrir E85 actualisée](https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=4). Test iPhone à reconfirmer.
