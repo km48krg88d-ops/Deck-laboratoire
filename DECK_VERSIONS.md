@@ -26,7 +26,8 @@ Ce fichier avait initialement servi à vérifier que les modifications directes 
 | E72 | [e72-angles-gestes.html](./e72-angles-gestes.html) | Angles / gestes |
 | E73 | [e73-relief-angle.html](./e73-relief-angle.html) | Relief d'angle |
 | E74 | [e74-angle-2-lignes.html](./e74-angle-2-lignes.html) | Angle en deux lignes indépendantes ; 29 tests logiques annoncés |
-| **E75** | **[e75-angle-pilote.html](./e75-angle-pilote.html)** | **Dernière expérience, angle pilote à raccord et longueur réglables ; 40 tests logiques annoncés ; essai iPhone en attente** |
+| E75 | [e75-angle-pilote.html](./e75-angle-pilote.html) | Angle pilote ; raccord et longueur réglables ; 40 tests logiques annoncés ; essai iPhone en attente |
+| **E76** | **[e76-raccord-orthogonal.html](./e76-raccord-orthogonal.html)** | **Dernière expérience : trait à 90° sans courbe et transition lumineuse locale, sans mélange lumière/ombre ; 10 assertions + 441 points CPU vérifiés ; WebGL/iPhone en attente** |
 
 Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres caractéristiques ne sont pas récapitulées ici.
 
@@ -34,6 +35,6 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 
 - `index.html` : application principale distincte (titre actuel E63.6) ; ne pas écraser sans instruction.
 - Les fichiers `eXX-*.html` : expérimentations autonomes et points de retour.
-- **Dernière version de travail au 16/11/2026 : E75**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
+- **Dernière version de travail au 16/11/2026 : E76**, mais cela ne signifie pas qu'elle soit validée sur iPhone ni qu'elle ait remplacé l'application principale.
 
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
