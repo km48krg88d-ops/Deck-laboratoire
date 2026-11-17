@@ -120,7 +120,7 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
       <input id="deckBisResistance" type="range" min="0" max="100" value="100" step="1">
       <label for="deckBisBlend">Fondu des ombres <output id="deckBisBlendValue">70 %</output></label>
       <input id="deckBisBlend" type="range" min="0" max="100" value="70" step="1">
-      <p>Jonction nette entre les deux courbes ; la pente extérieure se fond progressivement dans les couleurs de la toile.</p>
+      <p>Relief continu, sans anneau dessiné : la lumière suit la pente et disparaît dans la toile.</p>
       <div id="deckBisStatus" role="status">Variante originale</div>
     </div>
   </details>
@@ -2810,7 +2810,7 @@ window.__deckBisHost={
 };
 })();
 </script>
-<script src="./deck-lamp-bis.js?v=3"></script>
+<script src="./deck-lamp-bis.js?v=4"></script>
 <div id="deckGroupFeedback" role="status" aria-live="polite"></div>
 </body>
 </html>
