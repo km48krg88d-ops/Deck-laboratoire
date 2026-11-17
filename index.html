@@ -2818,8 +2818,8 @@ window.__deckBisHost={
  // Read the real animated DECK background under the lamp (never replace it).
  sampleBackground(x,y){
   try{
-   const sx=Math.max(0,Math.min(stage.width-1,Math.round(x*(dpr||1))));
-   const sy=Math.max(0,Math.min(stage.height-1,Math.round(y*(dpr||1))));
+   const sx=Math.max(0,Math.min(canvas.width-1,Math.round(x*(dpr||1))));
+   const sy=Math.max(0,Math.min(canvas.height-1,Math.round(y*(dpr||1))));
    const rgba=ctx.getImageData(sx,sy,1,1).data;
    return [rgba[0]/255,rgba[1]/255,rgba[2]/255];
   }catch(_){return null;}
