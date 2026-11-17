@@ -100,29 +100,38 @@ function initWebGL(){
   // No screen-space blur: every normal remains crisp at native DPR.
   // Continuous membrane shading: NO radial ring, no centre fill, no glow
   // painted onto the screen. Light is derived only from the 3D surface slope.
+  // E86 Bis v4: the geometry alone defines the relief. No radius-based ring,
+  // no coloured disk, and no post-processing blur. The underlying DECK canvas
+  // provides the real surface colour; this shader adds only slope lighting.
   const fragment=[
   'precision mediump float;',
   'varying vec3 vNormal;',
   'varying float vRadius;',
   'uniform float uOpacity;',
   'uniform float uBlend;',
+  'uniform vec3 uBackground;',
   'void main(){',
   'vec3 n=normalize(vNormal);',
-  'float lightDirection=dot(n.xy,normalize(vec2(-0.74,-0.67)));',
-  'float lightSide=smoothstep(0.0,0.52,max(0.0,lightDirection));',
-  'float shadowSide=smoothstep(0.0,0.52,max(0.0,-lightDirection));',
-  // Low-saturation lighting tones overlay the underlying DECK background.
-  'vec3 warm=vec3(0.94,0.82,0.75);',
-  'vec3 cool=vec3(0.18,0.28,0.43);',
-  'vec3 tint=mix(cool,warm,lightSide/(lightSide+shadowSide+0.0001));',
-  // Flat plateau = transparent. No white/grey disc at the centre.
-  'float slopeMask=smoothstep(0.015,0.19,length(n.xy));',
-  // Outer skirt fades to zero before it becomes a visible luminous halo.
-  'float edgeFade=1.0-smoothstep(0.98,1.44,vRadius);',
-  'float intensity=0.19*lightSide+0.29*shadowSide;',
-  'float translucency=mix(1.0,0.58,uBlend);',
-  'float alpha=intensity*slopeMask*edgeFade*translucency*uOpacity;',
-  'gl_FragColor=vec4(tint,clamp(alpha,0.0,0.52));',
+  'float slope=length(n.xy);',
+  'float direction=dot(n.xy,normalize(vec2(-0.74,-0.67)));',
+  'float lit=max(0.0,direction);',
+  'float dark=max(0.0,-direction);',
+  'float bgLum=dot(uBackground,vec3(0.2126,0.7152,0.0722));',
+  'float onLight=smoothstep(0.22,0.82,bgLum);',
+  // On a pale canvas cast a cooler, darker shadow; on a blue night canvas
+  // the two sides are faint light tints. No white/grey filled plateau.
+  'vec3 warm=mix(vec3(0.88,0.68,0.60),vec3(0.91,0.70,0.55),onLight);',
+  'vec3 cool=mix(vec3(0.26,0.42,0.63),vec3(0.22,0.34,0.49),onLight);',
+  'float side=lit+dark;',
+  'vec3 tint=mix(cool,warm,lit/(side+0.0001));',
+  'float slopeMask=smoothstep(0.025,0.34,slope);',
+  // Fade the surface progressively, never emphasize the junction by an
+  // explicitly coloured ring. The actual vertex normal preserves the join.
+  'float outer=1.0-smoothstep(1.02,1.53,vRadius);',
+  'float energy=(0.24*lit+0.29*dark);',
+  'float opacity=mix(1.0,0.58,uBlend);',
+  'float alpha=slopeMask*outer*energy*opacity*uOpacity;',
+  'gl_FragColor=vec4(tint,clamp(alpha,0.0,0.35));',
   '}'].join('\n');
   const program=gl.createProgram();
   gl.attachShader(program,compile(gl,gl.VERTEX_SHADER,vertex));
@@ -142,7 +151,7 @@ function initWebGL(){
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   Object.assign(state,{gl,program,available:true,error:'',dirty:true,rows,cols,positions,normals,radii,indices,buffers,
    attrib:{position:gl.getAttribLocation(program,'aPosition'),normal:gl.getAttribLocation(program,'aNormal'),radius:gl.getAttribLocation(program,'aRadius')},
-   uniform:{centre:gl.getUniformLocation(program,'uCentre'),viewport:gl.getUniformLocation(program,'uViewport'),scale:gl.getUniformLocation(program,'uScale'),opacity:gl.getUniformLocation(program,'uOpacity'),blend:gl.getUniformLocation(program,'uBlend')}});
+   uniform:{centre:gl.getUniformLocation(program,'uCentre'),viewport:gl.getUniformLocation(program,'uViewport'),scale:gl.getUniformLocation(program,'uScale'),opacity:gl.getUniformLocation(program,'uOpacity'),blend:gl.getUniformLocation(program,'uBlend'),background:gl.getUniformLocation(program,'uBackground')}});
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.available=false;state.error='contexte perdu';canvas.style.display='none';sync();});
   sync();
@@ -178,6 +187,7 @@ function rebuild(){
  }
  state.dirty=false;
 }
+let lastBackground=[0.08,0.13,0.22],lastBackgroundAt=-Infinity;
 function render(){
  if(!host.drawnLights.enabled||!state.enabled){canvas.style.display='none';return;}
  if(!initWebGL()){canvas.style.display='none';return;}
@@ -207,6 +217,17 @@ function render(){
   gl.uniform1f(state.uniform.scale,target*(.18+.82*expand)/.829);
   gl.uniform1f(state.uniform.opacity,clamp(lamp.displayLevel*1.6,0,1));
   gl.uniform1f(state.uniform.blend,state.blend/100);
+  // Read one pixel at the button centre at most twice a second. The rest of
+  // the theme's colour variation remains truly visible through transparency.
+  const now=performance.now();
+  if(now-lastBackgroundAt>650){
+   lastBackgroundAt=now;
+   try{
+    const sample=host.sampleBackground?.(p.x*w,p.y*h);
+    if(sample&&sample.length===3&&sample.every(Number.isFinite))lastBackground=sample;
+   }catch(_){}
+  }
+  gl.uniform3f(state.uniform.background,lastBackground[0],lastBackground[1],lastBackground[2]);
   gl.drawElements(gl.TRIANGLES,state.indices.length,gl.UNSIGNED_SHORT,0);
   const code=gl.getError();if(code!==gl.NO_ERROR)throw new Error('code '+code);
   canvas.style.display='block';
