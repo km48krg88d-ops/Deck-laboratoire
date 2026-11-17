@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111b2c">
+<title>DECK · E86 · Commande modélisée</title>
+<style>
+:root{color-scheme:dark;--fg:#e9eef7;--muted:#9aaabf;--accent:#d8e9fc}
+*{box-sizing:border-box}
+body,html{margin:0;width:100%;height:100%;overflow:hidden;background:#101927;color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+#stage{position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none;display:block;z-index:0}
+#top{position:fixed;z-index:3;top:calc(env(safe-area-inset-top) + 20px);left:20px;right:20px;pointer-events:none}
+h1{font-size:14px;letter-spacing:.14em;margin:0 0 6px;font-weight:600}
+#top p{font-size:11px;line-height:1.5;color:var(--muted);margin:0}
+#controls{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:5;max-width:520px;margin:auto;border:1px solid #b9cce02d;border-radius:18px;background:#0b1424ef;box-shadow:0 16px 45px #0009;padding:15px 17px 13px;backdrop-filter:blur(14px)}
+.setting{margin:0 0 13px}
+.setting label{display:flex;align-items:center;justify-content:space-between;font-size:12px;gap:12px;color:var(--fg);margin-bottom:7px}
+.setting output{font-size:12px;color:#f5bb7e;white-space:nowrap}
+.setting input{display:block;width:100%;height:23px;margin:0;accent-color:#f0bb7b;touch-action:pan-x}
+.endpoints{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:1px}
+.buttons{display:flex;gap:8px;align-items:center}
+button{border:1px solid #91a6bc54;color:#dfe8f4;background:#ffffff0b;border-radius:10px;font-size:11px;padding:10px 11px;cursor:pointer}
+button.on{background:#c3d7ec29;border-color:#cadbee77}
+#status{font-size:10px;margin-top:9px;color:#9fb0c7;min-height:14px}
+#hint{position:fixed;top:calc(env(safe-area-inset-top) + 76px);left:0;right:0;text-align:center;font-size:11px;color:#e9c99caa;pointer-events:none;z-index:2}
+@media(min-width:700px){#controls{bottom:28px}#top{top:26px;left:36px}}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-label="Maillage 3D déformable de la commande, fondé sur la courbe rouge et le raccord vert"></canvas>
+<header id="top"><h1>DECK / E86 — COMMANDE 001</h1><p>Profil reconstruit depuis ton GLB · Deux réglages géométriques indépendants</p></header>
+<div id="hint">Glisser pour tourner la pièce</div>
+<section id="controls" aria-label="Paramètres de la commande 3D">
+<div class="setting"><label for="height">Hauteur du bouton <output id="hval">100 %</output></label><input id="height" type="range" min="0" max="180" value="100" step="1"><div class="endpoints"><span>À plat</span><span>Hauteur d’origine</span><span>Élevé</span></div></div>
+<div class="setting"><label for="resistance">Résistance de la membrane <output id="rval">22 %</output></label><input id="resistance" type="range" min="0" max="100" value="22" step="1"><div class="endpoints"><span>Souple · petit arrondi</span><span>Rigide · grand arrondi</span></div></div>
+<div class="buttons"><button type="button" id="colors" class="on" aria-pressed="true">Rouge / vert : visibles</button><button type="button" id="reset">Vue d’origine</button></div>
+<div id="status" role="status">Initialisation du moteur 3D…</div>
+</section>
+<script id="vertex" type="x-shader/x-vertex">
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec3 aColor;
+uniform float uAzimuth, uPitch, uScale, uAspect;
+varying vec3 vNormal, vColor;
+void main(){
+ float c=cos(uAzimuth),s=sin(uAzimuth);
+ vec3 p=vec3(aPosition.x*c-aPosition.y*s,aPosition.x*s+aPosition.y*c,aPosition.z);
+ float sy=p.y*sin(uPitch)+p.z*cos(uPitch);
+ float depth=p.y*cos(uPitch)-p.z*sin(uPitch);
+ float perspective=1.0/(1.0+depth*0.065);
+ gl_Position=vec4(p.x*uScale*perspective/uAspect,(sy-0.18)*uScale*perspective+0.10,depth*0.085,1.0);
+ vNormal=aNormal;
+ vColor=aColor;
+}
+</script>
+<script id="fragment" type="x-shader/x-fragment">
+precision mediump float;
+varying vec3 vNormal, vColor;
+uniform vec3 uLight;
+void main(){
+ vec3 n=normalize(vNormal);
+ vec3 light=normalize(uLight);
+ float diffuse=max(0.0,dot(n,light));
+ float shadow=max(0.0,dot(n,-light));
+ vec3 warm=vec3(0.99,0.69,0.43);
+ vec3 cool=vec3(0.32,0.48,0.76);
+ vec3 color=vColor*(0.34+0.69*diffuse);
+ color+=warm*pow(diffuse,3.0)*0.20+cool*shadow*0.12;
+ gl_FragColor=vec4(color,1.0);
+}
+</script>
+<script>
+(function(){
+"use strict";
+// Values (radial distance, height) measured from the two coloured meshes of COMMANDE-001.glb.
+// GLB mesh 433 = green transition (material Matière); mesh 434 = red membrane (Matière17).
+const green=[[.768,.6728],[.777,.6701],[.784,.6665],[.792,.6620],[.799,.6569],[.805,.6510],[.811,.6444],[.816,.6373],[.820,.6297],[.824,.6217],[.826,.6133],[.828,.6048],[.829,.5961]];
+const red=[[.829,.5961],[.834,.5183],[.849,.4418],[.874,.3680],[.909,.2980],[.952,.2332],[1.003,.1746],[1.062,.1232],[1.127,.0799],[1.197,.0454],[1.271,.0203],[1.347,.0051],[1.425,0]];
+const topZ=.6728,joinR=.829,outerR=1.425;
+const canvas=document.getElementById("stage"),status=document.getElementById("status");
+const H=document.getElementById("height"),R=document.getElementById("resistance");
+const hv=document.getElementById("hval"),rv=document.getElementById("rval");
+const cols=document.getElementById("colors");
+let yaw=-.4,pitch=.92,zoom=1,guide=true;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function interpolation(points,x){
+ if(x<=points[0][0])return points[0][1];
+ for(let i=1;i<points.length;i++)if(x<=points[i][0]){
+  const p=points[i-1],q=points[i],t=(x-p[0])/(q[0]-p[0]);
+  return p[1]*(1-t)+q[1]*t;
+ }
+ return points[points.length-1][1];
+}
+function profile(radius,height,resistance){
+ const width=.022+.178*resistance,inner=joinR-width;
+ if(radius<=inner)return height;
+ if(radius<joinR){
+  const sourceR=.768+(radius-inner)/width*(joinR-.768);
+  return height*interpolation(green,sourceR)/topZ;
+ }
+ if(radius<outerR)return height*interpolation(red,radius)/topZ;
+ return 0;
+}
+function colorFor(radius,resistance){
+ if(!guide)return [0.83,0.87,0.90];
+ const inner=joinR-(.022+.178*resistance);
+ if(radius<inner)return [.91,.92,.91];
+ if(radius<joinR)return [.29,.72,.32];
+ if(radius<outerR)return [.97,.29,.31];
+ return [.70,.76,.80];
+}
+const gl=canvas.getContext("webgl",{alpha:false,antialias:true,depth:true,preserveDrawingBuffer:false});
+let fallback=false;
+function drawFallback(reason){
+ fallback=true;
+ const ctx=canvas.getContext("2d");
+ if(!ctx){status.textContent="3D non disponible : "+reason;status.style.color="#faacb7";return;}
+ function drawCut(){
+  const w=innerWidth,h=innerHeight,dpr=Math.min(2,devicePixelRatio||1);
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle="#121c2c";ctx.fillRect(0,0,w,h);
+  const height=Number(H.value)/100*topZ,resistance=Number(R.value)/100;
+  const sx=Math.min(w*.27,130),sy=Math.min(h*.40,240),y0=h*.53;
+  ctx.strokeStyle="#ffffff32";ctx.beginPath();ctx.moveTo(0,y0);ctx.lineTo(w,y0);ctx.stroke();
+  for(const col of ["#ee5e66","#57c471"]){
+   ctx.lineWidth=4;ctx.strokeStyle=col;ctx.beginPath();
+   let first=true;
+   for(let i=0;i<=200;i++){
+    const r=i/200*2.2,inner=joinR-(.022+.178*resistance);
+    const use=col==="#57c471"?r>=inner&&r<=joinR:r>=joinR&&r<=outerR;
+    if(!use){first=true;continue;}
+    const px=w*.5+r*sx,py=y0-profile(r,height,resistance)*sy;
+    if(first){ctx.moveTo(px,py);first=false;}else ctx.lineTo(px,py);
+   }
+   ctx.stroke();
+  }
+  ctx.fillStyle="#b5c8e3";ctx.font="12px sans-serif";
+  ctx.fillText("Coupe de la géométrie · mode secours 2D",16,h*.30);
+  status.textContent="WebGL indisponible ("+reason+"). Affichage de la coupe seulement.";
+  hv.textContent=H.value+" %";rv.textContent=R.value+" %";
+ }
+ H.addEventListener("input",drawCut);R.addEventListener("input",drawCut);addEventListener("resize",drawCut);drawCut();
+}
+if(!gl){drawFallback("contexte absent");return;}
+function makeShader(type,text){
+ const shader=gl.createShader(type);
+ gl.shaderSource(shader,text);gl.compileShader(shader);
+ if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader)||"Erreur shader");
+ return shader;
+}
+let program;
+try{
+ const vs=makeShader(gl.VERTEX_SHADER,document.getElementById("vertex").textContent);
+ const fs=makeShader(gl.FRAGMENT_SHADER,document.getElementById("fragment").textContent);
+ program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||"Erreur de liaison");
+}catch(error){status.textContent="Erreur WebGL : "+error.message;status.style.color="#faacb7";return;}
+gl.useProgram(program);
+const attr={pos:gl.getAttribLocation(program,"aPosition"),norm:gl.getAttribLocation(program,"aNormal"),col:gl.getAttribLocation(program,"aColor")};
+const uni={yaw:gl.getUniformLocation(program,"uAzimuth"),pitch:gl.getUniformLocation(program,"uPitch"),scale:gl.getUniformLocation(program,"uScale"),aspect:gl.getUniformLocation(program,"uAspect"),light:gl.getUniformLocation(program,"uLight")};
+const steps=175,segments=160,count=(steps+1)*(segments+1);
+const positions=new Float32Array(count*3),normals=new Float32Array(count*3),colors=new Float32Array(count*3);
+const indices=new Uint16Array(steps*segments*6);
+// Rings get more resolution near the original green and red profile.
+const radii=[];
+for(let i=0;i<=steps;i++){
+ const t=i/steps;
+ radii.push(t<.50?1.45*t/.50:1.45+(t-.50)/.50*(2.38-1.45));
+}
+for(let i=0,k=0;i<steps;i++)for(let j=0;j<segments;j++){
+ const a=i*(segments+1)+j,b=a+segments+1;
+ indices[k++]=a;indices[k++]=b;indices[k++]=a+1;
+ indices[k++]=a+1;indices[k++]=b;indices[k++]=b+1;
+}
+const buffers={
+ pos:gl.createBuffer(),norm:gl.createBuffer(),col:gl.createBuffer(),index:gl.createBuffer()
+};
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffers.index);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+function bind(name,buffer,data){
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);
+ const loc=attr[name];gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);
+}
+function rebuild(){
+ const height=Number(H.value)/100*topZ,resistance=Number(R.value)/100;
+ hv.textContent=H.value+" %";rv.textContent=R.value+" %";
+ for(let i=0;i<=steps;i++)for(let j=0;j<=segments;j++){
+  const r=radii[i],a=j/segments*Math.PI*2,c=Math.cos(a),ss=Math.sin(a),x=c*r,y=ss*r,ix=(i*(segments+1)+j)*3;
+  const z=profile(r,height,resistance),eps=.0025;
+  const slope=(profile(r+eps,height,resistance)-profile(Math.max(0,r-eps),height,resistance))/(2*eps);
+  const nx=-slope*c,ny=-slope*ss,nn=Math.hypot(nx,ny,1),co=colorFor(r,resistance);
+  positions[ix]=x;positions[ix+1]=y;positions[ix+2]=z;
+  normals[ix]=nx/nn;normals[ix+1]=ny/nn;normals[ix+2]=1/nn;
+  colors[ix]=co[0];colors[ix+1]=co[1];colors[ix+2]=co[2];
+ }
+ bind("pos",buffers.pos,positions);bind("norm",buffers.norm,normals);bind("col",buffers.col,colors);
+}
+function paint(){
+ const ratio=Math.min(2,devicePixelRatio||1),w=window.innerWidth,h=window.innerHeight;
+ const cw=Math.round(w*ratio),ch=Math.round(h*ratio);
+ if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
+ gl.viewport(0,0,cw,ch);gl.clearColor(.065,.10,.16,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
+ gl.useProgram(program);
+ const aspect=w/h,scale=Math.min(.48,Math.max(.18,.39*aspect))*zoom;
+ gl.uniform1f(uni.yaw,yaw);gl.uniform1f(uni.pitch,pitch);gl.uniform1f(uni.scale,scale);
+ gl.uniform1f(uni.aspect,aspect);
+ gl.uniform3f(uni.light,-.62,-.43,1.05);
+ bind("pos",buffers.pos,positions);bind("norm",buffers.norm,normals);bind("col",buffers.col,colors);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffers.index);
+ gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
+ const err=gl.getError();
+ status.textContent=err===gl.NO_ERROR?"WebGL actif · Profil mesuré : 2 pièces · "+(indices.length/3).toLocaleString("fr-FR")+" triangles":"Erreur WebGL : "+err;
+ status.style.color=err===gl.NO_ERROR?"#9db3ca":"#f7b1b1";
+}
+function update(){rebuild();paint();}
+H.addEventListener("input",update);R.addEventListener("input",update);
+cols.addEventListener("click",()=>{guide=!guide;cols.classList.toggle("on",guide);cols.setAttribute("aria-pressed",String(guide));cols.textContent=guide?"Rouge / vert : visibles":"Rouge / vert : masqués";update();});
+document.getElementById("reset").addEventListener("click",()=>{yaw=-.4;pitch=.92;zoom=1;paint();});
+let pointer=null;
+canvas.addEventListener("pointerdown",e=>{pointer={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener("pointermove",e=>{if(!pointer||pointer.id!==e.pointerId)return;yaw+=(e.clientX-pointer.x)*.008;pitch=clamp(pitch-(e.clientY-pointer.y)*.006,.25,1.55);pointer.x=e.clientX;pointer.y=e.clientY;paint();});
+canvas.addEventListener("pointerup",()=>{pointer=null;});canvas.addEventListener("pointercancel",()=>{pointer=null;});
+window.addEventListener("resize",paint);
+canvas.addEventListener("webglcontextlost",e=>{e.preventDefault();status.textContent="Contexte WebGL perdu — recharger la page";status.style.color="#f7b1b1";});
+update();
+})();
+</script>
+</body>
+</html>
