@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#9CAEB1">
-<title>DECK · E87 — Membrane et deux lumières 3D</title>
+<title>DECK · E87 v6 — Commande source 02</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#7b919d;color:#eaf1f7;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
@@ -29,10 +29,10 @@ button.active{border-color:#efc08cab;background:#dbb78d29}
 </style></head>
 <body>
 <canvas id="stage" aria-label="Membrane 3D continue, avec une commande géométrique et deux sources lumineuses placées dans l'espace"></canvas>
-<header id="header"><div><h1>DECK / E87 · MEMBRANE 3D</h1><p>Vue en plan · Matinée orange · Géométrie fixe</p></div><a href="./index.html?v=bis3">Retour DECK</a></header>
+<header id="header"><div><h1>DECK / E87 · COMMANDE 02 DU GLB</h1><p>Profil remplacé d’après COMMANDES-001.glb · Matinée orange</p></div><a href="./e88-atelier-commandes-3d.html?v=1">Voir les 4</a></header>
 <div id="status" role="status">Initialisation de la membrane 3D…</div>
 <section id="controls" aria-label="Apparition de la commande et éclairages 3D">
-<div class="row"><div><h2>Commande 001 · émergence 3D</h2><small>Profil GLB : hauteur 180 % · résistance 100 %</small></div><div class="row"><output id="value">0 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
+<div class="row"><div><h2>Commande 02 · émergence 3D</h2><small>Modèle réel du fichier · plateau 14,57 mm</small></div><div class="row"><output id="value">0 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
 <input id="intensity" type="range" min="0" max="100" value="0" step="1" aria-label="Déploiement géométrique de la commande, de la membrane plane au relief complet">
 <div class="row"><small id="animHint">Relief 3D : de la membrane plane à la forme complète</small><button type="button" id="animate100" class="active">Rejouer l’émergence 3D</button></div>
 <div id="lights">
@@ -55,19 +55,15 @@ float ease(float t){
  return t*t*(3.0-2.0*t);
 }
 void main(){
- // COMMANDE-001: plateau perfectly horizontal up to r = 0.629,
- // green fillet from r = 0.629 to 0.829, red skirt beyond r = 0.829.
- // The entire plateau rises together as a RIGID PLANE from frame one.
- // Only the RED OUTER SKIRT opens outwards: never grow a dome within
- // the plateau or distort the green-to-red junction.
+ // Model 02 from COMMANDES-001.glb: its real flat plateau rises as one plane.
+ // The connected outer skirt appears without disturbing the rigid center.
  float p=clamp(uShape,0.0,1.0);
  float rise=ease(p);
  float travel=ease((p-0.035)/0.92);
  float r=length(aPosition.xy);
  float width=0.36;
- // Start beyond the full green fillet + feather width:
- // r <= 0.829 always receives reveal = 1, including the flat plateau.
- float front=mix(1.23,2.10,travel);
+ // Start beyond model 02's flat center + green fillet.
+ float front=mix(1.32,2.10,travel);
  float x=clamp((front-r)/width,0.0,1.0);
  float reveal=ease(x);
  float dr=(x>0.0&&x<1.0)?-6.0*x*(1.0-x)/width:0.0;
@@ -119,35 +115,21 @@ const canvas=document.getElementById('stage'),status=document.getElementById('st
 const slider=document.getElementById('intensity'),value=document.getElementById('value'),power=document.getElementById('power');
 const cool=document.getElementById('cool'),warm=document.getElementById('warm');
 const animate100=document.getElementById('animate100'),animHint=document.getElementById('animHint');
-const GREEN=[[.768,.6728],[.777,.6701],[.784,.6665],[.792,.6620],[.799,.6569],[.805,.6510],[.811,.6444],[.816,.6373],[.820,.6297],[.824,.6217],[.826,.6133],[.828,.6048],[.829,.5961]];
-const RED=[[.829,.5961],[.834,.5183],[.849,.4418],[.874,.3680],[.909,.2980],[.952,.2332],[1.003,.1746],[1.062,.1232],[1.127,.0799],[1.197,.0454],[1.271,.0203],[1.347,.0051],[1.425,0]];
+// Original command 02: height profile measured from the actual COMMANDES-001.glb triangles.
+const MODEL02=[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0];
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(v,a));
 const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null};
-const HEIGHT=1.8,RESISTANCE=1;
-const curve=(()=>{
- const h=HEIGHT*.6728,join=.829,fillet=.022+.178*RESISTANCE,inner=join-fillet;
- const points=[[0,h],[inner,h]];
- for(const [radius,z] of GREEN.slice(1))points.push([inner+(radius-.768)/(.829-.768)*fillet,z*HEIGHT]);
- for(const [radius,z] of RED.slice(1))points.push([radius,z*HEIGHT]);
- points.push([1.55,0]);
- const delta=[],slopes=Array(points.length).fill(0);
- for(let i=0;i<points.length-1;i++)delta.push((points[i+1][1]-points[i][1])/(points[i+1][0]-points[i][0]));
- for(let i=1;i<points.length-1;i++){
-  if(delta[i-1]*delta[i]<=0)continue;
-  const a=points[i][0]-points[i-1][0],b=points[i+1][0]-points[i][0],w0=2*b+a,w1=b+2*a;
-  slopes[i]=(w0+w1)/(w0/delta[i-1]+w1/delta[i]);
- }
- return {points,slopes};
-})();
+// Exact source-derived 3D radial heights sampled every 0.5 mm, 0..36.5 mm.
+// PCHIP interpolation retains a rigid flat plateau and a smooth red/green fillet.
 function heightAt(radius){
- const p=curve.points,s=curve.slopes,n=p.length;
- if(radius<=0)return p[0][1];
- if(radius>=p[n-1][0])return 0;
- let lo=0,hi=n-1;
- while(hi-lo>1){const m=(lo+hi)>>1;if(p[m][0]<=radius)lo=m;else hi=m;}
- const a=p[lo],b=p[hi],h=b[0]-a[0],t=(radius-a[0])/h,t2=t*t,t3=t2*t;
- return Math.max(0,(2*t3-3*t2+1)*a[1]+(t3-2*t2+t)*h*s[lo]+(-2*t3+3*t2)*b[1]+(t3-t2)*h*s[hi]);
+ const x=clamp(radius/1.55*36.5*2,0,73);
+ const i=Math.min(72,Math.floor(x)),t=clamp(x-i,0,1),y=MODEL02;
+ const h0=y[i],h1=y[i+1],d0=h0-y[Math.max(0,i-1)],d1=h1-h0,d2=y[Math.min(73,i+2)]-h1;
+ const slope=(a,b)=>a*b<=0?0:2*a*b/(a+b);
+ const m0=i===0?d1:slope(d0,d1),m1=i===72?d1:slope(d1,d2);
+ const t2=t*t,t3=t2*t;
+ return Math.max(0,((2*t3-3*t2+1)*h0+(t3-2*t2+t)*m0+(-2*t3+3*t2)*h1+(t3-t2)*m1)/11);
 }
 function makeShader(gl,type,source){
  const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);
