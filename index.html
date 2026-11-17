@@ -89,6 +89,8 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 
 /* E86 bis 3D is opt-in: overlay never captures drawing gestures. */
 #deckBisLayer{position:fixed;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;touch-action:none;display:none}
+#e87MembraneLink{position:fixed;z-index:34;left:12px;top:calc(env(safe-area-inset-top) + 107px);padding:8px 11px;border:1px solid #e3f1ff85;border-radius:12px;background:#20384cdd;color:#ecf1f8;font:11px -apple-system,sans-serif;text-decoration:none;touch-action:manipulation}
+
 #deckBisBar{position:fixed;z-index:34;left:12px;top:calc(env(safe-area-inset-top) + 62px);display:flex;align-items:center;gap:5px;color:#e9eefb;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 #deckBisBar[hidden]{display:none!important}
 #deckBisBar button,#deckBisBar summary{border:1px solid #ffffff4e;border-radius:12px;background:#0c1729ed;color:#e4ebf5;font:11px -apple-system,sans-serif;padding:8px 10px;min-height:34px;white-space:nowrap;cursor:pointer;touch-action:manipulation}
@@ -125,6 +127,7 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
     </div>
   </details>
 </div>
+<a id="e87MembraneLink" href="./e87-membrane-3d.html?v=1">E87 · Membrane 3D</a>
 <div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E63.6</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
   <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 63.6 · 4 commandes indépendantes</span></div>
