@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#9CAEB1">
+<title>DECK · E87 — Membrane et deux lumières 3D</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#7b919d;color:#eaf1f7;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#header{position:fixed;top:calc(env(safe-area-inset-top) + 18px);left:17px;right:17px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;pointer-events:none}
+#header h1{font-size:12px;letter-spacing:.12em;font-weight:700;margin:0 0 5px;text-shadow:0 1px 3px #1c273c55}
+#header p{font-size:10px;opacity:.83;margin:0}
+#header a{pointer-events:auto;text-decoration:none;color:#fff;background:#1d354ba3;border:1px solid #fff5;padding:8px 11px;border-radius:11px;white-space:nowrap;font-size:11px}
+#controls{position:fixed;z-index:3;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 14px);max-width:465px;margin:auto;background:#1b3045e6;border:1px solid #f2f5fc55;border-radius:17px;box-shadow:0 10px 32px #17253545;padding:13px 15px;backdrop-filter:blur(14px)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h2{font-size:12px;font-weight:650;margin:0}
+small,.caption{font-size:10px;color:#d2dce7;line-height:1.5}
+.caption{margin:5px 0 9px}
+button{font:11px -apple-system,sans-serif;color:#e8f0f8;background:#ffffff19;border:1px solid #ffffff55;border-radius:11px;padding:9px 11px;cursor:pointer;touch-action:manipulation}
+button.active{border-color:#efc08cab;background:#dbb78d29}
+#intensity{width:100%;height:24px;margin:4px 0 7px;accent-color:#f2aa76;touch-action:pan-x}
+#value{font-size:13px;color:#ffdaac;font-weight:700;min-width:45px;text-align:right}
+#lights{display:flex;flex-wrap:wrap;gap:7px;margin:5px 0}
+#lights button{display:flex;gap:7px;align-items:center;font-size:10px;padding:7px 9px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:100%}
+#status{position:fixed;top:calc(env(safe-area-inset-top) + 61px);left:17px;font-size:10px;color:#fff7ef;text-shadow:0 1px 3px #14223370;pointer-events:none}
+@media(min-width:720px){#controls{bottom:25px}#header{left:30px;right:30px}}
+</style></head>
+<body>
+<canvas id="stage" aria-label="Membrane 3D continue, avec une commande géométrique et deux sources lumineuses placées dans l'espace"></canvas>
+<header id="header"><div><h1>DECK / E87 · MEMBRANE 3D</h1><p>Vue en plan · Matinée orange · Géométrie fixe</p></div><a href="./index.html?v=bis3">Retour DECK</a></header>
+<div id="status" role="status">Initialisation de la membrane 3D…</div>
+<section id="controls" aria-label="Lumières de la membrane">
+<div class="row"><div><h2>Commande 001 · intensité</h2><small>Profil GLB : hauteur 180 % · résistance 100 %</small></div><div class="row"><output id="value">0 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
+<input id="intensity" type="range" min="0" max="100" value="0" step="1" aria-label="Intensité lumineuse de la commande">
+<div class="row"><small id="animHint">Animation d’allumage · 0 → 100 %</small><button type="button" id="animate100" class="active">Rejouer 0 → 100 %</button></div>
+<div id="lights">
+<button type="button" id="cool" class="active" aria-pressed="true"><span class="dot" style="background:#9CAEB1"></span>Bleu-gris</button>
+<button type="button" id="warm" class="active" aria-pressed="true"><span class="dot" style="background:#F2AA76"></span>Orange doux</button>
+</div>
+<p class="caption">Deux sources lumineuses situées en 3D éclairent une membrane unique. Seule l’intensité lumineuse s’anime.</p>
+</section>
+<script id="vertex" type="x-shader/x-vertex">
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+uniform vec2 uViewport;
+uniform vec2 uCentre;
+uniform float uUnit;
+varying vec3 vPos;
+varying vec3 vNormal;
+void main(){
+ vec2 px=uCentre+aPosition.xy*uUnit;
+ gl_Position=vec4(px.x/uViewport.x*2.0-1.0,1.0-px.y/uViewport.y*2.0,0.0,1.0);
+ vPos=aPosition;
+ vNormal=aNormal;
+}
+</script>
+<script id="fragment" type="x-shader/x-fragment">
+precision highp float;
+varying vec3 vPos;
+varying vec3 vNormal;
+uniform vec3 uColdPos,uWarmPos,uColdColor,uWarmColor;
+uniform float uLevel,uColdEnabled,uWarmEnabled;
+vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
+ vec3 delta=position-vPos;
+ float dist2=dot(delta,delta);
+ vec3 dir=normalize(delta);
+ float diffuse=max(0.0,dot(n,dir));
+ float attenuation=1.0/(1.0+dist2*0.105);
+ vec3 halfDir=normalize(dir+vec3(0.0,0.0,1.0));
+ float spec=pow(max(0.0,dot(n,halfDir)),26.0)*0.075;
+ return tint*power*attenuation*(diffuse+spec);
+}
+void main(){
+ vec3 normal=normalize(vNormal);
+ vec3 material=vec3(0.31,0.39,0.47);
+ vec3 ambient=material*0.79+vec3(0.025,0.045,0.065);
+ vec3 cold=illuminate(uColdPos,uColdColor,2.15*uLevel*uColdEnabled,normal);
+ vec3 warm=illuminate(uWarmPos,uWarmColor,2.45*uLevel*uWarmEnabled,normal);
+ vec3 light=ambient+cold+warm;
+ vec3 color=pow(light/(vec3(1.0)+light*0.31),vec3(0.94));
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+}
+</script>
+<script>
+(function(){
+'use strict';
+const canvas=document.getElementById('stage'),status=document.getElementById('status');
+const slider=document.getElementById('intensity'),value=document.getElementById('value'),power=document.getElementById('power');
+const cool=document.getElementById('cool'),warm=document.getElementById('warm');
+const animate100=document.getElementById('animate100'),animHint=document.getElementById('animHint');
+const GREEN=[[.768,.6728],[.777,.6701],[.784,.6665],[.792,.6620],[.799,.6569],[.805,.6510],[.811,.6444],[.816,.6373],[.820,.6297],[.824,.6217],[.826,.6133],[.828,.6048],[.829,.5961]];
+const RED=[[.829,.5961],[.834,.5183],[.849,.4418],[.874,.3680],[.909,.2980],[.952,.2332],[1.003,.1746],[1.062,.1232],[1.127,.0799],[1.197,.0454],[1.271,.0203],[1.347,.0051],[1.425,0]];
+
+const clamp=(v,a,b)=>Math.min(b,Math.max(v,a));
+const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null};
+const HEIGHT=1.8,RESISTANCE=1;
+const curve=(()=>{
+ const h=HEIGHT*.6728,join=.829,fillet=.022+.178*RESISTANCE,inner=join-fillet;
+ const points=[[0,h],[inner,h]];
+ for(const [radius,z] of GREEN.slice(1))points.push([inner+(radius-.768)/(.829-.768)*fillet,z*HEIGHT]);
+ for(const [radius,z] of RED.slice(1))points.push([radius,z*HEIGHT]);
+ points.push([1.55,0]);
+ const delta=[],slopes=Array(points.length).fill(0);
+ for(let i=0;i<points.length-1;i++)delta.push((points[i+1][1]-points[i][1])/(points[i+1][0]-points[i][0]));
+ for(let i=1;i<points.length-1;i++){
+  if(delta[i-1]*delta[i]<=0)continue;
+  const a=points[i][0]-points[i-1][0],b=points[i+1][0]-points[i][0],w0=2*b+a,w1=b+2*a;
+  slopes[i]=(w0+w1)/(w0/delta[i-1]+w1/delta[i]);
+ }
+ return {points,slopes};
+})();
+function heightAt(radius){
+ const p=curve.points,s=curve.slopes,n=p.length;
+ if(radius<=0)return p[0][1];
+ if(radius>=p[n-1][0])return 0;
+ let lo=0,hi=n-1;
+ while(hi-lo>1){const m=(lo+hi)>>1;if(p[m][0]<=radius)lo=m;else hi=m;}
+ const a=p[lo],b=p[hi],h=b[0]-a[0],t=(radius-a[0])/h,t2=t*t,t3=t2*t;
+ return Math.max(0,(2*t3-3*t2+1)*a[1]+(t3-2*t2+t)*h*s[lo]+(-2*t3+3*t2)*b[1]+(t3-t2)*h*s[hi]);
+}
+function makeShader(gl,type,source){
+ const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);
+ if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Shader invalide');
+ return sh;
+}
+function init(){
+ const gl=canvas.getContext('webgl',{alpha:false,antialias:true,depth:false});
+ if(!gl)throw Error('WebGL indisponible dans ce navigateur');
+ const p=gl.createProgram();
+ gl.attachShader(p,makeShader(gl,gl.VERTEX_SHADER,document.getElementById('vertex').textContent));
+ gl.attachShader(p,makeShader(gl,gl.FRAGMENT_SHADER,document.getElementById('fragment').textContent));
+ gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison de programme impossible');
+ gl.useProgram(p);
+ const a={pos:gl.getAttribLocation(p,'aPosition'),normal:gl.getAttribLocation(p,'aNormal')};
+ const u={view:gl.getUniformLocation(p,'uViewport'),centre:gl.getUniformLocation(p,'uCentre'),unit:gl.getUniformLocation(p,'uUnit'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),level:gl.getUniformLocation(p,'uLevel'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled')};
+ Object.assign(state,{gl,program:p,a,u,ready:true,buffers:{pos:gl.createBuffer(),normal:gl.createBuffer(),index:gl.createBuffer()}});
+ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.ready=false;status.textContent='Contexte WebGL perdu : recharger la page';});
+ resize();
+}
+function upload(name,data){
+ const {gl,buffers,a}=state,k=name==='pos'?a.pos:a.normal;
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffers[name]);
+ gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(k);gl.vertexAttribPointer(k,3,gl.FLOAT,false,0,0);
+}
+// A uniform full-screen grid wastes vertices on the flat membrane and leaves
+// staircase facets on the tight green/red junction. Focus a regular, continuous
+// grid on the relief, stretching cells only where the membrane is planar.
+// It remains ONE indexed 3D mesh, not a composited shape or texture mask.
+function meshAxis(index,segments,extent,center,focus){
+ const lo=Math.max(0,center-focus),hi=Math.min(extent,center+focus);
+ const left=lo>0?Math.round(segments*.095):0;
+ const right=hi<extent?Math.round(segments*.095):0;
+ const middle=segments-left-right;
+ if(index<=left&&left>0)return lo*index/left;
+ if(index<=left+middle)return lo+(hi-lo)*(index-left)/middle;
+ return hi+(extent-hi)*(index-left-middle)/right;
+}
+function resize(){
+ if(!state.ready)return;
+ const {gl}=state,w=innerWidth,h=innerHeight;
+ // iPhone retina: native DPR (up to 3) instead of the old 2x raster.
+ const dpr=Math.min(3,devicePixelRatio||1);
+ canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));
+ canvas.style.width=w+'px';canvas.style.height=h+'px';
+ const unit=clamp(w*.235,77,120),cx=w/2,cy=h*.43;
+ // 249×249 = 62 001 vertices, safely below WebGL 1's 16-bit index limit.
+ const cols=248,rows=248,N=(rows+1)*(cols+1),focus=1.68*unit;
+ const positions=new Float32Array(N*3),normals=new Float32Array(N*3),triangles=new Uint16Array(rows*cols*6);
+ const xs=Array.from({length:cols+1},(_,i)=>meshAxis(i,cols,w,cx,focus));
+ const ys=Array.from({length:rows+1},(_,i)=>meshAxis(i,rows,h,cy,focus));
+ for(let iy=0;iy<=rows;iy++)for(let ix=0;ix<=cols;ix++){
+  const x=(xs[ix]-cx)/unit,y=(ys[iy]-cy)/unit,r=Math.hypot(x,y),z=heightAt(r);
+  const eps=.006,slope=(heightAt(r+eps)-heightAt(Math.max(0,r-eps)))/(r<eps?r+eps:2*eps);
+  const nx=-slope*x/Math.max(r,.00001),ny=-slope*y/Math.max(r,.00001),inv=1/Math.hypot(nx,ny,1),k=(iy*(cols+1)+ix)*3;
+  positions[k]=x;positions[k+1]=y;positions[k+2]=z;
+  normals[k]=nx*inv;normals[k+1]=ny*inv;normals[k+2]=inv;
+ }
+ for(let iy=0,k=0;iy<rows;iy++)for(let ix=0;ix<cols;ix++){
+  const a=iy*(cols+1)+ix,b=a+cols+1;
+  triangles[k++]=a;triangles[k++]=a+1;triangles[k++]=b;
+  triangles[k++]=a+1;triangles[k++]=b+1;triangles[k++]=b;
+ }
+ upload('pos',positions);upload('normal',normals);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,triangles,gl.STATIC_DRAW);
+ Object.assign(state,{w,h,unit,cx,cy,count:triangles.length,faces:triangles.length/3});
+ schedule();
+}
+function schedule(){
+ if(!state.ready||state.requested)return;
+ state.requested=true;requestAnimationFrame(draw);
+}
+function startAnimation(){
+ // A real WebGL lighting sequence: geometry & vertex normals stay untouched.
+ state.animation={start:null,duration:2800};
+ state.level=0;state.target=1;
+ state.last=0;
+ sync();schedule();
+}
+function draw(time){
+ state.requested=false;if(!state.ready)return;
+ const dt=state.last?Math.min(.09,(time-state.last)/1000):.016;state.last=time;
+ if(state.animation){
+  const animation=state.animation;
+  if(animation.start===null)animation.start=time;
+  const t=clamp((time-animation.start)/animation.duration,0,1);
+  // Smooth start and arrival: lights rise continuously, without a jump.
+  state.level=t*t*(3-2*t);
+  if(t>=1){state.level=1;state.target=1;state.animation=null;}
+  sync();
+ }else{
+  state.level+=(state.target-state.level)*(1-Math.exp(-dt*3.8));
+  if(Math.abs(state.level-state.target)<.0004)state.level=state.target;
+ }
+ const {gl,u}=state;
+ gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.29,.38,.45,1);gl.clear(gl.COLOR_BUFFER_BIT);
+ gl.useProgram(state.program);
+ gl.uniform2f(u.view,state.w,state.h);gl.uniform2f(u.centre,state.cx,state.cy);gl.uniform1f(u.unit,state.unit);
+ gl.uniform3f(u.coldPos,-2.8,-2.55,3.0);gl.uniform3f(u.warmPos,.45,3.05,2.2);
+ gl.uniform3f(u.coldColor,156/255,174/255,177/255);
+ gl.uniform3f(u.warmColor,242/255,170/255,118/255);
+ gl.uniform1f(u.level,state.level);
+ gl.uniform1f(u.coldOn,state.enabled[0]?1:0);gl.uniform1f(u.warmOn,state.enabled[1]?1:0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers.pos);gl.enableVertexAttribArray(state.a.pos);gl.vertexAttribPointer(state.a.pos,3,gl.FLOAT,false,0,0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers.normal);gl.enableVertexAttribArray(state.a.normal);gl.vertexAttribPointer(state.a.normal,3,gl.FLOAT,false,0,0);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.drawElements(gl.TRIANGLES,state.count,gl.UNSIGNED_SHORT,0);
+ const error=gl.getError();
+ if(error!==gl.NO_ERROR){status.textContent='Erreur WebGL : '+error;return;}
+ status.textContent='Une membrane continue · '+state.faces.toLocaleString('fr-FR')+' triangles · 2 sources 3D';
+ if(state.animation||state.level!==state.target)schedule();
+}
+function sync(){
+ const displayed=state.animation?state.level:state.target;
+ const v=Math.round(displayed*100);
+ slider.value=String(v);value.textContent=v+' %';
+ power.textContent=state.target>0?'Éteindre':'Allumer';
+ power.classList.toggle('active',state.target>0);
+ animHint.textContent=state.animation?'Allumage en cours · '+v+' %':'Animation d’allumage · 0 → 100 %';
+ for(const [i,b] of [cool,warm].entries()){b.classList.toggle('active',state.enabled[i]);b.setAttribute('aria-pressed',String(state.enabled[i]));}
+}
+animate100.addEventListener('click',startAnimation);
+slider.addEventListener('input',()=>{state.animation=null;state.target=Number(slider.value)/100;sync();schedule();});
+power.addEventListener('click',()=>{state.animation=null;state.target=state.target>.001?0:1;sync();schedule();});
+cool.addEventListener('click',()=>{state.enabled[0]=!state.enabled[0];sync();schedule();});
+warm.addEventListener('click',()=>{state.enabled[1]=!state.enabled[1];sync();schedule();});
+addEventListener('resize',resize);
+sync();
+try{init();startAnimation();}catch(e){status.textContent='Erreur de rendu 3D : '+String(e.message||e);status.style.color='#ffe4ca';}
+})();
+</script></body></html>
