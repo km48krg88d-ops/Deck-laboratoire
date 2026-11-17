@@ -489,8 +489,8 @@ function draw(time){
  gl.uniform2fv(u.centers,new Float32Array(state.centers.flat()));
  gl.uniform4f(u.shapes,...state.levels);
  gl.uniform4f(u.starts,...models.map(m=>m.front));
- gl.uniform3f(u.coldPos,-3.2,-4.8,5.0);
- gl.uniform3f(u.warmPos,1.5,4.5,3.6);
+ gl.uniform3f(u.coldPos,-6.0,-6.6,2.7);
+ gl.uniform3f(u.warmPos,5.5,7.0,2.5);
  const palette=paletteForCurrentTime();
  gl.uniform3f(u.coldColor,...palette.a);
  gl.uniform3f(u.warmColor,...palette.b);
