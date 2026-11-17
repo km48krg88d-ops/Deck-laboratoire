@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#9CAEB1">
-<title>DECK / E89 — Quatre commandes, une membrane 3D</title>
+<meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
+<title>DECK / E89 v2 — Membrane 3D, précision Retina et phases horaires</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -38,7 +38,7 @@ button:active{background:#edf6ff32}
 </head>
 <body>
 <canvas id="surface" aria-label="Une surface 3D continue contenant quatre commandes indépendantes, chacune animée géométriquement"></canvas>
-<header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Quatre commandes · palette du matin</p></div><a href="./e88-atelier-commandes-3d.html?v=2">Atelier E88</a></header>
+<header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Quatre commandes · <span id="clockPhase">couleurs selon l’heure</span></p></div><a href="./e88-atelier-commandes-3d.html?v=2">Atelier E88</a></header>
 <div id="stats" role="status">Initialisation des quatre reliefs…</div>
 <section id="panel" aria-label="Commandes du test général">
  <div id="panelHeader"><div><h2>Quatre commandes sur une membrane</h2><div class="sub">Toucher un relief pour l'activer ou l'éteindre</div></div><div class="actions"><button id="allOn" type="button">Tout allumer</button><button id="allOff" type="button">Tout éteindre</button></div></div>
@@ -48,8 +48,8 @@ button:active{background:#edf6ff32}
  <button type="button" data-id="2" aria-pressed="true"><span class="name">03 · Couronne bombée</span><span class="meta">120 % · 2,0 s</span><span class="value" id="value2">0 %</span></button>
  <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
  </div>
- <div id="panelFooter"><button type="button" id="replay">Rejouer les quatre apparitions</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
- <p id="description">Géométries et durées reprises de tes réglages E88. Éclairage 3D constant ; seul le relief apparaît ou disparaît.</p>
+ <div id="panelFooter"><button type="button" id="replay">Rejouer les quatre apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
+ <p id="description">Géométries et durées conservées. La membrane et les deux éclairages reprennent les couleurs de DECK selon l’heure ; seules les formes émergent.</p>
 </section>
 <script id="vert" type="x-shader/x-vertex">
 attribute vec2 aXY;
@@ -62,6 +62,7 @@ uniform vec4 uShapes;
 uniform vec4 uStarts;
 varying vec3 vPos;
 varying vec3 vNormal;
+varying vec2 vScreen;
 float ease(float v){v=clamp(v,0.0,1.0);return v*v*(3.0-2.0*v);}
 vec3 morph(vec2 d,float h,float dh,float p,float start){
  float r=length(d);
@@ -91,13 +92,18 @@ void main(){
  gl_Position=vec4(aXY.x*uUnit/uViewport.x*2.0-1.0,1.0-aXY.y*uUnit/uViewport.y*2.0,0.0,1.0);
  vPos=vec3(aXY-vec2(uViewport.x*.5,uViewport.y*.41)/uUnit,z);
  vNormal=n;
+ vScreen=aXY*uUnit;
 }
 </script>
 <script id="frag" type="x-shader/x-fragment">
 precision highp float;
 varying vec3 vPos;
 varying vec3 vNormal;
+varying vec2 vScreen;
 uniform vec3 uColdPos,uWarmPos,uColdColor,uWarmColor;
+uniform vec3 uPaletteA,uPaletteB;
+uniform vec2 uPaletteOrigin;
+uniform float uPaletteRadius,uPaletteBalance;
 uniform float uColdEnabled,uWarmEnabled;
 vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
  vec3 delta=position-vPos;
@@ -111,8 +117,12 @@ vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
 }
 void main(){
  vec3 normal=normalize(vNormal);
- vec3 material=vec3(0.31,0.39,0.47);
- vec3 ambient=material*0.79+vec3(0.025,0.045,0.065);
+ // Same radial time-of-day color distribution as DECK, now on a lit 3D material.
+ float d=clamp(length(vScreen-uPaletteOrigin)/max(1.0,uPaletteRadius),0.0,1.0);
+ float radial=d*d*(3.0-2.0*d);
+ float weight=pow(max(0.0,1.0-radial),uPaletteBalance);
+ vec3 material=mix(uPaletteA,uPaletteB,weight);
+ vec3 ambient=material*0.68+vec3(0.018,0.028,0.040);
  vec3 cold=illuminate(uColdPos,uColdColor,2.45*uColdEnabled,normal);
  vec3 warm=illuminate(uWarmPos,uWarmColor,2.55*uWarmEnabled,normal);
  vec3 light=ambient+cold+warm;
@@ -130,9 +140,47 @@ const status=document.getElementById('stats');
 const panel=document.getElementById('panel');
 const buttons=[...document.querySelectorAll('#models button')];
 const cool=document.getElementById('cool'),warm=document.getElementById('warm');
+const quality=document.getElementById('quality'),clockPhase=document.getElementById('clockPhase');
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
-const state={ready:false,requested:false,unit:45,centers:[],levels:[0,0,0,0],targets:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0};
+const state={ready:false,requested:false,unit:45,centers:[],levels:[0,0,0,0],targets:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:""};
+const dayCycleDefaults=[
+ [0,'Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
+ [3,'Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
+ [6,'Fin de nuit','#182C50','#849BC5',.52,1.12,1.34,1.80],
+ [7,'Aube rose','#7C91AA','#DEA0B2',.48,1.08,1.20,1.25],
+ [9,'Matinée orange','#9CAEB1','#F2AA76',.38,.93,1.12,1.25],
+ [11,'Journée · blanc chaud','#FFF4D7','#E8BC79',.48,.70,1.06,1.30],
+ [13,'Après-midi · bleu blanc','#C0D1DF','#FAFAF4',.56,.30,1.10,1.15],
+ [15,'Après-midi lumineux','#B7CDDF','#F9FAF5',.58,-.05,1.10,1.30],
+ [17,'Fin d’après-midi','#B1C4D7','#F4F6F4',.42,-.08,1.18,1.45],
+ [19,'Soir orangé','#526B91','#E3A17F',.20,.14,1.14,1.65],
+ [21,'Soir bleu','#2F486D','#A18FB8',-.10,.43,1.20,1.85],
+ [23,'Retour à la nuit','#182C50','#849BC5',.28,.56,1.12,1.80]
+].map(p=>({hour:p[0],name:p[1],a:p[2],b:p[3],x:p[4],y:p[5],spread:p[6],balance:p[7]}));
+let dayCycle=dayCycleDefaults.map(p=>({...p}));
+try{
+ const saved=JSON.parse(localStorage.getItem('deck-daycycle-v3'));
+ if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>p&&/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k])))){
+  dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));
+ }
+}catch(_){}
+const hexRGB=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+const lerpRGB=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+function paletteForCurrentTime(){
+ const date=new Date(),hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
+ let i=0;for(let k=1;k<dayCycle.length;k++)if(hour>=dayCycle[k].hour)i=k;
+ const a=dayCycle[i],b=dayCycle[(i+1)%12],end=i===11?24:b.hour;
+ const u=clamp((hour-a.hour)/(end-a.hour),0,1),t=u*u*(3-2*u);
+ return {
+  name:a.name,minute:date.getHours()*60+date.getMinutes(),
+  a:lerpRGB(hexRGB(a.a),hexRGB(b.a),t),
+  b:lerpRGB(hexRGB(a.b),hexRGB(b.b),t),
+  x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,
+  spread:a.spread+(b.spread-a.spread)*t,balance:a.balance+(b.balance-a.balance)*t
+ };
+}
+
 function sample(profile,r){
  const x=clamp(r/1.55*36.5*2,0,73),i=Math.min(72,Math.floor(x)),t=clamp(x-i,0,1);
  const h0=profile[i],h1=profile[i+1];
@@ -157,19 +205,35 @@ function initialize(){
  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison WebGL impossible');
  gl.useProgram(p);
  const a={xy:gl.getAttribLocation(p,'aXY'),heights:gl.getAttribLocation(p,'aHeights'),slopes:gl.getAttribLocation(p,'aSlopes')};
- const u={viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled')};
+ const u={viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance')};
  state.gl=gl;state.p=p;state.a=a;state.u=u;
+ state.uint32Supported=!!gl.getExtension('OES_element_index_uint');
+ state.highQuality=state.uint32Supported;
+ quality.setAttribute('aria-pressed',String(state.highQuality));
+ quality.textContent=state.highQuality?'Précision : fine':'Précision : normale';
  state.buffers={xy:gl.createBuffer(),heights:gl.createBuffer(),slopes:gl.createBuffer(),index:gl.createBuffer()};
  state.ready=true;
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.ready=false;status.textContent='Contexte WebGL perdu — recharge la page';});
  resize();
 }
-function meshAxis(index,segments,extent,focusEnd){
- // Concentrate vertical tessellation on all four reliefs, not under the control panel.
- const edge=Math.min(extent,focusEnd);
- const dense=Math.round(segments*.87);
- if(index<=dense)return index/dense*edge;
- return edge+(index-dense)/(segments-dense)*(extent-edge);
+// Five joined coordinate intervals form a single manifold 3D surface. The
+// vertex budget is concentrated on both circular embossings, not empty areas.
+function focusedAxis(count,extent,first,second,unit){
+ const r=Math.min(unit*1.62,(second-first)*.46,first*.94,(extent-second)*.94);
+ const cuts=[0,first-r,first+r,second-r,second+r,extent];
+ const n=[Math.round(count*.09),Math.round(count*.355),Math.round(count*.11),Math.round(count*.355)];
+ n.push(count-n.reduce((a,b)=>a+b,0));
+ const arr=new Float32Array(count+1);
+ let offset=0;
+ for(let seg=0;seg<5;seg++){
+  const size=n[seg];
+  for(let k=0;k<=size;k++){
+   const x=k/size;
+   arr[offset+k]=cuts[seg]+(cuts[seg+1]-cuts[seg])*x;
+  }
+  offset+=size;
+ }
+ return arr;
 }
 function upload(name,data,size){
  const gl=state.gl,attr=state.a[name];
@@ -189,19 +253,22 @@ function resize(){
  const positions=[[w*.255,topY],[w*.745,topY],[w*.255,bottomY],[w*.745,bottomY]];
  const centers=positions.map(([px,py])=>[px/unit,py/unit]);
  state.unit=unit;state.centers=centers;
- const cols=248,rows=248,vertices=(cols+1)*(rows+1);
- const xy=new Float32Array(vertices*2),heights=new Float32Array(vertices*4),slopes=new Float32Array(vertices*4),indices=new Uint16Array(cols*rows*6);
- const denseEnd=Math.min(h,bottom+1.55*unit+10);
- const xs=Array.from({length:cols+1},(_,i)=>w*i/cols/unit);
- const ys=Array.from({length:rows+1},(_,i)=>meshAxis(i,rows,h,denseEnd)/unit);
+ // High quality: 119 025 vertices / 236 672 triangles; standard WebGL1 fallback:
+ // 62 001 vertices / 123 008 triangles. Both use native Retina resolution.
+ const cols=state.highQuality?344:248,rows=cols,vertices=(cols+1)*(rows+1);
+ const xy=new Float32Array(vertices*2),heights=new Float32Array(vertices*4),slopes=new Float32Array(vertices*4);
+ const indices=state.highQuality?new Uint32Array(cols*rows*6):new Uint16Array(cols*rows*6);
+ const xs=focusedAxis(cols,w,positions[0][0],positions[1][0],unit);
+ const ys=focusedAxis(rows,h,topY,bottomY,unit);
  for(let iy=0;iy<=rows;iy++)for(let ix=0;ix<=cols;ix++){
-  const k=iy*(cols+1)+ix,p2=k*2,p4=k*4,x=xs[ix],y=ys[iy];
+  const k=iy*(cols+1)+ix,p2=k*2,p4=k*4,x=xs[ix]/unit,y=ys[iy]/unit;
   xy[p2]=x;xy[p2+1]=y;
   for(let j=0;j<4;j++){
    const [cx,cy]=centers[j],r=Math.hypot(x-cx,y-cy);
    const scale=configs[j].height/100/11;
    heights[p4+j]=sample(models[j].profile,r)*scale;
-   const ep=.005;
+   // More stable shading from the exact interpolated GLB profile, no CSS blur.
+   const ep=.014;
    slopes[p4+j]=(sample(models[j].profile,r+ep)-sample(models[j].profile,Math.max(0,r-ep)))/(r<ep?r+ep:2*ep)*scale;
   }
  }
@@ -213,7 +280,7 @@ function resize(){
  upload('xy',xy,2);upload('heights',heights,4);upload('slopes',slopes,4);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
- Object.assign(state,{w,h,indices:indices.length,faces:indices.length/3});
+ Object.assign(state,{w,h,indices:indices.length,faces:indices.length/3,indexType:state.highQuality?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT});
  requestDraw();
 }
 function requestDraw(){
@@ -259,8 +326,20 @@ function draw(time){
  gl.uniform4f(u.starts,...models.map(m=>m.front));
  gl.uniform3f(u.coldPos,-3.2,-4.8,5.0);
  gl.uniform3f(u.warmPos,1.5,4.5,3.6);
- gl.uniform3f(u.coldColor,156/255,174/255,177/255);
- gl.uniform3f(u.warmColor,242/255,170/255,118/255);
+ const palette=paletteForCurrentTime();
+ gl.uniform3f(u.coldColor,...palette.a);
+ gl.uniform3f(u.warmColor,...palette.b);
+ gl.uniform3f(u.paletteA,...palette.a);
+ gl.uniform3f(u.paletteB,...palette.b);
+ gl.uniform2f(u.paletteOrigin,palette.x*state.w,palette.y*state.h);
+ gl.uniform1f(u.paletteRadius,Math.max(state.w,state.h)*palette.spread);
+ gl.uniform1f(u.paletteBalance,palette.balance);
+ if(state.phase!==palette.name||state.minute!==palette.minute){
+  state.phase=palette.name;state.minute=palette.minute;
+  clockPhase.textContent=palette.name;
+  const bottomColor=palette.a.map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('');
+  document.getElementById('deckThemeColor').setAttribute('content','#'+bottomColor);
+ }
  gl.uniform1f(u.coldOn,state.lights[0]?1:0);
  gl.uniform1f(u.warmOn,state.lights[1]?1:0);
  for(const [name,size] of [['xy',2],['heights',4],['slopes',4]]){
@@ -269,16 +348,24 @@ function draw(time){
   gl.vertexAttribPointer(state.a[name],size,gl.FLOAT,false,0,0);
  }
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
- gl.drawElements(gl.TRIANGLES,state.indices,gl.UNSIGNED_SHORT,0);
+ gl.drawElements(gl.TRIANGLES,state.indices,state.indexType,0);
  const err=gl.getError();
  if(err!==gl.NO_ERROR){status.textContent='Erreur WebGL '+err;return;}
- status.textContent='Une membrane 3D · '+state.faces.toLocaleString('fr-FR')+' triangles · 4 reliefs indépendants';
+ status.textContent='Membrane 3D nette · '+state.faces.toLocaleString('fr-FR')+' triangles · '+state.phase;
  if(state.animations.some(Boolean))requestDraw();
 }
 for(let i=0;i<4;i++)buttons[i].addEventListener('click',()=>animate(i,state.targets[i]>.001?0:1));
 document.getElementById('allOn').addEventListener('click',()=>allTo(1));
 document.getElementById('allOff').addEventListener('click',()=>allTo(0));
 document.getElementById('replay').addEventListener('click',()=>allTo(1,true));
+quality.addEventListener('click',()=>{
+ if(!state.ready)return;
+ if(!state.uint32Supported&&state.highQuality)return;
+ state.highQuality=state.uint32Supported?!state.highQuality:false;
+ quality.setAttribute('aria-pressed',String(state.highQuality));
+ quality.textContent=state.highQuality?'Précision : fine':'Précision : normale';
+ resize();
+});
 for(const [i,element] of [[0,cool],[1,warm]]){
  element.addEventListener('click',()=>{state.lights[i]=!state.lights[i];element.setAttribute('aria-pressed',String(state.lights[i]));requestDraw();});
 }
@@ -292,6 +379,9 @@ canvas.addEventListener('pointerup',e=>{
  if(chosen>=0)animate(chosen,state.targets[chosen]>.001?0:1);
 });
 addEventListener('resize',resize);
+addEventListener('focus',()=>{if(state.ready)requestDraw();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.ready)requestDraw();});
+setInterval(()=>{if(state.ready)requestDraw();},30000);
 refresh();
 try{initialize();allTo(1,true);}catch(e){status.textContent='Erreur 3D : '+String(e.message||e);status.style.color='#ffe5cf';}
 })();
