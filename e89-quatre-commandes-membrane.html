@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
-<title>DECK / E89 v3 — Placement et intensité des quatre commandes 3D</title>
+<title>DECK / E89 v4 — Placement libre 3D</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -13,9 +13,10 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#7b919d;col
 #header{position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:16px;right:16px;z-index:2;pointer-events:none;display:flex;justify-content:space-between;align-items:start;gap:10px}
 #header h1{margin:0 0 5px;font-size:12px;letter-spacing:.15em;font-weight:700;text-shadow:0 1px 3px #1c273c55}
 #header p{font-size:10px;line-height:1.4;margin:0;color:#f2f6fae0}
-#header a{pointer-events:auto;text-decoration:none;font-size:11px;color:#fff;padding:8px 11px;border:1px solid #ecf5ff75;background:#1d354ba3;border-radius:10px;white-space:nowrap}
+#header button{pointer-events:auto;font:12px -apple-system,sans-serif;color:#fff;padding:10px 13px;border:1px solid #ecf5ffb3;background:#1d354b50;border-radius:22px;white-space:nowrap;backdrop-filter:blur(7px)}
 #stats{position:fixed;left:16px;top:calc(env(safe-area-inset-top) + 63px);font-size:10px;color:#eef4f7df;z-index:1;pointer-events:none;text-shadow:0 1px 3px #20344966}
-#panel{position:fixed;z-index:4;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;max-width:510px;margin:auto;background:#1b3045ec;border:1px solid #ecf5ff75;border-radius:17px;padding:12px 14px 11px;box-shadow:0 12px 35px #1832495e;backdrop-filter:blur(12px)}
+#panel{position:fixed;z-index:7;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;max-width:510px;margin:auto;background:#1b3045ec;border:1px solid #ecf5ff75;border-radius:17px;padding:12px 14px 11px;box-shadow:0 12px 35px #1832495e;backdrop-filter:blur(12px);max-height:72dvh;overflow:auto}
+#panel[hidden],#placementBar[hidden],#selectionDock[hidden]{display:none!important}
 #panelHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
 #panelHeader .actions{flex-wrap:wrap;justify-content:flex-end}
 #panelHeader .actions button{padding:7px 8px}
@@ -45,14 +46,27 @@ button:active{background:#edf6ff32}
 #panelFooter .lights{display:flex;gap:5px}
 #panelFooter button[aria-pressed=false]{opacity:.52}
 #description{font-size:10px;color:#c4d2e1;line-height:1.45;margin:8px 0 0}
-@media(max-width:360px){#panel{padding:10px 11px}#models .name{font-size:10px}button{padding:7px}}
+#placementBar{position:fixed;z-index:8;top:calc(env(safe-area-inset-top) + 70px);left:12px;right:12px;max-width:470px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:7px;border:1px solid #e5f3ff83;background:#14293ecc;border-radius:16px;padding:8px 9px;box-shadow:0 12px 25px #162d4860;backdrop-filter:blur(8px)}
+#placementBar>span{font-size:11px;font-weight:600}
+#placeChoices{display:flex;gap:4px}
+#placeChoices button{padding:8px 9px}
+#placeChoices button[aria-pressed=true]{background:#f0bb8244;border-color:#ffe2b5}
+#finishPlacement{color:#ffe2bb;border-color:#f2bb8c}
+#selectionDock{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;margin:auto;max-width:400px;background:#1b3045d9;border:1px solid #ecf5ff6c;border-radius:14px;padding:9px 12px 6px;backdrop-filter:blur(9px)}
+.dockTop{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:11px}
+#dockName{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#dockValue{color:#ffd2a2;font-weight:700;white-space:nowrap}
+#dockPower,#dockClose{padding:4px 8px;min-width:22px}
+#dockIntensity{display:block;width:100%;height:22px;accent-color:#f2aa76;margin:3px 0 0;touch-action:pan-x}
+@media(max-width:360px){#panel{padding:10px 11px}#models .name{font-size:10px}button{padding:7px}#placementBar{gap:4px;left:7px;right:7px;padding:7px}#placeChoices button{padding:7px}}
+
 </style>
 </head>
 <body>
 <canvas id="surface" aria-label="Une surface 3D continue contenant quatre commandes indépendantes, chacune animée géométriquement"></canvas>
-<header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Quatre commandes · <span id="clockPhase">couleurs selon l’heure</span></p></div><a href="./e88-atelier-commandes-3d.html?v=2">Atelier E88</a></header>
+<header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Placement libre · <span id="clockPhase">couleurs selon l’heure</span></p></div><button id="settingsButton" type="button" aria-expanded="false" aria-controls="panel">Réglages</button></header>
 <div id="stats" role="status">Initialisation des quatre reliefs…</div>
-<section id="panel" aria-label="Commandes du test général">
+<section id="panel" hidden aria-label="Commandes du test général">
  <div id="panelHeader"><div><h2>Quatre commandes sur une membrane</h2><div class="sub">Sélection, placement et relief individuels</div></div><div class="actions"><button id="placement" type="button" aria-pressed="false">Placer</button><button id="allOn" type="button">Tout ON</button><button id="allOff" type="button">Tout OFF</button></div></div>
  <div id="models" aria-label="Commandes 3D individuelles">
  <button type="button" data-id="0" aria-pressed="true"><span class="name">01 · Trois reliefs</span><span class="meta">100 % · 2,0 s</span><span class="value" id="value0">0 %</span></button>
@@ -62,8 +76,23 @@ button:active{background:#edf6ff32}
  </div>
  <div id="individual" aria-label="Réglage du relief de la lampe sélectionnée"><div id="selectedHeading"><strong id="selectedName">01 · Trois reliefs</strong><div class="selectedActions"><output id="selectedValue">100 %</output><button id="selectedPower" type="button">Éteindre</button></div></div><input id="selectedIntensity" type="range" min="0" max="100" step="1" value="100" aria-label="Déploiement de la commande sélectionnée"><div id="gestureHint">Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler</div></div>
  <div id="panelFooter"><button type="button" id="replay">Rejouer les quatre apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
- <p id="description">Position et niveau de chaque commande enregistrés. La membrane et les deux éclairages gardent les couleurs horaires de DECK.</p>
+ <p id="description">Position libre sur toute la membrane. Sélectionner une lampe, puis toucher un emplacement en mode Placer. <a href="./e88-atelier-commandes-3d.html?v=3" style="color:#ecf1fb">Atelier E88</a></p>
 </section>
+
+<div id="placementBar" hidden aria-label="Placement libre des lampes">
+  <span>Placer</span>
+  <div id="placeChoices">
+    <button type="button" data-place="0" aria-pressed="false">01</button>
+    <button type="button" data-place="1" aria-pressed="false">02</button>
+    <button type="button" data-place="2" aria-pressed="false">03</button>
+    <button type="button" data-place="3" aria-pressed="false">04</button>
+  </div>
+  <button id="finishPlacement" type="button">Terminer</button>
+</div>
+<div id="selectionDock" hidden aria-label="Intensité de la commande sélectionnée">
+  <div class="dockTop"><span id="dockName">Commande sélectionnée</span><output id="dockValue">100 %</output><button id="dockPower" type="button">Éteindre</button><button id="dockClose" type="button" aria-label="Fermer le réglage">×</button></div>
+  <input id="dockIntensity" type="range" min="0" max="100" value="100" step="1" aria-label="Déploiement de la commande">
+</div>
 <script id="vert" type="x-shader/x-vertex">
 attribute vec2 aXY;
 attribute vec4 aHeights;
@@ -155,11 +184,16 @@ const buttons=[...document.querySelectorAll('#models button')];
 const cool=document.getElementById('cool'),warm=document.getElementById('warm');
 const quality=document.getElementById('quality'),clockPhase=document.getElementById('clockPhase');
 const placementButton=document.getElementById('placement'),selectedSlider=document.getElementById('selectedIntensity');
+const settingsButton=document.getElementById('settingsButton'),placementBar=document.getElementById('placementBar');
+const finishPlacement=document.getElementById('finishPlacement'),placeChoices=[...document.querySelectorAll('#placeChoices button')];
+const selectionDock=document.getElementById('selectionDock'),dockSlider=document.getElementById('dockIntensity');
+const dockName=document.getElementById('dockName'),dockValue=document.getElementById('dockValue');
+const dockPower=document.getElementById('dockPower'),dockClose=document.getElementById('dockClose');
 const selectedName=document.getElementById('selectedName'),selectedValue=document.getElementById('selectedValue');
 const selectedPower=document.getElementById('selectedPower'),gestureHint=document.getElementById('gestureHint');
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
-const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:[0,0,0,0],targets:[1,1,1,1],lastLevels:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:0,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
+const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:[0,0,0,0],targets:[1,1,1,1],lastLevels:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:null,settingsOpen:false,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
 const POSITION_KEY='deck-e89-lamp-layout-v1';
 try{
  const saved=JSON.parse(localStorage.getItem(POSITION_KEY));
@@ -277,13 +311,9 @@ function upload(name,data,size){
  gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,size,gl.FLOAT,false,0,0);
 }
 function placementBounds(w,h,unit){
- const controlTop=h-panel.getBoundingClientRect().height-20;
- const radius=unit*1.55;
- const minX=Math.min(w*.49,Math.max(15,radius*.83));
- const maxX=Math.max(minX+1,w-minX);
- const minY=Math.min(h*.40,Math.max(68,90+radius*.69));
- const maxY=Math.max(minY+1,controlTop-radius*.76-8);
- return {minX,maxX,minY,maxY};
+ // No panel/grid constraints: the center may approach any screen edge.
+ // The material surface extends under the interface, as in the 2D DECK.
+ return {minX:4,maxX:Math.max(5,w-4),minY:4,maxY:Math.max(5,h-4)};
 }
 function resize(){
  if(!state.ready)return;
@@ -293,13 +323,10 @@ function resize(){
  canvas.style.width=w+'px';canvas.style.height=h+'px';
  const unit=clamp(w*.105,34,49);
  const b=placementBounds(w,h,unit);
- // Initial 2×2 layout; thereafter only the user moves the forms.
+ // Free scattered starting arrangement, not a compulsory 2×2 grid.
+ // Previously saved locations always win.
  if(state.positionFractions.length!==4){
-  const safeTop=90,controlTop=h-panel.getBoundingClientRect().height-20;
-  const bottom=Math.max(safeTop+140,controlTop-14);
-  const span=Math.max(180,bottom-safeTop);
-  const yTop=safeTop+span*.28,yBottom=safeTop+span*.77;
-  state.positionFractions=[[.255,yTop/h],[.745,yTop/h],[.255,yBottom/h],[.745,yBottom/h]];
+  state.positionFractions=[[.25,.35],[.76,.46],[.31,.64],[.71,.77]];
  }
  state.w=w;state.h=h;state.unit=unit;state.bounds=b;
  state.screenPositions=state.positionFractions.map(([x,y])=>[clamp(x*w,b.minX,b.maxX),clamp(y*h,b.minY,b.maxY)]);
@@ -394,12 +421,26 @@ function changeIntensity(value){
  if(value>.001)state.lastLevels[i]=value;
  refresh();requestDraw();saveLayout();
 }
+function showSettings(on){
+ state.settingsOpen=!!on;
+ panel.hidden=!state.settingsOpen;
+ settingsButton.setAttribute('aria-expanded',String(state.settingsOpen));
+ settingsButton.textContent=state.settingsOpen?'Fermer':'Réglages';
+ if(state.settingsOpen&&state.placeMode)setPlaceMode(false);
+ refresh();
+}
 function setPlaceMode(on){
  state.placeMode=!!on;
  placementButton.setAttribute('aria-pressed',String(state.placeMode));
  placementButton.textContent=state.placeMode?'Terminer':'Placer';
- gestureHint.textContent=state.placeMode?'Placement : glisse chaque relief au doigt':'Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler';
+ placementBar.hidden=!state.placeMode;
+ gestureHint.textContent=state.placeMode?'Placement : touche une zone libre ou glisse chaque relief':'Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler';
  canvas.style.cursor=state.placeMode?'move':'default';
+ if(state.placeMode){
+  state.settingsOpen=false;panel.hidden=true;
+  settingsButton.setAttribute('aria-expanded','false');settingsButton.textContent='Réglages';
+ }
+ refresh();
  if(!state.placeMode)saveLayout();
 }
 function refresh(){
@@ -417,10 +458,16 @@ function refresh(){
   selectedSlider.value=String(Math.round(state.levels[i]*100));
   selectedValue.textContent=Math.round(state.levels[i]*100)+' %';
   selectedPower.textContent=state.targets[i]>.001?'Éteindre':'Allumer';
+  dockName.textContent=selectedName.textContent;
+  dockValue.textContent=selectedValue.textContent;
+  dockSlider.value=selectedSlider.value;
+  dockPower.textContent=selectedPower.textContent;
  }else{
   selectedName.textContent='Sélectionner une commande';
   selectedValue.textContent='—';selectedSlider.value='0';selectedPower.textContent='Allumer';
  }
+ selectionDock.hidden=!valid||state.settingsOpen||state.placeMode;
+ for(let j=0;j<4;j++)placeChoices[j].setAttribute('aria-pressed',String(j===i));
 }
 function draw(time){
  state.requested=false;if(!state.ready)return;
@@ -474,6 +521,12 @@ function draw(time){
 }
 for(let i=0;i<4;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
 selectedSlider.addEventListener('input',()=>changeIntensity(Number(selectedSlider.value)/100));
+dockSlider.addEventListener('input',()=>changeIntensity(Number(dockSlider.value)/100));
+dockPower.addEventListener('click',()=>{if(state.selected!==null)toggleLamp(state.selected);});
+dockClose.addEventListener('click',()=>selectLamp(null));
+settingsButton.addEventListener('click',()=>showSettings(!state.settingsOpen));
+finishPlacement.addEventListener('click',()=>setPlaceMode(false));
+for(const b of placeChoices)b.addEventListener('click',()=>selectLamp(Number(b.dataset.place)));
 selectedPower.addEventListener('click',()=>{if(state.selected!==null)toggleLamp(state.selected);});
 placementButton.addEventListener('click',()=>setPlaceMode(!state.placeMode));
 document.getElementById('allOn').addEventListener('click',()=>allTo(1));
@@ -538,8 +591,8 @@ canvas.addEventListener('pointermove',e=>{
  const g=state.gesture;
  if(!g||g.id!==e.pointerId)return;
  if(Math.hypot(p.x-g.x,p.y-g.y)>7)g.moved=true;
- if(state.placeMode&&g.hit>=0&&g.moved){
-  g.dragged=true;movePlacement(g.hit,p.x,p.y);
+ if(state.placeMode&&g.moved&&(g.hit>=0||state.selected!==null)){
+  g.dragged=true;movePlacement(g.hit>=0?g.hit:state.selected,p.x,p.y);
  }
 });
 function finishPointer(e,cancelled){
@@ -550,6 +603,11 @@ function finishPointer(e,cancelled){
  if(state.pointers.size===0)state.multitouch=false;
  if(g&&g.id===e.pointerId){
   if(g.dragged){saveLayout();}
+  else if(!cancelled&&!wasMulti&&!g.moved&&state.placeMode){
+   // Tap anywhere on the membrane moves the selected model there.
+   if(g.hit<0&&state.selected!==null){movePlacement(state.selected,p.x,p.y);saveLayout();}
+   else if(g.hit>=0)selectLamp(g.hit);
+  }
   else if(!cancelled&&!wasMulti&&!g.moved&&!state.placeMode){
    if(g.hit>=0){
     const now=performance.now(),last=state.lastTap;
