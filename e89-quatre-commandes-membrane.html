@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
-<title>DECK / E89 v4 — Placement libre 3D</title>
+<title>DECK / E89 v7 — Éclairage réglable</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -58,6 +58,14 @@ button:active{background:#edf6ff32}
 #dockValue{color:#ffd2a2;font-weight:700;white-space:nowrap}
 #dockPower,#dockClose{padding:4px 8px;min-width:22px}
 #dockIntensity{display:block;width:100%;height:22px;accent-color:#f2aa76;margin:3px 0 0;touch-action:pan-x}
+#lightingControls{margin:12px 0 6px;padding:11px 1px 2px;border-top:1px solid #d4e4f552}
+#lightingTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+#lightingTitle strong{font-size:12px;font-weight:650}
+#lightingTitle button{font-size:10px;padding:6px 9px}
+.lightingRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:3px;margin-bottom:9px}
+.lightingRow label{font-size:11px;color:#e4ebf4}
+.lightingRow output{font-size:11px;font-weight:650;color:#f8d0aa;font-variant-numeric:tabular-nums}
+.lightingRow input{grid-column:1/-1;display:block;width:100%;height:23px;margin:0;accent-color:#f2aa76;touch-action:pan-x}
 @media(max-width:360px){#panel{padding:10px 11px}#models .name{font-size:10px}button{padding:7px}#placementBar{gap:4px;left:7px;right:7px;padding:7px}#placeChoices button{padding:7px}}
 
 </style>
@@ -75,6 +83,13 @@ button:active{background:#edf6ff32}
  <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
  </div>
  <div id="individual" aria-label="Réglage du relief de la lampe sélectionnée"><div id="selectedHeading"><strong id="selectedName">01 · Trois reliefs</strong><div class="selectedActions"><output id="selectedValue">100 %</output><button id="selectedPower" type="button">Éteindre</button></div></div><input id="selectedIntensity" type="range" min="0" max="100" step="1" value="100" aria-label="Déploiement de la commande sélectionnée"><div id="gestureHint">Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler</div></div>
+ <div id="lightingControls" aria-label="Réglage global de l’éclairage de la membrane">
+  <div id="lightingTitle"><strong>Éclairage de la membrane</strong><button type="button" id="resetLighting">Réinitialiser</button></div>
+  <div class="lightingRow"><label for="lightingContrast">Contraste</label><output id="lightingContrastValue" for="lightingContrast">100 %</output><input id="lightingContrast" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="lightingRow"><label for="lightingIntensity">Intensité lumineuse</label><output id="lightingIntensityValue" for="lightingIntensity">100 %</output><input id="lightingIntensity" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="lightingRow"><label for="lightingShadows">Force des ombres</label><output id="lightingShadowsValue" for="lightingShadows">100 %</output><input id="lightingShadows" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="sub">Réglage global du rendu sans changer les hauteurs.</div>
+ </div>
  <div id="panelFooter"><button type="button" id="replay">Rejouer les quatre apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
  <p id="description">Position libre sur toute la membrane. Sélectionner une lampe, puis toucher un emplacement en mode Placer. <a href="./e88-atelier-commandes-3d.html?v=3" style="color:#ecf1fb">Atelier E88</a></p>
 </section>
@@ -147,14 +162,16 @@ uniform vec3 uPaletteA,uPaletteB;
 uniform vec2 uPaletteOrigin;
 uniform float uPaletteRadius,uPaletteBalance;
 uniform float uColdEnabled,uWarmEnabled;
+uniform float uContrast,uLightIntensity,uShadowStrength;
 vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
  vec3 delta=position-vPos;
  float dist2=dot(delta,delta);
  vec3 dir=normalize(delta);
- float diffuse=max(0.0,dot(n,dir));
+ float flatDiffuse=max(0.0,dir.z);
+ float diffuse=clamp(flatDiffuse+(max(0.0,dot(n,dir))-flatDiffuse)*uShadowStrength,0.0,1.0);
  float attenuation=1.0/(1.0+dist2*0.09);
  vec3 halfDir=normalize(dir+vec3(0.0,0.0,1.0));
- float spec=pow(max(0.0,dot(n,halfDir)),12.0)*0.008;
+ float spec=pow(max(0.0,dot(n,halfDir)),12.0)*0.008*min(1.0,uShadowStrength);
  return tint*power*attenuation*(diffuse+spec);
 }
 void main(){
@@ -165,10 +182,17 @@ void main(){
  float weight=pow(max(0.0,1.0-radial),uPaletteBalance);
  vec3 material=mix(uPaletteA,uPaletteB,weight);
  vec3 ambient=material*0.84+vec3(0.012,0.018,0.026);
- vec3 cold=illuminate(uColdPos,uColdColor,1.65*uColdEnabled,normal);
- vec3 warm=illuminate(uWarmPos,uWarmColor,1.75*uWarmEnabled,normal);
+ // Extra soft shading above 100%; the current E89 v6 is preserved at 100%.
+ vec3 coldDir=normalize(uColdPos-vPos);
+ vec3 warmDir=normalize(uWarmPos-vPos);
+ float coldShade=uColdEnabled*clamp((max(0.0,coldDir.z)-max(0.0,dot(normal,coldDir)))/max(0.2,coldDir.z),0.0,1.0);
+ float warmShade=uWarmEnabled*clamp((max(0.0,warmDir.z)-max(0.0,dot(normal,warmDir)))/max(0.2,warmDir.z),0.0,1.0);
+ ambient*=1.0-0.45*max(0.0,uShadowStrength-1.0)*max(coldShade,warmShade);
+ vec3 cold=illuminate(uColdPos,uColdColor,1.65*uColdEnabled*uLightIntensity,normal);
+ vec3 warm=illuminate(uWarmPos,uWarmColor,1.75*uWarmEnabled*uLightIntensity,normal);
  vec3 light=ambient+cold+warm;
  vec3 color=pow(light/(vec3(1.0)+light*0.23),vec3(1.0));
+ color=(color-vec3(0.5))*uContrast+vec3(0.5);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }
 </script>
@@ -192,6 +216,13 @@ const dockPower=document.getElementById('dockPower'),dockClose=document.getEleme
 const selectedName=document.getElementById('selectedName'),selectedValue=document.getElementById('selectedValue');
 const selectedPower=document.getElementById('selectedPower'),gestureHint=document.getElementById('gestureHint');
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const LIGHTING_KEY='deck-e89-lighting-v1';
+const lighting={contrast:100,intensity:100,shadows:100};
+try{
+ const saved=JSON.parse(localStorage.getItem(LIGHTING_KEY));
+ if(saved&&typeof saved==='object')for(const key of Object.keys(lighting))if(Number.isFinite(saved[key]))lighting[key]=clamp(Math.round(saved[key]),0,200);
+}catch(_){}
+function saveLighting(){try{localStorage.setItem(LIGHTING_KEY,JSON.stringify(lighting));}catch(_){}}
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
 const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:[0,0,0,0],targets:[1,1,1,1],lastLevels:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:null,settingsOpen:false,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
 const POSITION_KEY='deck-e89-lamp-layout-v1';
@@ -269,7 +300,7 @@ function initialize(){
  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison WebGL impossible');
  gl.useProgram(p);
  const a={xy:gl.getAttribLocation(p,'aXY'),heights:gl.getAttribLocation(p,'aHeights'),slopes:gl.getAttribLocation(p,'aSlopes')};
- const u={viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance')};
+ const u={viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance'),contrast:gl.getUniformLocation(p,'uContrast'),lightIntensity:gl.getUniformLocation(p,'uLightIntensity'),shadowStrength:gl.getUniformLocation(p,'uShadowStrength')};
  state.gl=gl;state.p=p;state.a=a;state.u=u;
  state.uint32Supported=!!gl.getExtension('OES_element_index_uint');
  state.highQuality=state.uint32Supported;
@@ -507,6 +538,9 @@ function draw(time){
  }
  gl.uniform1f(u.coldOn,state.lights[0]?1:0);
  gl.uniform1f(u.warmOn,state.lights[1]?1:0);
+ gl.uniform1f(u.contrast,lighting.contrast/100);
+ gl.uniform1f(u.lightIntensity,lighting.intensity/100);
+ gl.uniform1f(u.shadowStrength,lighting.shadows/100);
  for(const [name,size] of [['xy',2],['heights',4],['slopes',4]]){
   gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers[name]);
   gl.enableVertexAttribArray(state.a[name]);
@@ -519,6 +553,18 @@ function draw(time){
  status.textContent='Membrane 3D nette · '+state.faces.toLocaleString('fr-FR')+' triangles · '+state.phase;
  if(state.animations.some(Boolean))requestDraw();
 }
+const lightingInputs=[['contrast','lightingContrast','lightingContrastValue'],['intensity','lightingIntensity','lightingIntensityValue'],['shadows','lightingShadows','lightingShadowsValue']].map(([key,inputId,outputId])=>({key,input:document.getElementById(inputId),output:document.getElementById(outputId)}));
+function syncLighting(){for(const {key,input,output} of lightingInputs){input.value=String(lighting[key]);output.textContent=lighting[key]+' %';}}
+syncLighting();
+for(const {key,input,output} of lightingInputs)input.addEventListener('input',()=>{
+ lighting[key]=clamp(Number(input.value),0,200);
+ output.textContent=lighting[key]+' %';
+ saveLighting();requestDraw();
+});
+document.getElementById('resetLighting').addEventListener('click',()=>{
+ lighting.contrast=100;lighting.intensity=100;lighting.shadows=100;
+ syncLighting();saveLighting();requestDraw();
+});
 for(let i=0;i<4;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
 selectedSlider.addEventListener('input',()=>changeIntensity(Number(selectedSlider.value)/100));
 dockSlider.addEventListener('input',()=>changeIntensity(Number(dockSlider.value)/100));
