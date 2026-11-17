@@ -97,15 +97,40 @@ function interpolation(points,x){
  }
  return points[points.length-1][1];
 }
-function profile(radius,height,resistance){
+// C1 monotone Hermite spline: eliminates straight segments and the hard radial
+// normal changes between sampled GLB red / green curves.
+let smoothedProfile=null;
+function profilePrepare(height,resistance){
  const width=.022+.178*resistance,inner=joinR-width;
- if(radius<=inner)return height;
- if(radius<joinR){
-  const sourceR=.768+(radius-inner)/width*(joinR-.768);
-  return height*interpolation(green,sourceR)/topZ;
+ const points=[[0,height],[inner,height]];
+ for(const [r,z] of green.slice(1)){
+  points.push([inner+(r-.768)/(.829-.768)*width,height*z/topZ]);
  }
- if(radius<outerR)return height*interpolation(red,radius)/topZ;
- return 0;
+ for(const [r,z] of red.slice(1))points.push([r,height*z/topZ]);
+ points.push([1.55,0]);
+ const n=points.length,delta=[];
+ for(let i=0;i<n-1;i++)delta.push((points[i+1][1]-points[i][1])/(points[i+1][0]-points[i][0]));
+ const slopes=new Array(n).fill(0);
+ for(let i=1;i<n-1;i++){
+  const d0=delta[i-1],d1=delta[i];
+  if(d0*d1<=0)continue;
+  const h0=points[i][0]-points[i-1][0],h1=points[i+1][0]-points[i][0];
+  const w0=2*h1+h0,w1=h1+2*h0;
+  slopes[i]=(w0+w1)/(w0/d0+w1/d1);
+ }
+ smoothedProfile={height,resistance,points,slopes};
+}
+function profile(radius,height,resistance){
+ if(!smoothedProfile||smoothedProfile.height!==height||smoothedProfile.resistance!==resistance)
+  profilePrepare(height,resistance);
+ const {points,slopes}=smoothedProfile;
+ if(radius<=points[0][0])return points[0][1];
+ const n=points.length;if(radius>=points[n-1][0])return 0;
+ let lo=0,hi=n-1;
+ while(hi-lo>1){const mid=(lo+hi)>>1;if(points[mid][0]<=radius)lo=mid;else hi=mid;}
+ const x0=points[lo][0],x1=points[hi][0],h=x1-x0,t=(radius-x0)/h;
+ const t2=t*t,t3=t2*t;
+ return Math.max(0,(2*t3-3*t2+1)*points[lo][1]+(t3-2*t2+t)*h*slopes[lo]+(-2*t3+3*t2)*points[hi][1]+(t3-t2)*h*slopes[hi]);
 }
 function colorFor(radius,resistance){
  if(!guide)return [0.83,0.87,0.90];
@@ -191,7 +216,7 @@ function rebuild(){
  hv.textContent=H.value+" %";rv.textContent=R.value+" %";
  for(let i=0;i<=steps;i++)for(let j=0;j<=segments;j++){
   const r=radii[i],a=j/segments*Math.PI*2,c=Math.cos(a),ss=Math.sin(a),x=c*r,y=ss*r,ix=(i*(segments+1)+j)*3;
-  const z=profile(r,height,resistance),eps=.0025;
+  const z=profile(r,height,resistance),eps=.013; // filtered normal gradient softens visible concentric bands
   const slope=(profile(r+eps,height,resistance)-profile(Math.max(0,r-eps),height,resistance))/(2*eps);
   const nx=-slope*c,ny=-slope*ss,nn=Math.hypot(nx,ny,1),co=colorFor(r,resistance);
   positions[ix]=x;positions[ix+1]=y;positions[ix+2]=z;
