@@ -95,6 +95,9 @@ function initWebGL(){
   'gl_Position=vec4(pos.x*2.0/uViewport.x-1.0,1.0-pos.y*2.0/uViewport.y,-aPosition.z*0.02,1.0);',
   'vNormal=aNormal;vRadius=aRadius;',
   '}'].join('\n');
+  // The junction between the green fillet and red skirt keeps the sharper
+  // lighting of Bis v1; only the surrounding slope fades into the DECK canvas.
+  // No screen-space blur: every normal remains crisp at native DPR.
   const fragment=[
   'precision mediump float;',
   'varying vec3 vNormal;',
@@ -103,20 +106,28 @@ function initWebGL(){
   'uniform float uBlend;',
   'void main(){',
   'vec3 n=normalize(vNormal);',
-  'float slope=length(n.xy);',
+  'float tilt=clamp(length(n.xy),0.0,1.0);',
   'float incidence=dot(n.xy,normalize(vec2(-0.74,-0.67)));',
-  'float lit=smoothstep(0.01,0.65,max(0.0,incidence));',
-  'float shade=smoothstep(0.01,0.65,max(0.0,-incidence));',
-  // Gently toned highlights/shadows (no opaque white material, no flat sticker).
-  'vec3 lightTint=vec3(0.92,0.84,0.89);',
-  'vec3 darkTint=vec3(0.12,0.20,0.34);',
-  'vec3 tint=mix(lightTint,darkTint,shade/(lit+shade+0.001));',
-  // Flat surface exactly transparent; outer edge feathers fully to 0 alpha.
-  'float slopeMask=smoothstep(0.015,0.22,slope);',
-  'float fringe=1.0-smoothstep(1.12,1.54,vRadius);',
-  'float diffusion=mix(0.92,0.48,uBlend);',
-  'float alpha=(0.12+0.72*max(lit,shade))*slopeMask*fringe*diffusion*uOpacity;',
-  'gl_FragColor=vec4(tint,clamp(alpha,0.0,0.88));',
+  'float warm=max(0.0,incidence),cold=max(0.0,-incidence);',
+  // Original Bis v1 material at the joint, with a precise 2–4px transition.
+  'vec3 original=vec3(0.70,0.79,0.91)*(0.57+0.19*n.z);',
+  'original+=vec3(0.95,0.63,0.32)*warm*0.57;',
+  'original+=vec3(0.15,0.33,0.61)*cold*0.32;',
+  'float oldEdge=1.0-smoothstep(1.33,1.54,vRadius);',
+  'float oldAlpha=(0.14+0.79*tilt)*oldEdge*uOpacity;',
+  // The rest is a broad translucent tonal gradient, NOT a blurred overlay.
+  'float signedLight=smoothstep(-0.13,0.16,incidence);',
+  'vec3 gradient=mix(vec3(0.10,0.19,0.34),vec3(0.88,0.83,0.87),signedLight);',
+  'float ramp=1.0-smoothstep(0.88,1.54,vRadius);',
+  'float slopeMask=smoothstep(0.025,0.26,tilt);',
+  'float lobe=smoothstep(0.015,0.65,abs(incidence));',
+  'float fade=mix(0.95,0.54,uBlend);',
+  'float softAlpha=(0.08+0.49*lobe)*slopeMask*ramp*fade*uOpacity;',
+  // Exact green-red meeting radius from COMMANDE-001.glb.
+  'float junction=1.0-smoothstep(0.018,0.065,abs(vRadius-0.829));',
+  'vec3 color=mix(gradient,original,junction);',
+  'float alpha=mix(softAlpha,oldAlpha,junction);',
+  'gl_FragColor=vec4(clamp(color,0.0,1.0),clamp(alpha,0.0,0.93));',
   '}'].join('\n');
   const program=gl.createProgram();
   gl.attachShader(program,compile(gl,gl.VERTEX_SHADER,vertex));
