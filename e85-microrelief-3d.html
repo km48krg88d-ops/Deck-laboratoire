@@ -103,6 +103,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 #e85Widget input[type=checkbox]{width:20px;height:20px;flex:none;touch-action:manipulation}
 #e85Widget .e85Note{color:#a7b8d0;font-size:10px;line-height:1.4;margin-bottom:11px}
 #e85Show2DOut{color:#a7b8d0;font-weight:400;font-size:10px;margin-left:5px}
+#e85Widget .e85LightLabel{display:flex;align-items:center;gap:8px;margin-top:12px;color:#ffe1b1;font-size:10px}
+#e85Widget .e85LightDot{display:inline-block;height:13px;width:13px;flex:none;border-radius:50%;background:#ffb554;box-shadow:0 0 10px #ffae69aa,5px 0 0 #427fc4}
+#e85Widget #e85Demo{width:100%;margin-top:12px;padding:9px 8px;border-color:#ffbd7588;background:#ffb65718}
+#e85Widget #e85Demo[aria-pressed="true"]{background:#ffb65744}
 @media(max-height:550px){#e85Widget{top:calc(env(safe-area-inset-top) + 6px)}}
 </style>
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
@@ -120,6 +124,13 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
   <label for="e85Fold">Largeur du raccord <output id="e85FoldOut">9</output></label>
   <input type="range" id="e85Fold" min="2" max="22" step="1" value="9">
   <div class="e85Marks"><span>Serré</span><span>Arrondi</span></div>
+  <div class="e85LightLabel"><span class="e85LightDot"></span> Source ambrée · ombre bleu froid</div>
+  <label for="e85LightAngle">Direction de la lumière <output id="e85LightAngleOut">225°</output></label>
+  <input type="range" id="e85LightAngle" min="0" max="360" step="5" value="225">
+  <label for="e85LightPower">Puissance lumineuse <output id="e85LightPowerOut">1.3</output></label>
+  <input type="range" id="e85LightPower" min="0" max="2.5" step="0.1" value="1.3">
+  <button id="e85Demo" type="button" aria-pressed="false">Afficher deux reliefs test</button>
+  <div class="e85Note">Test sans modifier les lampes enregistrées.</div>
 </div>
 </details>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
@@ -1566,14 +1577,16 @@ function e85Relief(lamp,allowDraft=false){
  // Bounded offscreen raster: avoid blocking iPhone gestures on large discs.
  const resolution=Math.min(1.5,Math.max(1,dpr||1));
  const pxSize=Math.max(1,Math.min(320,Math.ceil(side*resolution)));
- const key=[lamp.id,Math.round(radius*10)/10,fold,e85Params.height,pxSize].join(':');
+ const key=[lamp.id,Math.round(radius*10)/10,fold,e85Params.height,pxSize,e85Params.lightAngle,e85Params.lightPower].join(':');
  let patch=e85Relief.cache.get(key);
  if(!patch){
   const surface=document.createElement('canvas');surface.width=surface.height=pxSize;
   const c=surface.getContext('2d'),pixels=c.createImageData(pxSize,pxSize);
   const scale=side/pxSize;
-  // Fixed upper-left light. Normals are derived numerically from physical height.
-  const lx=-.52,ly=-.64,lz=.563;
+  // Real surface normals; directional amber key light and opposite cool fill.
+  // Screen axes: 225° comes from upper-left, shading outer and inner rim oppositely.
+  const a=e85Params.lightAngle*Math.PI/180,lx=Math.cos(a),ly=Math.sin(a);
+  const power=e85Params.lightPower;
   for(let iy=0;iy<pxSize;iy++)for(let ix=0;ix<pxSize;ix++){
     const dx=(ix+.5)*scale-side*.5,dy=(iy+.5)*scale-side*.5;
     const distance=Math.hypot(dx,dy),h0=e85ReliefProfile(distance,radius,ring,fold,e85Params.height);
@@ -1584,15 +1597,20 @@ function e85Relief(lamp,allowDraft=false){
     const sx=slope*dx/Math.max(.0001,distance),sy=slope*dy/Math.max(.0001,distance);
     const len=Math.hypot(sx,sy,1);
     const nx=-sx/len,ny=-sy/len,nz=1/len;
-    const illumination=nx*lx+ny*ly+nz*lz;
-    const flat=lz;
-    const signed=(illumination-flat)*3.0;
-    const tinyPlateau=h0*.012;
-    const strength=Math.min(.90,Math.abs(signed)*1.4+tinyPlateau);
+    const facing=nx*lx+ny*ly; // oriented slope, not screen-space circle decoration
+    const plateau=h0/Math.max(.0001,e85Params.height);
+    const warm=Math.max(0,facing)*power;
+    const cool=Math.max(0,-facing)*power;
     const k=(iy*pxSize+ix)*4;
-    if(signed>=0){pixels.data[k]=232;pixels.data[k+1]=239;pixels.data[k+2]=252;}
-    else {pixels.data[k]=1;pixels.data[k+1]=4;pixels.data[k+2]=12;}
-    pixels.data[k+3]=Math.round(255*strength);
+    if(warm>=cool){
+     // Grazing amber key on the slope, neutral material on flat plateau.
+     pixels.data[k]=255;pixels.data[k+1]=183;pixels.data[k+2]=101;
+     pixels.data[k+3]=Math.round(255*Math.min(.96,warm*2.4+plateau*.045));
+    }else{
+     // Cooler opposite slope produces a genuine counter-shaded rim.
+     pixels.data[k]=54;pixels.data[k+1]=120;pixels.data[k+2]=211;
+     pixels.data[k+3]=Math.round(255*Math.min(.90,cool*2.0+plateau*.035));
+    }
   }
   c.putImageData(pixels,0,0);
   patch=surface;e85Relief.cache.set(key,patch);
@@ -1605,6 +1623,12 @@ function e85Relief(lamp,allowDraft=false){
  ctx.restore();
 }
 e85Relief.cache=new Map();
+function e85DrawDemoReliefs(){
+ const radius=Math.min(w*.115,52),y=.48,now=drawnLights.time;
+ const disk={id:6,points:[{x:.29,y,t:now},{x:.29+radius/w,y,t:now}],displayLevel:1,level:1};
+ const ring={id:4,points:[{x:.71,y,t:now},{x:.71+radius/w,y,t:now}],displayLevel:1,level:1};
+ try{e85Relief(disk,true);e85Relief(ring,true);}catch(error){e85Relief.lastError=String(error);}
+}
 
 function drawRaisedBackground(lamp){const enabled=lamp.id===0?drawnLook.verticalRectangle:lamp.id===1?drawnLook.horizontalRectangle:lamp.id===2?drawnLook.circle:lamp.id===3?drawnLook.angle:lamp.id===4?drawnLook.spot:lamp.id===5?drawnLook.chevron:true;if(!enabled||!drawnLook.slitLight)return;const release=drawnReliefRelease(lamp);if(release.level<.001)return;const m=drawnMetrics(lamp),reach=drawnLook.spill*2.6,draft=drawnLights.draft===lamp,scale=lamp.id===4?2.35:lamp.offAt!==undefined?2.15:1.5,pad=reach*1.65,left=Math.max(0,Math.floor(m.minX-pad)),top=Math.max(0,Math.floor(m.minY-pad)),right=Math.min(w,Math.ceil(m.maxX+pad)),bottom=Math.min(h,Math.ceil(m.maxY+pad)),width=right-left,height=bottom-top;if(width<=0||height<=0)return;const key=[w,h,reach,scale,drawnLook.shadowStrength,lamp.id===3?drawnLook.rightAngleCornerPx:0,lamp.id===4||lamp.id===6?drawnLook.circularSoftnessPct:0,...lamp.points.map(p=>Math.round(p.x*w*4)/4+','+Math.round(p.y*h*4)/4)].join(':'),cache=drawRaisedBackground.cache||(drawRaisedBackground.cache=[]);let field=cache[lamp.id];if(!field||field.key!==key){const buildStart=drawnGestureNow(),surface=document.createElement('canvas');surface.width=Math.max(1,Math.ceil(width*scale));surface.height=Math.max(1,Math.ceil(height*scale));const c=surface.getContext('2d'),cx=(m.minX+m.maxX)/2,cy=(m.minY+m.maxY)/2,r=(m.maxX-m.minX+m.maxY-m.minY)/4;const all=lamp.id<2?[{x:lamp.points[0].x*w,y:lamp.points[0].y*h},{x:lamp.points.at(-1).x*w,y:lamp.points.at(-1).y*h}]:contourPoints(lamp),stride=lamp.id>=7?2:1,pts=all.filter((_,i)=>i%stride===0||i===all.length-1),segments=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<.01)continue;let normal=lamp.id===0?{x:1,y:0}:lamp.id===1?{x:0,y:-1}:(lamp.id===3||lamp.id===5)?{x:-dy/len,y:dx/len}:lampFace(lamp,a,b);segments.push({a,dx:dx/len,dy:dy/len,len,normal});}
 if(raisedMaskGPU===undefined)raisedMaskGPU=makeRaisedMaskGPU();if((!raisedMaskGPU||raisedMaskGPU.gl.isContextLost())&&queueRaisedMask({id:lamp.id,key,w,h,look:{...drawnLook},lamp:{id:lamp.id,points:lamp.points},metrics:m,geometry:{minX:m.minX,minY:m.minY,maxX:m.maxX,maxY:m.maxY},segments,reach,left,top,width,height,scale,pixelWidth:surface.width,pixelHeight:surface.height})){field=cache[lamp.id]||ringWaveUnder(lamp);if(field)drawRaisedCachedField(field,release,lamp);return;}if(!gpuRaisedMask(surface,lamp,m,segments,reach,left,top,width,height)){reliefDiagnostics.renderer='canvas-fallback';const image=c.createImageData(surface.width,surface.height);for(let y=0;y<surface.height;y++)for(let x=0;x<surface.width;x++){const px=left+x/scale,py=top+y/scale;let signed=raisedShapeSample(lamp,px,py,m,segments,reach);const k=(y*surface.width+x)*4,white=signed>=0?255:0,noise=(((Math.imul(x+1,374761393)^Math.imul(y+1,668265263))>>>0)%1024/1023-.5);image.data[k]=image.data[k+1]=image.data[k+2]=white;image.data[k+3]=Math.round(255*Math.min(.94,Math.abs(signed)*.94*(signed<0?drawnLook.shadowStrength/1.65:1))+noise);}c.putImageData(image,0,0);}reliefDiagnostics.builds++;reliefDiagnostics.lastBuildMs=(drawnGestureNow()-buildStart)*1000;reliefDiagnostics.maxBuildMs=Math.max(reliefDiagnostics.maxBuildMs,reliefDiagnostics.lastBuildMs);field=cache[lamp.id]={key,surface,left,top,width,height,geometry:{minX:m.minX,minY:m.minY,maxX:m.maxX,maxY:m.maxY}};}
@@ -1722,6 +1746,7 @@ function renderDrawnLights(dt){
     try{e85Relief(lamp,true);}catch(error){e85Relief.lastError=String(error);}
    }
   }
+  if(e85Params.demo)e85DrawDemoReliefs();
   frames++;frameAcc+=dt;
   if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
   return;
@@ -3446,18 +3471,24 @@ panel.querySelector('.bottomline .hint').textContent='Tracer : former l’ouvert
 syncDrawnModeUI();
 // E66 experimental page does not change the installed app service worker.
 // E85: persistent compact micro-relief controls, independent from E84.
-const e85Params={height:1.6,fold:9,show2D:true};
-try{const v=JSON.parse(localStorage.getItem('deck-e85-relief-v1'));if(Number.isFinite(v?.height))e85Params.height=clamp(v.height,0,3.2);if(Number.isFinite(v?.fold))e85Params.fold=clamp(v.fold,2,22);if(typeof v?.show2D==='boolean')e85Params.show2D=v.show2D;}catch(_){}
+const e85Params={height:1.6,fold:9,show2D:true,lightAngle:225,lightPower:1.3,demo:false};
+try{const v=JSON.parse(localStorage.getItem('deck-e85-relief-v1'));if(Number.isFinite(v?.height))e85Params.height=clamp(v.height,0,3.2);if(Number.isFinite(v?.fold))e85Params.fold=clamp(v.fold,2,22);if(typeof v?.show2D==='boolean')e85Params.show2D=v.show2D;if(Number.isFinite(v?.lightAngle))e85Params.lightAngle=clamp(v.lightAngle,0,360);if(Number.isFinite(v?.lightPower))e85Params.lightPower=clamp(v.lightPower,0,2.5);}catch(_){}
 function e85UpdateControls(){
  const a=document.getElementById('e85Height'),b=document.getElementById('e85Fold');
  if(!a||!b)return;
  a.value=String(e85Params.height);b.value=String(e85Params.fold);
  document.getElementById('e85HeightOut').textContent=e85Params.height.toFixed(1);
  document.getElementById('e85FoldOut').textContent=e85Params.fold.toFixed(0);
+ document.getElementById('e85LightAngle').value=String(e85Params.lightAngle);
+ document.getElementById('e85LightPower').value=String(e85Params.lightPower);
+ document.getElementById('e85LightAngleOut').textContent=e85Params.lightAngle.toFixed(0)+'°';
+ document.getElementById('e85LightPowerOut').textContent=e85Params.lightPower.toFixed(1);
+ document.getElementById('e85Demo').textContent=e85Params.demo?'Masquer les reliefs test':'Afficher deux reliefs test';
+ document.getElementById('e85Demo').setAttribute('aria-pressed',String(e85Params.demo));
  document.getElementById('e85Show2D').checked=e85Params.show2D;
  document.getElementById('e85Show2DOut').textContent=e85Params.show2D?'Activé':'Masqué';
 }
-for(const [field,id] of [['height','e85Height'],['fold','e85Fold']]){
+for(const [field,id] of [['height','e85Height'],['fold','e85Fold'],['lightAngle','e85LightAngle'],['lightPower','e85LightPower']]){
  document.getElementById(id).addEventListener('input',event=>{
    e85Params[field]=Number(event.target.value);
    e85Relief.cache.clear();e85UpdateControls();
@@ -3469,8 +3500,15 @@ document.getElementById('e85Show2D').addEventListener('change',event=>{
  e85UpdateControls();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
+document.getElementById('e85Demo').addEventListener('click',()=>{
+ e85Params.demo=!e85Params.demo;
+ if(e85Params.demo)e85Params.show2D=false;
+ e85UpdateControls();
+ try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
+});
 document.getElementById('e85ReliefReset').addEventListener('click',()=>{
  e85Params.height=1.6;e85Params.fold=9;e85Params.show2D=true;
+ e85Params.lightAngle=225;e85Params.lightPower=1.3;e85Params.demo=false;
  e85Relief.cache.clear();e85UpdateControls();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
