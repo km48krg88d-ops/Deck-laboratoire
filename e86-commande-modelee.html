@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111b2c">
-<title>DECK · E86 · Commande modélisée</title>
+<title>DECK · E86 · Commande en plan ombré</title>
 <style>
 :root{color-scheme:dark;--fg:#e9eef7;--muted:#9aaabf;--accent:#d8e9fc}
 *{box-sizing:border-box}
@@ -19,7 +19,7 @@ h1{font-size:14px;letter-spacing:.14em;margin:0 0 6px;font-weight:600}
 .setting output{font-size:12px;color:#f5bb7e;white-space:nowrap}
 .setting input{display:block;width:100%;height:23px;margin:0;accent-color:#f0bb7b;touch-action:pan-x}
 .endpoints{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:1px}
-.buttons{display:flex;gap:8px;align-items:center}
+.buttons{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 button{border:1px solid #91a6bc54;color:#dfe8f4;background:#ffffff0b;border-radius:10px;font-size:11px;padding:10px 11px;cursor:pointer}
 button.on{background:#c3d7ec29;border-color:#cadbee77}
 #status{font-size:10px;margin-top:9px;color:#9fb0c7;min-height:14px}
@@ -29,12 +29,12 @@ button.on{background:#c3d7ec29;border-color:#cadbee77}
 </head>
 <body>
 <canvas id="stage" aria-label="Maillage 3D déformable de la commande, fondé sur la courbe rouge et le raccord vert"></canvas>
-<header id="top"><h1>DECK / E86 — COMMANDE 001</h1><p>Profil reconstruit depuis ton GLB · Deux réglages géométriques indépendants</p></header>
-<div id="hint">Glisser pour tourner la pièce</div>
+<header id="top"><h1>DECK / E86 — COMMANDE 001</h1><p>Vue en plan, ombrage 3D · Profil issu de ton GLB</p></header>
+<div id="hint">Vue de dessus · surface réellement déformée</div>
 <section id="controls" aria-label="Paramètres de la commande 3D">
-<div class="setting"><label for="height">Hauteur du bouton <output id="hval">100 %</output></label><input id="height" type="range" min="0" max="180" value="100" step="1"><div class="endpoints"><span>À plat</span><span>Hauteur d’origine</span><span>Élevé</span></div></div>
-<div class="setting"><label for="resistance">Résistance de la membrane <output id="rval">22 %</output></label><input id="resistance" type="range" min="0" max="100" value="22" step="1"><div class="endpoints"><span>Souple · petit arrondi</span><span>Rigide · grand arrondi</span></div></div>
-<div class="buttons"><button type="button" id="colors" class="on" aria-pressed="true">Rouge / vert : visibles</button><button type="button" id="reset">Vue d’origine</button></div>
+<div class="setting"><label for="height">Hauteur du bouton <output id="hval">150 %</output></label><input id="height" type="range" min="0" max="180" value="150" step="1"><div class="endpoints"><span>À plat</span><span>Hauteur d’origine</span><span>Élevé</span></div></div>
+<div class="setting"><label for="resistance">Résistance de la membrane <output id="rval">50 %</output></label><input id="resistance" type="range" min="0" max="100" value="50" step="1"><div class="endpoints"><span>Souple · petit arrondi</span><span>Rigide · grand arrondi</span></div></div>
+<div class="buttons"><button type="button" id="view" class="on" aria-pressed="true">Vue en plan</button><button type="button" id="colors" aria-pressed="false">Repères rouge / vert</button><button type="button" id="reset">150 / 50</button></div>
 <div id="status" role="status">Initialisation du moteur 3D…</div>
 </section>
 <script id="vertex" type="x-shader/x-vertex">
@@ -48,8 +48,8 @@ void main(){
  vec3 p=vec3(aPosition.x*c-aPosition.y*s,aPosition.x*s+aPosition.y*c,aPosition.z);
  float sy=p.y*sin(uPitch)+p.z*cos(uPitch);
  float depth=p.y*cos(uPitch)-p.z*sin(uPitch);
- float perspective=1.0/(1.0+depth*0.065);
- gl_Position=vec4(p.x*uScale*perspective/uAspect,(sy-0.18)*uScale*perspective+0.10,depth*0.085,1.0);
+ // Projection orthographique : le plan conserve un cercle véritable.
+ gl_Position=vec4(p.x*uScale/uAspect,sy*uScale+0.14,depth*0.085,1.0);
  vNormal=aNormal;
  vColor=aColor;
 }
@@ -61,13 +61,18 @@ uniform vec3 uLight;
 void main(){
  vec3 n=normalize(vNormal);
  vec3 light=normalize(uLight);
- float diffuse=max(0.0,dot(n,light));
- float shadow=max(0.0,dot(n,-light));
- vec3 warm=vec3(0.99,0.69,0.43);
- vec3 cool=vec3(0.32,0.48,0.76);
- vec3 color=vColor*(0.34+0.69*diffuse);
- color+=warm*pow(diffuse,3.0)*0.20+cool*shadow*0.12;
- gl_FragColor=vec4(color,1.0);
+ // La pente de la membrane réagit à une source rasante et directionnelle.
+ float facing=dot(n,light);
+ float ambient=0.30;
+ float diffuse=0.80*max(0.0,facing);
+ float farSide=max(0.0,dot(n,normalize(vec3(0.72,0.54,0.28))));
+ float curvature=clamp(1.0-n.z,0.0,1.0);
+ vec3 warm=vec3(1.0,0.67,0.36);
+ vec3 cool=vec3(0.32,0.48,0.74);
+ vec3 color=vColor*(ambient+diffuse);
+ color+=warm*pow(max(0.0,facing),3.0)*curvature*0.27;
+ color+=cool*farSide*curvature*0.18;
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }
 </script>
 <script>
@@ -82,7 +87,7 @@ const canvas=document.getElementById("stage"),status=document.getElementById("st
 const H=document.getElementById("height"),R=document.getElementById("resistance");
 const hv=document.getElementById("hval"),rv=document.getElementById("rval");
 const cols=document.getElementById("colors");
-let yaw=-.4,pitch=.92,zoom=1,guide=true;
+let yaw=0,pitch=Math.PI/2,zoom=1,guide=false,plan=true;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function interpolation(points,x){
  if(x<=points[0][0])return points[0][1];
@@ -202,24 +207,36 @@ function paint(){
  gl.viewport(0,0,cw,ch);gl.clearColor(.065,.10,.16,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
  gl.useProgram(program);
- const aspect=w/h,scale=Math.min(.48,Math.max(.18,.39*aspect))*zoom;
+ const aspect=w/h,scale=Math.min(.48,Math.max(.18,.38*aspect))*zoom;
  gl.uniform1f(uni.yaw,yaw);gl.uniform1f(uni.pitch,pitch);gl.uniform1f(uni.scale,scale);
  gl.uniform1f(uni.aspect,aspect);
- gl.uniform3f(uni.light,-.62,-.43,1.05);
+ gl.uniform3f(uni.light,-.85,-.62,.58);
  bind("pos",buffers.pos,positions);bind("norm",buffers.norm,normals);bind("col",buffers.col,colors);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffers.index);
  gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
  const err=gl.getError();
- status.textContent=err===gl.NO_ERROR?"WebGL actif · Profil mesuré : 2 pièces · "+(indices.length/3).toLocaleString("fr-FR")+" triangles":"Erreur WebGL : "+err;
+ status.textContent=err===gl.NO_ERROR?(plan?"Plan ombré · ":"Vue 3/4 · ")+(indices.length/3).toLocaleString("fr-FR")+" triangles · 150/50 au chargement":"Erreur WebGL : "+err;
  status.style.color=err===gl.NO_ERROR?"#9db3ca":"#f7b1b1";
 }
 function update(){rebuild();paint();}
 H.addEventListener("input",update);R.addEventListener("input",update);
-cols.addEventListener("click",()=>{guide=!guide;cols.classList.toggle("on",guide);cols.setAttribute("aria-pressed",String(guide));cols.textContent=guide?"Rouge / vert : visibles":"Rouge / vert : masqués";update();});
-document.getElementById("reset").addEventListener("click",()=>{yaw=-.4;pitch=.92;zoom=1;paint();});
+cols.addEventListener("click",()=>{guide=!guide;cols.classList.toggle("on",guide);cols.setAttribute("aria-pressed",String(guide));cols.textContent=guide?"Repères : visibles":"Repères rouge / vert";update();});
+const view=document.getElementById("view"),hint=document.getElementById("hint");
+function setPlan(value){
+ plan=value;yaw=0;pitch=plan?Math.PI/2:.92;zoom=1;
+ view.classList.toggle("on",plan);view.setAttribute("aria-pressed",String(plan));
+ view.textContent=plan?"Vue en plan":"Vue 3/4";
+ hint.textContent=plan?"Vue de dessus · surface réellement déformée":"Glisser pour tourner la pièce";
+ paint();
+}
+view.addEventListener("click",()=>setPlan(!plan));
+document.getElementById("reset").addEventListener("click",()=>{
+ H.value="150";R.value="50";guide=false;cols.classList.remove("on");cols.setAttribute("aria-pressed","false");
+ cols.textContent="Repères rouge / vert";setPlan(true);update();
+});
 let pointer=null;
-canvas.addEventListener("pointerdown",e=>{pointer={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
-canvas.addEventListener("pointermove",e=>{if(!pointer||pointer.id!==e.pointerId)return;yaw+=(e.clientX-pointer.x)*.008;pitch=clamp(pitch-(e.clientY-pointer.y)*.006,.25,1.55);pointer.x=e.clientX;pointer.y=e.clientY;paint();});
+canvas.addEventListener("pointerdown",e=>{if(plan)return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener("pointermove",e=>{if(plan||!pointer||pointer.id!==e.pointerId)return;yaw+=(e.clientX-pointer.x)*.008;pitch=clamp(pitch-(e.clientY-pointer.y)*.006,.25,Math.PI/2);pointer.x=e.clientX;pointer.y=e.clientY;paint();});
 canvas.addEventListener("pointerup",()=>{pointer=null;});canvas.addEventListener("pointercancel",()=>{pointer=null;});
 window.addEventListener("resize",paint);
 canvas.addEventListener("webglcontextlost",e=>{e.preventDefault();status.textContent="Contexte WebGL perdu — recharger la page";status.style.color="#f7b1b1";});
