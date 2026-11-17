@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142038">
+<title>DECK E85 — Test indépendant du calque 3D</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#142038;color:#eaf0fc;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}
+#proof{position:fixed;z-index:2147483001;left:13px;top:calc(env(safe-area-inset-top) + 12px);padding:7px 9px;border-radius:7px;background:#f7be59;color:#171d2c;font-size:11px;font-weight:700;pointer-events:none}
+#front{position:fixed!important;inset:0!important;display:block!important;z-index:2147483000!important;width:100vw!important;height:100dvh!important;pointer-events:none!important;background:transparent!important;opacity:1!important}
+#tools{position:fixed;z-index:2147483002;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);max-width:420px;margin:auto;background:#0b1327ee;border:1px solid #b9ccec49;border-radius:18px;padding:12px 14px;box-shadow:0 6px 32px #0009}
+h1{font-size:13px;margin:0 0 6px;font-weight:650}
+p{font-size:11px;color:#a6b5cf;margin:5px 0 9px;line-height:1.4}
+label{display:flex;justify-content:space-between;font-size:12px;margin-top:10px}
+input{width:100%;accent-color:#ffba65;height:24px}
+#status{font-size:11px;color:#9fe0bb;margin-top:8px;overflow-wrap:anywhere}
+#guides{position:fixed;top:26%;width:100%;display:flex;justify-content:space-around;font-size:10px;color:#c0cee2;pointer-events:none;z-index:2147483001;text-align:center}
+</style>
+</head>
+<body>
+<div id="proof">TÉMOIN HTML · AU PREMIER PLAN</div>
+<canvas id="front" aria-label="Deux reliefs 3D colorés, disque et donut"></canvas>
+<div id="guides"><span>DISQUE</span><span>DONUT</span></div>
+<div id="tools">
+<h1>DECK E85 · Test 3D indépendant</h1>
+<p>Deux volumes doivent être visibles au centre : bord ambré face à la source, ombre bleue en opposition. Ce test n’utilise aucun dessin d’E84.</p>
+<label for="height">Hauteur <output id="hv">3,2</output></label><input id="height" type="range" min="0" max="3.2" step="0.1" value="3.2">
+<label for="fold">Raccord <output id="fv">6</output></label><input id="fold" type="range" min="2" max="22" step="1" value="6">
+<label for="angle">Orientation <output id="av">225°</output></label><input id="angle" type="range" min="0" max="360" step="5" value="225">
+<div id="status" role="status">Initialisation du canvas…</div>
+</div>
+<script>
+(function(){
+"use strict";
+const canvas=document.getElementById("front");
+const ctx=canvas.getContext("2d",{alpha:true});
+const stat=document.getElementById("status");
+if(!ctx){stat.textContent="ERREUR : contexte canvas 2D indisponible";return;}
+const controls=["height","fold","angle"].map(id=>document.getElementById(id));
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+function profile(d,R,ring,fold,height){
+ const outer=1-smooth((d-(R-fold))/(2*fold));
+ if(!ring)return height*outer;
+ return height*outer*smooth((d-(R*.57-fold))/(2*fold));
+}
+function surface(cx,cy,R,ring,height,fold,angle){
+ const margin=fold+3,side=Math.ceil(2*(R+margin)),resolution=Math.min(1.5,window.devicePixelRatio||1);
+ const px=Math.max(1,Math.min(320,Math.ceil(side*resolution)));
+ const off=document.createElement("canvas");off.width=off.height=px;
+ const c=off.getContext("2d");
+ if(!c)throw Error("context 2D intermédiaire indisponible");
+ const data=c.createImageData(px,px),scale=side/px,lightX=Math.cos(angle),lightY=Math.sin(angle);
+ let visible=0,amber=0,blue=0;
+ for(let iy=0;iy<px;iy++)for(let ix=0;ix<px;ix++){
+  const dx=(ix+.5)*scale-side*.5,dy=(iy+.5)*scale-side*.5,d=Math.hypot(dx,dy);
+  if(d>R+fold+1)continue;
+  const h=profile(d,R,ring,fold,height);
+  const hminus=profile(Math.max(0,d-.55),R,ring,fold,height),hplus=profile(d+.55,R,ring,fold,height);
+  const slope=(hplus-hminus)/1.1,nx=-slope*dx/Math.max(.0001,d),ny=-slope*dy/Math.max(.0001,d),len=Math.hypot(nx,ny,1);
+  const facing=(nx*lightX+ny*lightY)/len,warm=Math.max(0,facing),cool=Math.max(0,-facing);
+  const k=4*(iy*px+ix),plateau=h/Math.max(.0001,height);
+  let alpha;
+  if(warm>=cool){data.data[k]=255;data.data[k+1]=184;data.data[k+2]=102;alpha=Math.min(.96,warm*3.1+plateau*.07);amber++;}
+  else{data.data[k]=49;data.data[k+1]=122;data.data[k+2]=235;alpha=Math.min(.94,cool*3.0+plateau*.06);blue++;}
+  data.data[k+3]=Math.round(255*alpha);
+  if(alpha>.04)visible++;
+ }
+ c.putImageData(data,0,0);
+ ctx.drawImage(off,cx-side/2,cy-side/2,side,side);
+ return {visible,amber,blue};
+}
+function draw(){
+ try{
+ const dpr=Math.min(2,window.devicePixelRatio||1),w=window.innerWidth,h=window.innerHeight;
+ const W=Math.round(w*dpr),H=Math.round(h*dpr);
+ if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+ canvas.style.width=w+"px";canvas.style.height=h+"px";
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const height=Number(controls[0].value),fold=Number(controls[1].value),angle=Number(controls[2].value)*Math.PI/180;
+ document.getElementById("hv").textContent=height.toFixed(1).replace(".",",");
+ document.getElementById("fv").textContent=fold;
+ document.getElementById("av").textContent=(angle*180/Math.PI).toFixed(0)+"°";
+ const R=Math.min(58,w*.13),y=h*.46;
+ const disk=surface(w*.29,y,R,false,height,fold,angle);
+ const donut=surface(w*.71,y,R,true,height,fold,angle);
+ stat.textContent="Canvas au premier plan · "+W+"×"+H+" · Disque "+disk.visible+" px · Donut "+donut.visible+" px";
+ stat.style.color="#9fe0bb";
+ }catch(error){stat.textContent="ERREUR : "+String(error);stat.style.color="#ffabab";}
+}
+for(const input of controls)input.addEventListener("input",draw);
+window.addEventListener("resize",draw);
+window.addEventListener("error",e=>{stat.textContent="ERREUR JS : "+e.message;stat.style.color="#ffabab";});
+draw();
+})();
+</script>
+</body>
+</html>
