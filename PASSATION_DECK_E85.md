@@ -123,3 +123,7 @@ E85 a d’abord présenté trois régressions : objets invisibles pendant le ges
 ### Correctif volet 3D du 16/11/2026
 
 Après rétablissement des animations, l’utilisateur constate que « 3D · Réglages » ne s’ouvre pas. Le bouton piloté par JavaScript est remplacé dans E85 par un élément natif HTML `<details>`/`<summary>`, fermé initialement et ouvrable sans écouteur de clic. Le panneau ne couvre que l'entête quand il est fermé ; les deux curseurs restent opérationnels. Le JavaScript a été vérifié syntaxiquement, test tactile réel non encore confirmé. URL d'essai : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=5 .
+
+### Correctif visibilité relief — 17 novembre 2026
+
+Retour utilisateur : « Rien ne se passe quand je modifie les paramètres ». Le rendu était dessiné sous la lumière vive d’E84 : sur fond sombre, le relief pouvait être imperceptible ; l’amplitude du curseur de raccord du donut était limitée artificiellement à ~10 px par `radius*.19`. Correctifs E85 : couche du champ normal dessinée **après** le rendu lumineux, pour préserver le modelé clair/obscur ; intensité du relief augmentée sans changer sa formule de profil ; raccord utilisable de 2 à 22 px à rayon nominal (52 px). À 0 en hauteur, aucune ombre 3D ; à 3.2, pente plus marquée ; raccord 2 = bord abrupt, 22 = pli large. Cela ne change pas les autres formes, seulement disque ID6 et donut ID4. Le comportement réel sur Safari/iPhone doit être vérifié. Lien : https://km48krg88d-ops.github.io/Deck-laboratoire/e85-microrelief-3d.html?v=6 .
