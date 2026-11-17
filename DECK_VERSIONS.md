@@ -52,3 +52,5 @@ Chaque nouvelle version importante doit être ajoutée ici **et** documentée da
 **Correctif E85 du 16/11 :** restauration de la prévisualisation et du rendu animé E84 pour disque et donut, masque diurne E84 récupéré, micro-relief indépendant plafonné à 320² pixels, sans modification des gestes. La vérification visuelle en Safari reste en attente.
 
 **E86 — 17/11/2026 · Commande 001 réelle** — Première surface WebGL interactive reconstruite à partir des deux maillages rouge/vert du fichier `COMMANDE-001.glb`. Hauteur du bouton + résistance/rayon du raccord vert, vue 3D orientable et matériau blanc/codage source. Essai autonome : `e86-commande-modelee.html`. E84/E85 et index préservés.
+
+**E86 — Vue en plan ombrée (17/11)** : projection orthographique par défaut avec hauteur 150 %, résistance 50 % et matière unifiée ombrée ; boutons Plan/3-4 et repères rouge/vert, sans modifier la géométrie source. [Tester E86](https://km48krg88d-ops.github.io/Deck-laboratoire/e86-commande-modelee.html?v=2).
