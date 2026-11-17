@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#9CAEB1">
+<title>DECK · E88 — Atelier des quatre commandes 3D</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#7b919d;color:#eaf1f7;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#header{position:fixed;top:calc(env(safe-area-inset-top) + 18px);left:17px;right:17px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;pointer-events:none}
+#header h1{font-size:12px;letter-spacing:.12em;font-weight:700;margin:0 0 5px;text-shadow:0 1px 3px #1c273c55}
+#header p{font-size:10px;opacity:.83;margin:0}
+#header a{pointer-events:auto;text-decoration:none;color:#fff;background:#1d354ba3;border:1px solid #fff5;padding:8px 11px;border-radius:11px;white-space:nowrap;font-size:11px}
+#controls{position:fixed;z-index:3;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 14px);max-width:465px;margin:auto;background:#1b3045e6;border:1px solid #f2f5fc55;border-radius:17px;box-shadow:0 10px 32px #17253545;padding:13px 15px;backdrop-filter:blur(14px)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h2{font-size:12px;font-weight:650;margin:0}
+small,.caption{font-size:10px;color:#d2dce7;line-height:1.5}
+.caption{margin:5px 0 9px}
+button{font:11px -apple-system,sans-serif;color:#e8f0f8;background:#ffffff19;border:1px solid #ffffff55;border-radius:11px;padding:9px 11px;cursor:pointer;touch-action:manipulation}
+button.active{border-color:#efc08cab;background:#dbb78d29}
+#intensity{width:100%;height:24px;margin:4px 0 7px;accent-color:#f2aa76;touch-action:pan-x}
+#value{font-size:13px;color:#ffdaac;font-weight:700;min-width:45px;text-align:right}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 11px}
+#models button{text-align:left;white-space:normal;line-height:1.3;padding:8px 9px}
+#models button[aria-pressed=true]{background:#c1d9ea37;border-color:#e0f0f4}
+#models button small{display:block;opacity:.7;font-size:9px}
+#options{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:4px 0 8px}
+#options label{font-size:10px;color:#d2dce7}
+#options input{width:100%;accent-color:#d4c4b1;height:21px;touch-action:pan-x}
+#lights{display:flex;flex-wrap:wrap;gap:7px;margin:5px 0}
+#lights button{display:flex;gap:7px;align-items:center;font-size:10px;padding:7px 9px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:100%}
+#status{position:fixed;top:calc(env(safe-area-inset-top) + 61px);left:17px;font-size:10px;color:#fff7ef;text-shadow:0 1px 3px #14223370;pointer-events:none}
+@media(min-width:720px){#controls{bottom:25px}#header{left:30px;right:30px}}
+</style></head>
+<body>
+<canvas id="stage" aria-label="Membrane 3D continue, avec une commande géométrique et deux sources lumineuses placées dans l'espace"></canvas>
+<header id="header"><div><h1>DECK / E88 · 4 COMMANDES 3D</h1><p>Modèles extraits de COMMANDES-001.glb · Matinée orange</p></div><a href="./index.html?v=bis3">Retour DECK</a></header>
+<div id="status" role="status">Initialisation de la membrane 3D…</div>
+<section id="controls" aria-label="Atelier individuel de quatre commandes et éclairages 3D">
+<nav id="models" aria-label="Choisir un modèle de commande"><button type="button" data-model="0" aria-pressed="false">01 · Trois reliefs<small>Concentrique</small></button><button type="button" data-model="1" aria-pressed="true">02 · Plateau + raccord<small>Remplacement E87</small></button><button type="button" data-model="2" aria-pressed="false">03 · Couronne bombée<small>Centre abaissé</small></button><button type="button" data-model="3" aria-pressed="false">04 · Grand plateau<small>Large surface plane</small></button></nav>
+<div class="row"><div><h2 id="modelName">Commande 02 · plateau + raccord</h2><small id="modelInfo">Profil du fichier · sommet 14,57 mm</small></div><div class="row"><output id="value">0 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
+<input id="intensity" type="range" min="0" max="100" value="0" step="1" aria-label="Déploiement géométrique de la commande, de la membrane plane au relief complet">
+<div class="row"><small id="animHint">Relief 3D : de la membrane plane à la forme complète</small><button type="button" id="animate100" class="active">Rejouer l’émergence 3D</button></div>
+<div id="options"><label>Hauteur du modèle <output id="modelHeightText">100 %</output><input id="modelHeight" type="range" min="50" max="160" value="100" step="1"></label><label>Durée de montée <output id="modelTimeText">3,0 s</output><input id="modelTime" type="range" min="1" max="6" value="3" step=".1"></label></div>
+<div id="lights">
+<button type="button" id="cool" class="active" aria-pressed="true"><span class="dot" style="background:#9CAEB1"></span>Bleu-gris</button>
+<button type="button" id="warm" class="active" aria-pressed="true"><span class="dot" style="background:#F2AA76"></span>Orange doux</button>
+</div>
+<p class="caption">Quatre profils réels extraits du GLB. Chaque forme conserve ses propres réglages et son animation ; éclairages constants.</p>
+</section>
+<script id="vertex" type="x-shader/x-vertex">
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+uniform vec2 uViewport;
+uniform vec2 uCentre;
+uniform float uUnit;
+uniform float uShape;
+uniform float uFrontStart;
+varying vec3 vPos;
+varying vec3 vNormal;
+float ease(float t){
+ t=clamp(t,0.0,1.0);
+ return t*t*(3.0-2.0*t);
+}
+void main(){
+ // The four profiles are read from COMMANDES-001.glb.
+ // A model-specific start radius keeps its central plateau flat;
+ // the surrounding relief then propagates radially into the membrane.
+ float p=clamp(uShape,0.0,1.0);
+ float rise=ease(p);
+ float travel=ease((p-0.035)/0.92);
+ float r=length(aPosition.xy);
+ float width=0.36;
+ // The initial front is set individually according to the profile's flat centre.
+ float front=mix(uFrontStart,2.10,travel);
+ float x=clamp((front-r)/width,0.0,1.0);
+ float reveal=ease(x);
+ float dr=(x>0.0&&x<1.0)?-6.0*x*(1.0-x)/width:0.0;
+ float factor=rise*reveal;
+ vec3 pos=vec3(aPosition.xy,aPosition.z*factor);
+ // True geometric normal of the emerging 3D height field:
+ // dz/dr = rise * (original_slope * reveal + z0 * dReveal/dr).
+ vec2 radial=r>0.00001?aPosition.xy/r:vec2(0.0);
+ vec2 oldSlope=aNormal.xy/max(aNormal.z,0.001);
+ vec2 newSlope=rise*(oldSlope*reveal-aPosition.z*dr*radial);
+ vec3 newNormal=normalize(vec3(newSlope,1.0));
+ vec2 px=uCentre+pos.xy*uUnit;
+ gl_Position=vec4(px.x/uViewport.x*2.0-1.0,1.0-px.y/uViewport.y*2.0,0.0,1.0);
+ vPos=pos;
+ vNormal=newNormal;
+}
+</script>
+<script id="fragment" type="x-shader/x-fragment">
+precision highp float;
+varying vec3 vPos;
+varying vec3 vNormal;
+uniform vec3 uColdPos,uWarmPos,uColdColor,uWarmColor;
+uniform float uColdEnabled,uWarmEnabled;
+vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
+ vec3 delta=position-vPos;
+ float dist2=dot(delta,delta);
+ vec3 dir=normalize(delta);
+ float diffuse=max(0.0,dot(n,dir));
+ float attenuation=1.0/(1.0+dist2*0.105);
+ vec3 halfDir=normalize(dir+vec3(0.0,0.0,1.0));
+ float spec=pow(max(0.0,dot(n,halfDir)),26.0)*0.075;
+ return tint*power*attenuation*(diffuse+spec);
+}
+void main(){
+ vec3 normal=normalize(vNormal);
+ vec3 material=vec3(0.31,0.39,0.47);
+ vec3 ambient=material*0.79+vec3(0.025,0.045,0.065);
+ vec3 cold=illuminate(uColdPos,uColdColor,2.15*uColdEnabled,normal);
+ vec3 warm=illuminate(uWarmPos,uWarmColor,2.45*uWarmEnabled,normal);
+ vec3 light=ambient+cold+warm;
+ vec3 color=pow(light/(vec3(1.0)+light*0.31),vec3(0.94));
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+}
+</script>
+<script>
+(function(){
+'use strict';
+const canvas=document.getElementById('stage'),status=document.getElementById('status');
+const slider=document.getElementById('intensity'),value=document.getElementById('value'),power=document.getElementById('power');
+const cool=document.getElementById('cool'),warm=document.getElementById('warm');
+const animate100=document.getElementById('animate100'),animHint=document.getElementById('animHint');
+const modelHeight=document.getElementById('modelHeight'),modelTime=document.getElementById('modelTime');
+const modelName=document.getElementById('modelName'),modelInfo=document.getElementById('modelInfo');
+const modelButtons=[...document.querySelectorAll('#models button')];
+// Heights sampled by ray / barycentric intersection of original GLB triangles, every 0.5 mm.
+// y is relative to the shared membrane plane; the four groups are not re-drawn illustrations.
+const MODELS=[{"name":"Trois reliefs","id":1,"front":0.56,"profile":[7.66,7.58,7.39,7.08,6.62,5.97,5.12,3.99,2.7,1.69,0.98,0.5,0.19,0.04,0.04,0.19,0.5,0.99,1.7,2.73,4.03,5.14,5.99,6.64,7.09,7.4,7.58,7.66,7.58,7.38,7.06,6.6,5.94,5.07,3.94,2.84,1.98,1.3,0.79,0.4,0.17,0.05,0.03,0.11,0.35,0.7,1.17,1.79,2.6,3.65,4.86,5.78,6.45,6.95,7.31,7.56,7.64,7.61,7.46,7.2,6.75,6.15,5.37,4.34,3.19,2.37,1.69,1.14,0.71,0.39,0.17,0.04,0,0],"max":7.66},{"name":"Plateau + raccord","id":2,"front":1.32,"profile":[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0],"max":14.57},{"name":"Couronne bombée","id":3,"front":0.78,"profile":[2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.81,3.71,4.6,5.49,6.21,6.9,7.59,8.28,8.81,9.32,9.84,10.36,10.74,11.1,11.46,11.82,12.1,12.31,12.52,12.73,12.93,13,13.07,13.14,13.21,13.2,13.13,13.06,12.99,12.91,12.7,12.49,12.28,12.07,11.76,11.4,11.04,10.68,10.27,9.75,9.24,8.72,8.17,7.48,6.79,6.1,5.34,4.45,3.56,2.68,1.77,1.06,0.56,0.22,0.04,0.01,0],"max":13.21},{"name":"Grand plateau","id":4,"front":1.4,"profile":[13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.24,13.24,13.19,13.11,13.02,12.87,12.71,12.47,12.24,11.92,11.6,11.17,10.72,10.18,9.54,8.8,7.89,6.67,4.53,2.04,1.22,0.64,0.26,0.05,0.01,0],"max":13.25}];
+
+const clamp=(v,a,b)=>Math.min(b,Math.max(v,a));
+const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null,model:1,configs:MODELS.map(()=>({height:100,duration:3}))};
+try{const saved=JSON.parse(localStorage.getItem('deck-e88-model-configs-v1'));if(Array.isArray(saved)&&saved.length===4){for(let i=0;i<4;i++){if(Number.isFinite(saved[i].height))state.configs[i].height=clamp(saved[i].height,50,160);if(Number.isFinite(saved[i].duration))state.configs[i].duration=clamp(saved[i].duration,1,6);}}}catch(_){}
+function saveConfigs(){try{localStorage.setItem('deck-e88-model-configs-v1',JSON.stringify(state.configs));}catch(_){}}
+// Original GLB radial height profiles: 36.5 mm outer radius maps to 1.55 world units.
+function heightAt(radius){
+ const y=MODELS[state.model].profile;
+ const mm=clamp(radius/1.55*36.5,0,36.5);
+ const x=mm*2,i=Math.min(72,Math.floor(x)),t=clamp(x-i,0,1);
+ const h0=y[i],h1=y[i+1];
+ // PCHIP slopes prevent rings from becoming polygonal or overshooting the GLB.
+ const prior=y[Math.max(0,i-1)],next=y[Math.min(73,i+2)];
+ const d0=h0-prior,d1=h1-h0,d2=next-h1;
+ const slope=(a,b)=>a*b<=0?0:2*a*b/(a+b);
+ const m0=i===0?d1:slope(d0,d1),m1=i===72?d1:slope(d1,d2);
+ const t2=t*t,t3=t2*t;
+ const out=(2*t3-3*t2+1)*h0+(t3-2*t2+t)*m0+(-2*t3+3*t2)*h1+(t3-t2)*m1;
+ return Math.max(0,out*state.configs[state.model].height/100/11);
+}
+function makeShader(gl,type,source){
+ const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);
+ if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Shader invalide');
+ return sh;
+}
+function init(){
+ const gl=canvas.getContext('webgl',{alpha:false,antialias:true,depth:false});
+ if(!gl)throw Error('WebGL indisponible dans ce navigateur');
+ const p=gl.createProgram();
+ gl.attachShader(p,makeShader(gl,gl.VERTEX_SHADER,document.getElementById('vertex').textContent));
+ gl.attachShader(p,makeShader(gl,gl.FRAGMENT_SHADER,document.getElementById('fragment').textContent));
+ gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison de programme impossible');
+ gl.useProgram(p);
+ const a={pos:gl.getAttribLocation(p,'aPosition'),normal:gl.getAttribLocation(p,'aNormal')};
+ const u={view:gl.getUniformLocation(p,'uViewport'),centre:gl.getUniformLocation(p,'uCentre'),unit:gl.getUniformLocation(p,'uUnit'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),shape:gl.getUniformLocation(p,'uShape'),front:gl.getUniformLocation(p,'uFrontStart'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled')};
+ Object.assign(state,{gl,program:p,a,u,ready:true,buffers:{pos:gl.createBuffer(),normal:gl.createBuffer(),index:gl.createBuffer()}});
+ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.ready=false;status.textContent='Contexte WebGL perdu : recharger la page';});
+ resize();
+}
+function upload(name,data){
+ const {gl,buffers,a}=state,k=name==='pos'?a.pos:a.normal;
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffers[name]);
+ gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(k);gl.vertexAttribPointer(k,3,gl.FLOAT,false,0,0);
+}
+// A uniform full-screen grid wastes vertices on the flat membrane and leaves
+// staircase facets on the tight green/red junction. Focus a regular, continuous
+// grid on the relief, stretching cells only where the membrane is planar.
+// It remains ONE indexed 3D mesh, not a composited shape or texture mask.
+function meshAxis(index,segments,extent,center,focus){
+ const lo=Math.max(0,center-focus),hi=Math.min(extent,center+focus);
+ const left=lo>0?Math.round(segments*.095):0;
+ const right=hi<extent?Math.round(segments*.095):0;
+ const middle=segments-left-right;
+ if(index<=left&&left>0)return lo*index/left;
+ if(index<=left+middle)return lo+(hi-lo)*(index-left)/middle;
+ return hi+(extent-hi)*(index-left-middle)/right;
+}
+function resize(){
+ if(!state.ready)return;
+ const {gl}=state,w=innerWidth,h=innerHeight;
+ // iPhone retina: native DPR (up to 3) instead of the old 2x raster.
+ const dpr=Math.min(3,devicePixelRatio||1);
+ canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));
+ canvas.style.width=w+'px';canvas.style.height=h+'px';
+ const unit=clamp(w*.235,77,120),cx=w/2,cy=h*.43;
+ // 249×249 = 62 001 vertices, safely below WebGL 1's 16-bit index limit.
+ const cols=248,rows=248,N=(rows+1)*(cols+1),focus=1.68*unit;
+ const positions=new Float32Array(N*3),normals=new Float32Array(N*3),triangles=new Uint16Array(rows*cols*6);
+ const xs=Array.from({length:cols+1},(_,i)=>meshAxis(i,cols,w,cx,focus));
+ const ys=Array.from({length:rows+1},(_,i)=>meshAxis(i,rows,h,cy,focus));
+ for(let iy=0;iy<=rows;iy++)for(let ix=0;ix<=cols;ix++){
+  const x=(xs[ix]-cx)/unit,y=(ys[iy]-cy)/unit,r=Math.hypot(x,y),z=heightAt(r);
+  const eps=.006,slope=(heightAt(r+eps)-heightAt(Math.max(0,r-eps)))/(r<eps?r+eps:2*eps);
+  const nx=-slope*x/Math.max(r,.00001),ny=-slope*y/Math.max(r,.00001),inv=1/Math.hypot(nx,ny,1),k=(iy*(cols+1)+ix)*3;
+  positions[k]=x;positions[k+1]=y;positions[k+2]=z;
+  normals[k]=nx*inv;normals[k+1]=ny*inv;normals[k+2]=inv;
+ }
+ for(let iy=0,k=0;iy<rows;iy++)for(let ix=0;ix<cols;ix++){
+  const a=iy*(cols+1)+ix,b=a+cols+1;
+  triangles[k++]=a;triangles[k++]=a+1;triangles[k++]=b;
+  triangles[k++]=a+1;triangles[k++]=b+1;triangles[k++]=b;
+ }
+ upload('pos',positions);upload('normal',normals);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,triangles,gl.STATIC_DRAW);
+ Object.assign(state,{w,h,unit,cx,cy,count:triangles.length,faces:triangles.length/3});
+ schedule();
+}
+function schedule(){
+ if(!state.ready||state.requested)return;
+ state.requested=true;requestAnimationFrame(draw);
+}
+function startAnimation(){
+ // The button grows from a flat, continuous membrane.
+ // Uniform uShape drives its 3D vertices and recomputed normals on the GPU.
+ state.animation={start:null,duration:state.configs[state.model].duration*1000,from:0,to:1};
+ state.level=0;state.target=1;
+ state.last=0;
+ sync();schedule();
+}
+function animateTo(next){
+ next=clamp(next,0,1);
+ const distance=Math.abs(next-state.level);
+ state.target=next;
+ if(distance<.001){state.level=next;state.animation=null;sync();schedule();return;}
+ state.animation={start:null,duration:Math.max(380,state.configs[state.model].duration*1000*(next>state.level?1:.75)*distance),from:state.level,to:next};
+ state.last=0;sync();schedule();
+}
+function draw(time){
+ state.requested=false;if(!state.ready)return;
+ const dt=state.last?Math.min(.09,(time-state.last)/1000):.016;state.last=time;
+ if(state.animation){
+  const animation=state.animation;
+  if(animation.start===null)animation.start=time;
+  const t=clamp((time-animation.start)/animation.duration,0,1);
+  const eased=t*t*(3-2*t);
+  state.level=animation.from+(animation.to-animation.from)*eased;
+  if(t>=1){state.level=animation.to;state.target=animation.to;state.animation=null;}
+  sync();
+ }else{
+  state.level+=(state.target-state.level)*(1-Math.exp(-dt*3.8));
+  if(Math.abs(state.level-state.target)<.0004)state.level=state.target;
+ }
+ const {gl,u}=state;
+ gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.29,.38,.45,1);gl.clear(gl.COLOR_BUFFER_BIT);
+ gl.useProgram(state.program);
+ gl.uniform2f(u.view,state.w,state.h);gl.uniform2f(u.centre,state.cx,state.cy);gl.uniform1f(u.unit,state.unit);
+ gl.uniform3f(u.coldPos,-2.8,-2.55,3.0);gl.uniform3f(u.warmPos,.45,3.05,2.2);
+ gl.uniform3f(u.coldColor,156/255,174/255,177/255);
+ gl.uniform3f(u.warmColor,242/255,170/255,118/255);
+ gl.uniform1f(u.shape,state.level);
+ gl.uniform1f(u.front,MODELS[state.model].front);
+ gl.uniform1f(u.coldOn,state.enabled[0]?1:0);gl.uniform1f(u.warmOn,state.enabled[1]?1:0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers.pos);gl.enableVertexAttribArray(state.a.pos);gl.vertexAttribPointer(state.a.pos,3,gl.FLOAT,false,0,0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers.normal);gl.enableVertexAttribArray(state.a.normal);gl.vertexAttribPointer(state.a.normal,3,gl.FLOAT,false,0,0);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.drawElements(gl.TRIANGLES,state.count,gl.UNSIGNED_SHORT,0);
+ const error=gl.getError();
+ if(error!==gl.NO_ERROR){status.textContent='Erreur WebGL : '+error;return;}
+ status.textContent='Commande '+MODELS[state.model].id+' du GLB · '+state.faces.toLocaleString('fr-FR')+' triangles · maillage unique';
+ if(state.animation||state.level!==state.target)schedule();
+}
+function sync(){
+ const model=MODELS[state.model],config=state.configs[state.model];
+ modelName.textContent='Commande '+String(model.id).padStart(2,'0')+' · '+model.name;
+ modelInfo.textContent='Profil extrait du GLB · hauteur maximale '+model.max.toFixed(2).replace('.',',')+' mm';
+ modelHeight.value=String(config.height);modelTime.value=String(config.duration);
+ document.getElementById('modelHeightText').textContent=config.height+' %';
+ document.getElementById('modelTimeText').textContent=config.duration.toFixed(1).replace('.',',')+' s';
+ for(let i=0;i<modelButtons.length;i++)modelButtons[i].setAttribute('aria-pressed',String(i===state.model));
+ const displayed=state.animation?state.level:state.target;
+ const v=Math.round(displayed*100);
+ slider.value=String(v);value.textContent=v+' %';
+ power.textContent=state.target>0?'Faire disparaître':'Faire apparaître';
+ power.classList.toggle('active',state.target>0);
+ animHint.textContent=state.animation?(state.animation.to>state.animation.from?'Émergence en 3D · ':'Disparition en 3D · ')+v+' %':'Relief 3D · 0 % = membrane plane';
+ for(const [i,b] of [cool,warm].entries()){b.classList.toggle('active',state.enabled[i]);b.setAttribute('aria-pressed',String(state.enabled[i]));}
+}
+animate100.addEventListener('click',startAnimation);
+for(const button of modelButtons){
+ button.addEventListener('click',()=>{
+  const next=Number(button.dataset.model);
+  if(next===state.model)return;
+  state.model=next;state.level=0;state.target=1;state.animation=null;state.last=0;
+  sync();resize();startAnimation();
+ });
+}
+modelHeight.addEventListener('input',()=>{
+ state.configs[state.model].height=Number(modelHeight.value);
+ saveConfigs();sync();resize();
+});
+modelTime.addEventListener('input',()=>{
+ state.configs[state.model].duration=Number(modelTime.value);
+ saveConfigs();sync();
+});
+slider.addEventListener('input',()=>{state.animation=null;state.target=Number(slider.value)/100;state.level=state.target;sync();schedule();});
+power.addEventListener('click',()=>animateTo(state.target>.001?0:1));
+cool.addEventListener('click',()=>{state.enabled[0]=!state.enabled[0];sync();schedule();});
+warm.addEventListener('click',()=>{state.enabled[1]=!state.enabled[1];sync();schedule();});
+addEventListener('resize',resize);
+sync();
+try{init();startAnimation();}catch(e){status.textContent='Erreur de rendu 3D : '+String(e.message||e);status.style.color='#ffe4ca';}
+})();
+</script></body></html>
