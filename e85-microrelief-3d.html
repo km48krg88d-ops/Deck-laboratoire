@@ -99,6 +99,10 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 #e85Widget label{display:flex;justify-content:space-between;margin:8px 0 4px;gap:10px}
 #e85Widget input{width:100%;accent-color:#cad6ed;height:23px;touch-action:pan-x}
 #e85Widget .e85Marks{display:flex;justify-content:space-between;color:#a7b8d0;font-size:9px}
+#e85Widget .e85Switch{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600;padding-top:4px}
+#e85Widget input[type=checkbox]{width:20px;height:20px;flex:none;touch-action:manipulation}
+#e85Widget .e85Note{color:#a7b8d0;font-size:10px;line-height:1.4;margin-bottom:11px}
+#e85Show2DOut{color:#a7b8d0;font-weight:400;font-size:10px;margin-left:5px}
 @media(max-height:550px){#e85Widget{top:calc(env(safe-area-inset-top) + 6px)}}
 </style>
 <!-- V19 · republication GitHub Pages · contenu graphique inchangé -->
@@ -108,6 +112,8 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <summary id="e85Summary">3D · Réglages</summary>
 <div class="e85Panel">
   <div class="e85Head"><strong>E85 · RELIEF 3D</strong><button id="e85ReliefReset" type="button">Réinitialiser</button></div>
+  <label class="e85Switch" for="e85Show2D"><span>Rendu 2D <output id="e85Show2DOut">Activé</output></span><input id="e85Show2D" type="checkbox" checked></label>
+  <div class="e85Note">Désactivé : fond neutre, formes 2D masquées, seuls le disque et le donut restent en relief 3D.</div>
   <label for="e85Height">Hauteur <output id="e85HeightOut">1.6</output></label>
   <input type="range" id="e85Height" min="0" max="3.2" step="0.1" value="1.6">
   <div class="e85Marks"><span>Plat</span><span>1</span><span>2</span><span>3</span></div>
@@ -1549,8 +1555,8 @@ function e85ReliefProfile(distance,radius,ring,fold,height){
   const opening=smooth((distance-(inner-fold))/(2*fold));
   return height*opening*rise;
 }
-function e85Relief(lamp){
- if(!lamp||(lamp.id!==4&&lamp.id!==6)||drawnLights.draft===lamp)return;
+function e85Relief(lamp,allowDraft=false){
+ if(!lamp||(lamp.id!==4&&lamp.id!==6)||(!allowDraft&&drawnLights.draft===lamp))return;
  const level=lamp.offAt!==undefined?drawnReliefRelease(lamp).level:lamp.displayLevel;
  if(level<.001||e85Params.height<.001)return;
  const radius=drawnDiscRadius(lamp),p=lamp.points[0],x=p.x*w,y=p.y*h;
@@ -1697,12 +1703,29 @@ function deckLineReleaseLayer(layer,lamp){
 }
 function renderDrawnLights(dt){
  drawnLights.time+=dt;apertureAtmosphere.time+=dt;updateHeldLamp();
- if(drawnLook.nightCanvas)drawNightCanvas();else drawDayCycle();
- if(drawnLook.showSphere)drawDrawnSphere(dt);
+ if(!e85Params.show2D){ctx.fillStyle='#101827';ctx.fillRect(0,0,w,h);}
+ else {if(drawnLook.nightCanvas)drawNightCanvas();else drawDayCycle();if(drawnLook.showSphere)drawDrawnSphere(dt);}
  const lamps=drawnLights.lamps.map(l=>l&&(DRAWN_GROUP_ARCS||l.id<7)?l:null);
  drawnLights.retiring=drawnLights.retiring.filter(l=>drawnLights.time-l.offAt<(l.id<2?DECK_LINE_MEMBRANE_SECONDS:DRAWN_EXTINGUISH_SECONDS)+.12&&(DRAWN_GROUP_ARCS||l.id<7));
  lamps.push(...drawnLights.retiring);
  if(drawnLights.draft)lamps[drawnLights.draft.id]=drawnLights.draft;
+ if(!e85Params.show2D){
+  // Diagnostic 3D-only mode: no E84 masks, outlines, 2D light layers or previews.
+  // Gesture recognition and lamp positions are untouched.
+  for(const lamp of lamps)if(lamp){
+   if(lamp.offAt!==undefined&&drawnLights.lamps[lamp.id]===lamp&&drawnLights.time-lamp.offAt>=(lamp.id<2?DECK_LINE_MEMBRANE_SECONDS:DRAWN_EXTINGUISH_SECONDS)){
+    delete lamp.offAt;delete lamp.offLevel;lamp.displayLevel=0;
+   }
+   if(lamp.offAt!==undefined)lamp.displayLevel=lamp.offLevel;
+   else lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));
+   if(lamp.id===4||lamp.id===6){
+    try{e85Relief(lamp,true);}catch(error){e85Relief.lastError=String(error);}
+   }
+  }
+  frames++;frameAcc+=dt;
+  if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
+  return;
+ }
  if(!drawnLook.nightCanvas){
   for(const lamp of lamps)if(lamp){
    if(lamp.offAt!==undefined&&drawnLights.lamps[lamp.id]===lamp&&drawnLights.time-lamp.offAt>=(lamp.id<2?DECK_LINE_MEMBRANE_SECONDS:DRAWN_EXTINGUISH_SECONDS)){delete lamp.offAt;delete lamp.offLevel;lamp.displayLevel=0;}
@@ -3423,14 +3446,16 @@ panel.querySelector('.bottomline .hint').textContent='Tracer : former l’ouvert
 syncDrawnModeUI();
 // E66 experimental page does not change the installed app service worker.
 // E85: persistent compact micro-relief controls, independent from E84.
-const e85Params={height:1.6,fold:9};
-try{const v=JSON.parse(localStorage.getItem('deck-e85-relief-v1'));if(Number.isFinite(v?.height))e85Params.height=clamp(v.height,0,3.2);if(Number.isFinite(v?.fold))e85Params.fold=clamp(v.fold,2,22);}catch(_){}
+const e85Params={height:1.6,fold:9,show2D:true};
+try{const v=JSON.parse(localStorage.getItem('deck-e85-relief-v1'));if(Number.isFinite(v?.height))e85Params.height=clamp(v.height,0,3.2);if(Number.isFinite(v?.fold))e85Params.fold=clamp(v.fold,2,22);if(typeof v?.show2D==='boolean')e85Params.show2D=v.show2D;}catch(_){}
 function e85UpdateControls(){
  const a=document.getElementById('e85Height'),b=document.getElementById('e85Fold');
  if(!a||!b)return;
  a.value=String(e85Params.height);b.value=String(e85Params.fold);
  document.getElementById('e85HeightOut').textContent=e85Params.height.toFixed(1);
  document.getElementById('e85FoldOut').textContent=e85Params.fold.toFixed(0);
+ document.getElementById('e85Show2D').checked=e85Params.show2D;
+ document.getElementById('e85Show2DOut').textContent=e85Params.show2D?'Activé':'Masqué';
 }
 for(const [field,id] of [['height','e85Height'],['fold','e85Fold']]){
  document.getElementById(id).addEventListener('input',event=>{
@@ -3439,8 +3464,13 @@ for(const [field,id] of [['height','e85Height'],['fold','e85Fold']]){
    try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
  });
 }
+document.getElementById('e85Show2D').addEventListener('change',event=>{
+ e85Params.show2D=event.target.checked;
+ e85UpdateControls();
+ try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
+});
 document.getElementById('e85ReliefReset').addEventListener('click',()=>{
- e85Params.height=1.6;e85Params.fold=9;
+ e85Params.height=1.6;e85Params.fold=9;e85Params.show2D=true;
  e85Relief.cache.clear();e85UpdateControls();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
