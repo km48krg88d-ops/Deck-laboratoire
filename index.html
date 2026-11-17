@@ -2803,6 +2803,14 @@ window.__deckBisHost={
  drawnLights,
  get w(){return w;},
  get h(){return h;},
+ // Sample only one already-rendered background pixel on demand (module caches
+ // it for 650 ms). No change to the original rendering or gestures.
+ sampleBackground(x,y){
+  const sx=clamp(Math.round(x*dpr),0,canvas.width-1);
+  const sy=clamp(Math.round(y*dpr),0,canvas.height-1);
+  const rgb=ctx.getImageData(sx,sy,1,1).data;
+  return [rgb[0]/255,rgb[1]/255,rgb[2]/255];
+ },
  makeFixedDrawnDisc,
  selectDrawnLight,
  saveDrawnLights,
@@ -2810,7 +2818,7 @@ window.__deckBisHost={
 };
 })();
 </script>
-<script src="./deck-lamp-bis.js?v=4"></script>
+<script src="./deck-lamp-bis.js?v=5"></script>
 <div id="deckGroupFeedback" role="status" aria-live="polite"></div>
 </body>
 </html>
