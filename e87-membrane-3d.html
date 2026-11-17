@@ -32,8 +32,9 @@ button.active{border-color:#efc08cab;background:#dbb78d29}
 <header id="header"><div><h1>DECK / E87 · MEMBRANE 3D</h1><p>Vue en plan · Matinée orange · Géométrie fixe</p></div><a href="./index.html?v=bis3">Retour DECK</a></header>
 <div id="status" role="status">Initialisation de la membrane 3D…</div>
 <section id="controls" aria-label="Lumières de la membrane">
-<div class="row"><div><h2>Commande 001 · intensité</h2><small>Profil GLB : hauteur 180 % · résistance 100 %</small></div><div class="row"><output id="value">100 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
-<input id="intensity" type="range" min="0" max="100" value="100" step="1" aria-label="Intensité lumineuse de la commande">
+<div class="row"><div><h2>Commande 001 · intensité</h2><small>Profil GLB : hauteur 180 % · résistance 100 %</small></div><div class="row"><output id="value">0 %</output><button type="button" id="power" class="active">Éteindre</button></div></div>
+<input id="intensity" type="range" min="0" max="100" value="0" step="1" aria-label="Intensité lumineuse de la commande">
+<div class="row"><small id="animHint">Animation d’allumage · 0 → 100 %</small><button type="button" id="animate100" class="active">Rejouer 0 → 100 %</button></div>
 <div id="lights">
 <button type="button" id="cool" class="active" aria-pressed="true"><span class="dot" style="background:#9CAEB1"></span>Bleu-gris</button>
 <button type="button" id="warm" class="active" aria-pressed="true"><span class="dot" style="background:#F2AA76"></span>Orange doux</button>
@@ -88,11 +89,12 @@ void main(){
 const canvas=document.getElementById('stage'),status=document.getElementById('status');
 const slider=document.getElementById('intensity'),value=document.getElementById('value'),power=document.getElementById('power');
 const cool=document.getElementById('cool'),warm=document.getElementById('warm');
+const animate100=document.getElementById('animate100'),animHint=document.getElementById('animHint');
 const GREEN=[[.768,.6728],[.777,.6701],[.784,.6665],[.792,.6620],[.799,.6569],[.805,.6510],[.811,.6444],[.816,.6373],[.820,.6297],[.824,.6217],[.826,.6133],[.828,.6048],[.829,.5961]];
 const RED=[[.829,.5961],[.834,.5183],[.849,.4418],[.874,.3680],[.909,.2980],[.952,.2332],[1.003,.1746],[1.062,.1232],[1.127,.0799],[1.197,.0454],[1.271,.0203],[1.347,.0051],[1.425,0]];
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(v,a));
-const state={target:1,level:1,enabled:[true,true],last:0,requested:false,ready:false,unit:86};
+const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null};
 const HEIGHT=1.8,RESISTANCE=1;
 const curve=(()=>{
  const h=HEIGHT*.6728,join=.829,fillet=.022+.178*RESISTANCE,inner=join-fillet;
@@ -192,11 +194,28 @@ function schedule(){
  if(!state.ready||state.requested)return;
  state.requested=true;requestAnimationFrame(draw);
 }
+function startAnimation(){
+ // A real WebGL lighting sequence: geometry & vertex normals stay untouched.
+ state.animation={start:null,duration:2800};
+ state.level=0;state.target=1;
+ state.last=0;
+ sync();schedule();
+}
 function draw(time){
  state.requested=false;if(!state.ready)return;
  const dt=state.last?Math.min(.09,(time-state.last)/1000):.016;state.last=time;
- state.level+=(state.target-state.level)*(1-Math.exp(-dt*3.8));
- if(Math.abs(state.level-state.target)<.0004)state.level=state.target;
+ if(state.animation){
+  const animation=state.animation;
+  if(animation.start===null)animation.start=time;
+  const t=clamp((time-animation.start)/animation.duration,0,1);
+  // Smooth start and arrival: lights rise continuously, without a jump.
+  state.level=t*t*(3-2*t);
+  if(t>=1){state.level=1;state.target=1;state.animation=null;}
+  sync();
+ }else{
+  state.level+=(state.target-state.level)*(1-Math.exp(-dt*3.8));
+  if(Math.abs(state.level-state.target)<.0004)state.level=state.target;
+ }
  const {gl,u}=state;
  gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.29,.38,.45,1);gl.clear(gl.COLOR_BUFFER_BIT);
  gl.useProgram(state.program);
@@ -213,20 +232,24 @@ function draw(time){
  const error=gl.getError();
  if(error!==gl.NO_ERROR){status.textContent='Erreur WebGL : '+error;return;}
  status.textContent='Une membrane continue · '+state.faces.toLocaleString('fr-FR')+' triangles · 2 sources 3D';
- if(state.level!==state.target)schedule();
+ if(state.animation||state.level!==state.target)schedule();
 }
 function sync(){
- const v=Math.round(state.target*100);
+ const displayed=state.animation?state.level:state.target;
+ const v=Math.round(displayed*100);
  slider.value=String(v);value.textContent=v+' %';
- power.textContent=v>0?'Éteindre':'Allumer';power.classList.toggle('active',v>0);
+ power.textContent=state.target>0?'Éteindre':'Allumer';
+ power.classList.toggle('active',state.target>0);
+ animHint.textContent=state.animation?'Allumage en cours · '+v+' %':'Animation d’allumage · 0 → 100 %';
  for(const [i,b] of [cool,warm].entries()){b.classList.toggle('active',state.enabled[i]);b.setAttribute('aria-pressed',String(state.enabled[i]));}
 }
-slider.addEventListener('input',()=>{state.target=Number(slider.value)/100;sync();schedule();});
-power.addEventListener('click',()=>{state.target=state.target>.001?0:1;sync();schedule();});
+animate100.addEventListener('click',startAnimation);
+slider.addEventListener('input',()=>{state.animation=null;state.target=Number(slider.value)/100;sync();schedule();});
+power.addEventListener('click',()=>{state.animation=null;state.target=state.target>.001?0:1;sync();schedule();});
 cool.addEventListener('click',()=>{state.enabled[0]=!state.enabled[0];sync();schedule();});
 warm.addEventListener('click',()=>{state.enabled[1]=!state.enabled[1];sync();schedule();});
 addEventListener('resize',resize);
 sync();
-try{init();}catch(e){status.textContent='Erreur de rendu 3D : '+String(e.message||e);status.style.color='#ffe4ca';}
+try{init();startAnimation();}catch(e){status.textContent='Erreur de rendu 3D : '+String(e.message||e);status.style.color='#ffe4ca';}
 })();
 </script></body></html>
