@@ -144,17 +144,35 @@ function upload(name,data){
  gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
  gl.enableVertexAttribArray(k);gl.vertexAttribPointer(k,3,gl.FLOAT,false,0,0);
 }
+// A uniform full-screen grid wastes vertices on the flat membrane and leaves
+// staircase facets on the tight green/red junction. Focus a regular, continuous
+// grid on the relief, stretching cells only where the membrane is planar.
+// It remains ONE indexed 3D mesh, not a composited shape or texture mask.
+function meshAxis(index,segments,extent,center,focus){
+ const lo=Math.max(0,center-focus),hi=Math.min(extent,center+focus);
+ const left=lo>0?Math.round(segments*.095):0;
+ const right=hi<extent?Math.round(segments*.095):0;
+ const middle=segments-left-right;
+ if(index<=left&&left>0)return lo*index/left;
+ if(index<=left+middle)return lo+(hi-lo)*(index-left)/middle;
+ return hi+(extent-hi)*(index-left-middle)/right;
+}
 function resize(){
  if(!state.ready)return;
- const {gl}=state,w=innerWidth,h=innerHeight,dpr=Math.min(2,devicePixelRatio||1);
+ const {gl}=state,w=innerWidth,h=innerHeight;
+ // iPhone retina: native DPR (up to 3) instead of the old 2x raster.
+ const dpr=Math.min(3,devicePixelRatio||1);
  canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));
  canvas.style.width=w+'px';canvas.style.height=h+'px';
  const unit=clamp(w*.235,77,120),cx=w/2,cy=h*.43;
- const cols=clamp(Math.ceil(w/2.65),120,215),rows=clamp(Math.ceil(h/2.65),120,250),N=(rows+1)*(cols+1);
+ // 249×249 = 62 001 vertices, safely below WebGL 1's 16-bit index limit.
+ const cols=248,rows=248,N=(rows+1)*(cols+1),focus=1.68*unit;
  const positions=new Float32Array(N*3),normals=new Float32Array(N*3),triangles=new Uint16Array(rows*cols*6);
+ const xs=Array.from({length:cols+1},(_,i)=>meshAxis(i,cols,w,cx,focus));
+ const ys=Array.from({length:rows+1},(_,i)=>meshAxis(i,rows,h,cy,focus));
  for(let iy=0;iy<=rows;iy++)for(let ix=0;ix<=cols;ix++){
-  const x=(ix/cols*w-cx)/unit,y=(iy/rows*h-cy)/unit,r=Math.hypot(x,y),z=heightAt(r);
-  const eps=.008,slope=(heightAt(r+eps)-heightAt(Math.max(0,r-eps)))/(r<eps?r+eps:2*eps);
+  const x=(xs[ix]-cx)/unit,y=(ys[iy]-cy)/unit,r=Math.hypot(x,y),z=heightAt(r);
+  const eps=.006,slope=(heightAt(r+eps)-heightAt(Math.max(0,r-eps)))/(r<eps?r+eps:2*eps);
   const nx=-slope*x/Math.max(r,.00001),ny=-slope*y/Math.max(r,.00001),inv=1/Math.hypot(nx,ny,1),k=(iy*(cols+1)+ix)*3;
   positions[k]=x;positions[k+1]=y;positions[k+2]=z;
   normals[k]=nx*inv;normals[k+1]=ny*inv;normals[k+2]=inv;
