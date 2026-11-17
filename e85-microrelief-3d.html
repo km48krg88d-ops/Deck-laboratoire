@@ -87,6 +87,7 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 #stage:focus{outline:none}
 #e66GestureStatus{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);max-width:85vw;z-index:99999;pointer-events:none;background:rgba(15,20,28,.76);color:#fff;border-radius:10px;padding:8px 12px;font:12px -apple-system,sans-serif;text-align:center;opacity:.75}
 /* E85 native details: open/close works even if the drawing engine is busy. */
+#e85ReliefLayer{position:fixed;inset:0;width:100%;height:100%;z-index:40;pointer-events:none;touch-action:none;display:block}
 #e85Widget{position:fixed;top:calc(env(safe-area-inset-top) + 58px);right:12px;z-index:100001;width:min(250px,calc(100vw - 24px));color:#e6ecf6;font:12px -apple-system,BlinkMacSystemFont,sans-serif;background:rgba(10,19,34,.95);border:1px solid #ffffff40;border-radius:15px;box-shadow:0 8px 26px #0007;touch-action:manipulation}
 #e85Widget:not([open]){width:auto;background:transparent;border:0;box-shadow:none;pointer-events:none}
 #e85Widget summary{display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none;min-height:38px;padding:10px 13px;cursor:pointer;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:#0a1322;border:1px solid #ffffff55;border-radius:18px}
@@ -131,9 +132,11 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
   <input type="range" id="e85LightPower" min="0" max="2.5" step="0.1" value="1.3">
   <button id="e85Demo" type="button" aria-pressed="false">Afficher deux reliefs test</button>
   <div class="e85Note">Test sans modifier les lampes enregistrées.</div>
+  <div id="e85RenderStatus" role="status" aria-live="polite" style="color:#c5d8f2;font-size:10px;margin-top:8px">Calque 3D : initialisation…</div>
 </div>
 </details>
 <canvas id="stage" tabindex="0" aria-label="Tracer un trait vertical au centre de la sphère : les particules convergent après le passage du doigt, chacune avec un léger retard et une durée de trajet différents. Dans le mode Ouverture blanche, rapprocher deux doigts depuis le centre du rectangle pour diffuser la lumière. Toucher à côté pour revenir à la sphère. Au clavier : espace pour tester, Échap pour reformer la sphère."></canvas>
+<canvas id="e85ReliefLayer" aria-hidden="true"></canvas>
 <div class="top"><div class="mark">DECK <span style="color:#777;letter-spacing:.12em;font-weight:400">/ E62</span></div><div class="topright"><button class="chip" id="placeLamps" type="button" aria-pressed="false">Placer</button><button class="chip" id="reset" aria-label="Recentrer">↺</button><button class="chip" id="toggle" aria-expanded="true">Immersion</button></div></div>
 <section class="panel hidden" id="panel">
   <div class="heading"><strong>DECK — LABORATOIRE</strong><span>Essai 62 · Toile bleu nuit · Fentes de lumière</span></div>
@@ -244,6 +247,9 @@ body:not(.atelier) #toggle{background:rgba(255,255,255,.10);font-size:11px;paddi
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('stage');let ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
+const e85Layer=document.getElementById('e85ReliefLayer');
+const e85Ctx=e85Layer.getContext('2d',{alpha:true});
+let e85LastReliefError='',e85PaintCount=0;
 const panel=document.getElementById('panel'),fps=document.getElementById('fps');document.body.classList.add('opal-mode');
 const ambiences={
   original:{base:'#050505',centre:'rgba(5,5,5,0)'},
@@ -929,8 +935,10 @@ function resize(){
   const physicalW=Math.round(w*dpr),physicalH=Math.round(h*dpr);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
   if(canvas.width!==physicalW||canvas.height!==physicalH){canvas.width=physicalW;canvas.height=physicalH;}
+  if(e85Layer.width!==physicalW||e85Layer.height!==physicalH){e85Layer.width=physicalW;e85Layer.height=physicalH;}
   ctx.setTransform(physicalW/w,0,0,physicalH/h,0,0);
-  ctx.imageSmoothingEnabled=true;
+  e85Ctx.setTransform(physicalW/w,0,0,physicalH/h,0,0);
+  ctx.imageSmoothingEnabled=true;e85Ctx.imageSmoothingEnabled=true;
 }
 window.addEventListener('resize',resize);if(window.visualViewport)window.visualViewport.addEventListener('resize',resize); resize(); createParticles();
 // Petite pastille lumineuse precalculee une fois, dessinee sans carre opaque.
@@ -1616,13 +1624,29 @@ function e85Relief(lamp,allowDraft=false){
   patch=surface;e85Relief.cache.set(key,patch);
   if(e85Relief.cache.size>24)e85Relief.cache.delete(e85Relief.cache.keys().next().value);
  }
- ctx.save();
- ctx.globalCompositeOperation='source-over';
- ctx.globalAlpha=clamp(level*1.65,0,1);
- ctx.drawImage(patch,x-side/2,y-side/2,side,side);
- ctx.restore();
+ e85Ctx.save();
+ e85Ctx.globalCompositeOperation='source-over';
+ e85Ctx.globalAlpha=clamp(level*1.65,0,1);
+ e85Ctx.drawImage(patch,x-side/2,y-side/2,side,side);
+ e85Ctx.restore();
+ e85PaintCount++;
 }
 e85Relief.cache=new Map();
+function e85Report(){
+ const node=document.getElementById('e85RenderStatus');if(!node)return;
+ node.textContent=e85LastReliefError?'Erreur 3D : '+e85LastReliefError:
+ 'Calque 3D : '+e85Layer.width+'×'+e85Layer.height+' · '+e85PaintCount+' relief(s) dessinés';
+ node.style.color=e85LastReliefError?'#ff9f9f':'#c5d8f2';
+}
+function e85DrawError(error){e85LastReliefError=String(error?.message||error).slice(0,160);e85Report();}
+function e85RedrawImmediate(){
+ try{
+  e85PaintCount=0;e85LastReliefError='';e85Ctx.clearRect(0,0,w,h);
+  for(const l of drawnLights.lamps)if(l&&(l.id===4||l.id===6))e85Relief(l,true);
+  if(e85Params.demo)e85DrawDemoReliefs();
+  e85Report();
+ }catch(error){e85DrawError(error);}
+}
 function e85DrawDemoReliefs(){
  const radius=Math.min(w*.115,52),y=.48,now=drawnLights.time;
  const disk={id:6,points:[{x:.29,y,t:now},{x:.29+radius/w,y,t:now}],displayLevel:1,level:1};
@@ -1632,7 +1656,7 @@ function e85DrawDemoReliefs(){
 
 function drawRaisedBackground(lamp){const enabled=lamp.id===0?drawnLook.verticalRectangle:lamp.id===1?drawnLook.horizontalRectangle:lamp.id===2?drawnLook.circle:lamp.id===3?drawnLook.angle:lamp.id===4?drawnLook.spot:lamp.id===5?drawnLook.chevron:true;if(!enabled||!drawnLook.slitLight)return;const release=drawnReliefRelease(lamp);if(release.level<.001)return;const m=drawnMetrics(lamp),reach=drawnLook.spill*2.6,draft=drawnLights.draft===lamp,scale=lamp.id===4?2.35:lamp.offAt!==undefined?2.15:1.5,pad=reach*1.65,left=Math.max(0,Math.floor(m.minX-pad)),top=Math.max(0,Math.floor(m.minY-pad)),right=Math.min(w,Math.ceil(m.maxX+pad)),bottom=Math.min(h,Math.ceil(m.maxY+pad)),width=right-left,height=bottom-top;if(width<=0||height<=0)return;const key=[w,h,reach,scale,drawnLook.shadowStrength,lamp.id===3?drawnLook.rightAngleCornerPx:0,lamp.id===4||lamp.id===6?drawnLook.circularSoftnessPct:0,...lamp.points.map(p=>Math.round(p.x*w*4)/4+','+Math.round(p.y*h*4)/4)].join(':'),cache=drawRaisedBackground.cache||(drawRaisedBackground.cache=[]);let field=cache[lamp.id];if(!field||field.key!==key){const buildStart=drawnGestureNow(),surface=document.createElement('canvas');surface.width=Math.max(1,Math.ceil(width*scale));surface.height=Math.max(1,Math.ceil(height*scale));const c=surface.getContext('2d'),cx=(m.minX+m.maxX)/2,cy=(m.minY+m.maxY)/2,r=(m.maxX-m.minX+m.maxY-m.minY)/4;const all=lamp.id<2?[{x:lamp.points[0].x*w,y:lamp.points[0].y*h},{x:lamp.points.at(-1).x*w,y:lamp.points.at(-1).y*h}]:contourPoints(lamp),stride=lamp.id>=7?2:1,pts=all.filter((_,i)=>i%stride===0||i===all.length-1),segments=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<.01)continue;let normal=lamp.id===0?{x:1,y:0}:lamp.id===1?{x:0,y:-1}:(lamp.id===3||lamp.id===5)?{x:-dy/len,y:dx/len}:lampFace(lamp,a,b);segments.push({a,dx:dx/len,dy:dy/len,len,normal});}
 if(raisedMaskGPU===undefined)raisedMaskGPU=makeRaisedMaskGPU();if((!raisedMaskGPU||raisedMaskGPU.gl.isContextLost())&&queueRaisedMask({id:lamp.id,key,w,h,look:{...drawnLook},lamp:{id:lamp.id,points:lamp.points},metrics:m,geometry:{minX:m.minX,minY:m.minY,maxX:m.maxX,maxY:m.maxY},segments,reach,left,top,width,height,scale,pixelWidth:surface.width,pixelHeight:surface.height})){field=cache[lamp.id]||ringWaveUnder(lamp);if(field)drawRaisedCachedField(field,release,lamp);return;}if(!gpuRaisedMask(surface,lamp,m,segments,reach,left,top,width,height)){reliefDiagnostics.renderer='canvas-fallback';const image=c.createImageData(surface.width,surface.height);for(let y=0;y<surface.height;y++)for(let x=0;x<surface.width;x++){const px=left+x/scale,py=top+y/scale;let signed=raisedShapeSample(lamp,px,py,m,segments,reach);const k=(y*surface.width+x)*4,white=signed>=0?255:0,noise=(((Math.imul(x+1,374761393)^Math.imul(y+1,668265263))>>>0)%1024/1023-.5);image.data[k]=image.data[k+1]=image.data[k+2]=white;image.data[k+3]=Math.round(255*Math.min(.94,Math.abs(signed)*.94*(signed<0?drawnLook.shadowStrength/1.65:1))+noise);}c.putImageData(image,0,0);}reliefDiagnostics.builds++;reliefDiagnostics.lastBuildMs=(drawnGestureNow()-buildStart)*1000;reliefDiagnostics.maxBuildMs=Math.max(reliefDiagnostics.maxBuildMs,reliefDiagnostics.lastBuildMs);field=cache[lamp.id]={key,surface,left,top,width,height,geometry:{minX:m.minX,minY:m.minY,maxX:m.maxX,maxY:m.maxY}};}
-drawRaisedCachedField(field,release,lamp);if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85Relief.lastError=String(error);}}}
+drawRaisedCachedField(field,release,lamp);if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85DrawError(error);}}}
 
 function traceDrawnContour(lamp){const pts=contourPoints(lamp);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));}
 function drawGroupArc(lamp){const reach=drawnLook.spill,level=lamp.displayLevel*.85;if(!drawnLook.slitLight||level<.002)return;ctx.save();ctx.strokeStyle='rgb(246,248,255)';ctx.lineJoin='round';ctx.lineCap='round';for(let i=12;i>=1;i--){const fraction=i/12;ctx.lineWidth=2+reach*fraction;ctx.globalAlpha=level*drawnLook.spillStrength*.055*Math.pow(1-fraction*.65,1.5);traceDrawnContour(lamp);ctx.stroke();}ctx.restore();}
@@ -1727,6 +1751,7 @@ function deckLineReleaseLayer(layer,lamp){
 }
 function renderDrawnLights(dt){
  drawnLights.time+=dt;apertureAtmosphere.time+=dt;updateHeldLamp();
+ e85PaintCount=0;e85LastReliefError='';e85Ctx.clearRect(0,0,w,h);
  if(!e85Params.show2D){ctx.fillStyle='#101827';ctx.fillRect(0,0,w,h);}
  else {if(drawnLook.nightCanvas)drawNightCanvas();else drawDayCycle();if(drawnLook.showSphere)drawDrawnSphere(dt);}
  const lamps=drawnLights.lamps.map(l=>l&&(DRAWN_GROUP_ARCS||l.id<7)?l:null);
@@ -1743,10 +1768,11 @@ function renderDrawnLights(dt){
    if(lamp.offAt!==undefined)lamp.displayLevel=lamp.offLevel;
    else lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));
    if(lamp.id===4||lamp.id===6){
-    try{e85Relief(lamp,true);}catch(error){e85Relief.lastError=String(error);}
+    try{e85Relief(lamp,true);}catch(error){e85DrawError(error);}
    }
   }
   if(e85Params.demo)e85DrawDemoReliefs();
+  e85Report();
   frames++;frameAcc+=dt;
   if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
   return;
@@ -1759,7 +1785,7 @@ function renderDrawnLights(dt){
     drawRaisedBackground(lamp);
    }else{lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));drawRaisedBackground(lamp);}
   }
-  drawFailedDrawnStrokes();drawChevronLeadPreview();frames++;frameAcc+=dt;
+  drawFailedDrawnStrokes();drawChevronLeadPreview();e85Report();frames++;frameAcc+=dt;
   if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
   return;
  }
@@ -1801,10 +1827,10 @@ function renderDrawnLights(dt){
   }
   main.save();main.globalCompositeOperation=drawnLook.nightCanvas?'screen':'source-over';main.drawImage(layer,0,0,w,h);main.restore();
   // Light first, surface normals second: slope shading must remain visible.
-  if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85Relief.lastError=String(error);}}
+  if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85DrawError(error);}}
  }
  for(const lamp of lamps)if(lamp&&lamp.offAt===undefined)drawUnifiedEdge(lamp);
- drawFailedDrawnStrokes();drawChevronLeadPreview();frames++;frameAcc+=dt;
+ drawFailedDrawnStrokes();drawChevronLeadPreview();e85Report();frames++;frameAcc+=dt;
  if(frameAcc>1.7){fps.textContent=Math.round(frames/frameAcc)+' i/s';frames=0;frameAcc=0;}
 }
 function demoDrawnLights(){cancelDrawnGesture();const t=drawnLights.time-3;drawnLights.lamps=[makeDrawnLamp(0,[{x:.46,y:.30,t},{x:.46,y:.69,t}],.72),makeDrawnLamp(1,[{x:.15,y:.49,t},{x:.85,y:.49,t}],.72),makeDrawnLamp(2,Array.from({length:49},(_,i)=>({x:(w*.72+Math.cos(i/48*Math.PI*2)*w*.1)/w,y:(h*.25+Math.sin(i/48*Math.PI*2)*w*.1)/h,t})),.72),makeDrawnLamp(3,[{x:.17,y:.77,t},{x:.17,y:.63,t},{x:.36,y:.63,t}],.72),makeDrawnLamp(4,[{x:.73,y:.73,t}],.72),makeDrawnLamp(5,[{x:.55,y:.88,t},{x:.70,y:.81,t},{x:.85,y:.88,t}],.72),makeDrawnLamp(6,[{x:.25,y:.24,t},{x:.33,y:.24,t}],.6)];if(DRAWN_GROUP_ARCS)drawnLights.lamps.push(makeDrawnLamp(7,[{x:.14,y:.18,t},{x:.25,y:.12,t},{x:.36,y:.18,t}],.72),makeDrawnLamp(8,[{x:.14,y:.88,t},{x:.25,y:.94,t},{x:.36,y:.88,t}],.72));selectDrawnLight(null);saveDrawnLights();}
@@ -3491,25 +3517,25 @@ function e85UpdateControls(){
 for(const [field,id] of [['height','e85Height'],['fold','e85Fold'],['lightAngle','e85LightAngle'],['lightPower','e85LightPower']]){
  document.getElementById(id).addEventListener('input',event=>{
    e85Params[field]=Number(event.target.value);
-   e85Relief.cache.clear();e85UpdateControls();
+   e85Relief.cache.clear();e85UpdateControls();e85RedrawImmediate();
    try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
  });
 }
 document.getElementById('e85Show2D').addEventListener('change',event=>{
  e85Params.show2D=event.target.checked;
- e85UpdateControls();
+ e85UpdateControls();e85RedrawImmediate();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
 document.getElementById('e85Demo').addEventListener('click',()=>{
  e85Params.demo=!e85Params.demo;
  if(e85Params.demo)e85Params.show2D=false;
- e85UpdateControls();
+ e85UpdateControls();e85RedrawImmediate();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
 document.getElementById('e85ReliefReset').addEventListener('click',()=>{
  e85Params.height=1.6;e85Params.fold=9;e85Params.show2D=true;
  e85Params.lightAngle=225;e85Params.lightPower=1.3;e85Params.demo=false;
- e85Relief.cache.clear();e85UpdateControls();
+ e85Relief.cache.clear();e85UpdateControls();e85RedrawImmediate();
  try{localStorage.setItem('deck-e85-relief-v1',JSON.stringify(e85Params));}catch(_){}
 });
 e85UpdateControls();
