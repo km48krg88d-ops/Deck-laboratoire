@@ -98,6 +98,8 @@ function initWebGL(){
   // The junction between the green fillet and red skirt keeps the sharper
   // lighting of Bis v1; only the surrounding slope fades into the DECK canvas.
   // No screen-space blur: every normal remains crisp at native DPR.
+  // Continuous membrane shading: NO radial ring, no centre fill, no glow
+  // painted onto the screen. Light is derived only from the 3D surface slope.
   const fragment=[
   'precision mediump float;',
   'varying vec3 vNormal;',
@@ -106,28 +108,21 @@ function initWebGL(){
   'uniform float uBlend;',
   'void main(){',
   'vec3 n=normalize(vNormal);',
-  'float tilt=clamp(length(n.xy),0.0,1.0);',
-  'float incidence=dot(n.xy,normalize(vec2(-0.74,-0.67)));',
-  'float warm=max(0.0,incidence),cold=max(0.0,-incidence);',
-  // Original Bis v1 material at the joint, with a precise 2–4px transition.
-  'vec3 original=vec3(0.70,0.79,0.91)*(0.57+0.19*n.z);',
-  'original+=vec3(0.95,0.63,0.32)*warm*0.57;',
-  'original+=vec3(0.15,0.33,0.61)*cold*0.32;',
-  'float oldEdge=1.0-smoothstep(1.33,1.54,vRadius);',
-  'float oldAlpha=(0.14+0.79*tilt)*oldEdge*uOpacity;',
-  // The rest is a broad translucent tonal gradient, NOT a blurred overlay.
-  'float signedLight=smoothstep(-0.13,0.16,incidence);',
-  'vec3 gradient=mix(vec3(0.10,0.19,0.34),vec3(0.88,0.83,0.87),signedLight);',
-  'float ramp=1.0-smoothstep(0.88,1.54,vRadius);',
-  'float slopeMask=smoothstep(0.025,0.26,tilt);',
-  'float lobe=smoothstep(0.015,0.65,abs(incidence));',
-  'float fade=mix(0.95,0.54,uBlend);',
-  'float softAlpha=(0.08+0.49*lobe)*slopeMask*ramp*fade*uOpacity;',
-  // Exact green-red meeting radius from COMMANDE-001.glb.
-  'float junction=1.0-smoothstep(0.018,0.065,abs(vRadius-0.829));',
-  'vec3 color=mix(gradient,original,junction);',
-  'float alpha=mix(softAlpha,oldAlpha,junction);',
-  'gl_FragColor=vec4(clamp(color,0.0,1.0),clamp(alpha,0.0,0.93));',
+  'float lightDirection=dot(n.xy,normalize(vec2(-0.74,-0.67)));',
+  'float lightSide=smoothstep(0.0,0.52,max(0.0,lightDirection));',
+  'float shadowSide=smoothstep(0.0,0.52,max(0.0,-lightDirection));',
+  // Low-saturation lighting tones overlay the underlying DECK background.
+  'vec3 warm=vec3(0.94,0.82,0.75);',
+  'vec3 cool=vec3(0.18,0.28,0.43);',
+  'vec3 tint=mix(cool,warm,lightSide/(lightSide+shadowSide+0.0001));',
+  // Flat plateau = transparent. No white/grey disc at the centre.
+  'float slopeMask=smoothstep(0.015,0.19,length(n.xy));',
+  // Outer skirt fades to zero before it becomes a visible luminous halo.
+  'float edgeFade=1.0-smoothstep(0.98,1.44,vRadius);',
+  'float intensity=0.19*lightSide+0.29*shadowSide;',
+  'float translucency=mix(1.0,0.58,uBlend);',
+  'float alpha=intensity*slopeMask*edgeFade*translucency*uOpacity;',
+  'gl_FragColor=vec4(tint,clamp(alpha,0.0,0.52));',
   '}'].join('\n');
   const program=gl.createProgram();
   gl.attachShader(program,compile(gl,gl.VERTEX_SHADER,vertex));
@@ -170,9 +165,12 @@ function rebuild(){
   const r=1.55*i/rows,z=sample(curve,r);
   const dr=r<eps?r+eps:2*eps;
   const slope=(sample(curve,r+eps)-sample(curve,Math.max(0,r-eps)))/dr;
+  // Tone-map steep GLB profile normals: the red/green junction remains
+  // geometrically continuous, but does not saturate into a dark circular rim.
+  const shadeSlope=Math.sign(slope)*Math.log1p(Math.abs(slope))*.26;
   for(let j=0;j<=cols;j++){
    const t=j*2*Math.PI/cols,c=Math.cos(t),s=Math.sin(t),index=i*(cols+1)+j,k=index*3;
-   const nx=-slope*c,ny=-slope*s,inv=1/Math.hypot(nx,ny,1);
+   const nx=-shadeSlope*c,ny=-shadeSlope*s,inv=1/Math.hypot(nx,ny,1);
    state.positions[k]=r*c;state.positions[k+1]=r*s;state.positions[k+2]=z;
    state.normals[k]=nx*inv;state.normals[k+1]=ny*inv;state.normals[k+2]=inv;
    state.radii[index]=r;
