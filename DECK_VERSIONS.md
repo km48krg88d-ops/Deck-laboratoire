@@ -50,3 +50,5 @@ Les repères E63–E73 suivent les noms des fichiers conservés ; leurs autres c
 Chaque nouvelle version importante doit être ajoutée ici **et** documentée dans [DECK_ETAT.md](./DECK_ETAT.md).
 
 **Correctif E85 du 16/11 :** restauration de la prévisualisation et du rendu animé E84 pour disque et donut, masque diurne E84 récupéré, micro-relief indépendant plafonné à 320² pixels, sans modification des gestes. La vérification visuelle en Safari reste en attente.
+
+**E86 — 17/11/2026 · Commande 001 réelle** — Première surface WebGL interactive reconstruite à partir des deux maillages rouge/vert du fichier `COMMANDE-001.glb`. Hauteur du bouton + résistance/rayon du raccord vert, vue 3D orientable et matériau blanc/codage source. Essai autonome : `e86-commande-modelee.html`. E84/E85 et index préservés.
