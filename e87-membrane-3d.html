@@ -39,7 +39,7 @@ button.active{border-color:#efc08cab;background:#dbb78d29}
 <button type="button" id="cool" class="active" aria-pressed="true"><span class="dot" style="background:#9CAEB1"></span>Bleu-gris</button>
 <button type="button" id="warm" class="active" aria-pressed="true"><span class="dot" style="background:#F2AA76"></span>Orange doux</button>
 </div>
-<p class="caption">Une poussée centrale soulève progressivement la commande, puis le raccord se propage dans la membrane. Les deux sources lumineuses restent constantes : seules la géométrie et ses normales évoluent.</p>
+<p class="caption">Le plateau reste parfaitement horizontal dès le début et monte comme une pièce plane. Le raccord vert suit sans se bomber ; la pente rouge se déploie dans la membrane. Les deux lumières restent constantes.</p>
 </section>
 <script id="vertex" type="x-shader/x-vertex">
 attribute vec3 aPosition;
@@ -55,14 +55,19 @@ float ease(float t){
  return t*t*(3.0-2.0*t);
 }
 void main(){
- // The original GLB-derived profile is stored in aPosition.
- // A wave of spatial emergence crosses it; the background remains one mesh.
+ // COMMANDE-001: plateau perfectly horizontal up to r = 0.629,
+ // green fillet from r = 0.629 to 0.829, red skirt beyond r = 0.829.
+ // The entire plateau rises together as a RIGID PLANE from frame one.
+ // Only the RED OUTER SKIRT opens outwards: never grow a dome within
+ // the plateau or distort the green-to-red junction.
  float p=clamp(uShape,0.0,1.0);
- float rise=ease(p/0.72);
+ float rise=ease(p);
  float travel=ease((p-0.035)/0.92);
- float front=mix(0.26,2.10,travel);
  float r=length(aPosition.xy);
  float width=0.36;
+ // Start beyond the full green fillet + feather width:
+ // r <= 0.829 always receives reveal = 1, including the flat plateau.
+ float front=mix(1.23,2.10,travel);
  float x=clamp((front-r)/width,0.0,1.0);
  float reveal=ease(x);
  float dr=(x>0.0&&x<1.0)?-6.0*x*(1.0-x)/width:0.0;
