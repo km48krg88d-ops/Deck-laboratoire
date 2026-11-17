@@ -134,9 +134,18 @@ const modelButtons=[...document.querySelectorAll('#models button')];
 const MODELS=[{"name":"Trois reliefs","id":1,"front":0.56,"profile":[7.66,7.58,7.39,7.08,6.62,5.97,5.12,3.99,2.7,1.69,0.98,0.5,0.19,0.04,0.04,0.19,0.5,0.99,1.7,2.73,4.03,5.14,5.99,6.64,7.09,7.4,7.58,7.66,7.58,7.38,7.06,6.6,5.94,5.07,3.94,2.84,1.98,1.3,0.79,0.4,0.17,0.05,0.03,0.11,0.35,0.7,1.17,1.79,2.6,3.65,4.86,5.78,6.45,6.95,7.31,7.56,7.64,7.61,7.46,7.2,6.75,6.15,5.37,4.34,3.19,2.37,1.69,1.14,0.71,0.39,0.17,0.04,0,0],"max":7.66},{"name":"Plateau + raccord","id":2,"front":1.32,"profile":[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0],"max":14.57},{"name":"Couronne bombée","id":3,"front":0.78,"profile":[2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.81,3.71,4.6,5.49,6.21,6.9,7.59,8.28,8.81,9.32,9.84,10.36,10.74,11.1,11.46,11.82,12.1,12.31,12.52,12.73,12.93,13,13.07,13.14,13.21,13.2,13.13,13.06,12.99,12.91,12.7,12.49,12.28,12.07,11.76,11.4,11.04,10.68,10.27,9.75,9.24,8.72,8.17,7.48,6.79,6.1,5.34,4.45,3.56,2.68,1.77,1.06,0.56,0.22,0.04,0.01,0],"max":13.21},{"name":"Grand plateau","id":4,"front":1.4,"profile":[13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.24,13.24,13.19,13.11,13.02,12.87,12.71,12.47,12.24,11.92,11.6,11.17,10.72,10.18,9.54,8.8,7.89,6.67,4.53,2.04,1.22,0.64,0.26,0.05,0.01,0],"max":13.25}];
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(v,a));
-const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null,model:1,configs:[{height:160,duration:2},{height:142,duration:1.4},{height:120,duration:2},{height:132,duration:2}]};
+const state={target:1,level:0,enabled:[true,true],last:0,requested:false,ready:false,unit:86,animation:null,model:1,configs:[{height:100,duration:2},{height:142,duration:1.4},{height:120,duration:2},{height:132,duration:2}]};
 try{const saved=JSON.parse(localStorage.getItem('deck-e88-model-configs-v1'));if(Array.isArray(saved)&&saved.length===4){for(let i=0;i<4;i++){if(Number.isFinite(saved[i].height))state.configs[i].height=clamp(saved[i].height,50,160);if(Number.isFinite(saved[i].duration))state.configs[i].duration=clamp(saved[i].duration,1,6);}}}catch(_){}
 function saveConfigs(){try{localStorage.setItem('deck-e88-model-configs-v1',JSON.stringify(state.configs));}catch(_){}}
+// Apply the explicitly requested 160→100 change once to the existing
+// validated 01 setting, without touching other individualized settings.
+try{
+ if(localStorage.getItem('deck-e88-model01-height-100-v1')!=='1'){
+  if(state.configs[0].height===160){state.configs[0].height=100;saveConfigs();}
+  localStorage.setItem('deck-e88-model01-height-100-v1','1');
+ }
+}catch(_){}
+
 // Original GLB radial height profiles: 36.5 mm outer radius maps to 1.55 world units.
 function heightAt(radius){
  const y=MODELS[state.model].profile;
