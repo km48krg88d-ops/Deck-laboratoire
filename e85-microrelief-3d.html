@@ -1554,7 +1554,8 @@ function e85Relief(lamp){
  const level=lamp.offAt!==undefined?drawnReliefRelease(lamp).level:lamp.displayLevel;
  if(level<.001||e85Params.height<.001)return;
  const radius=drawnDiscRadius(lamp),p=lamp.points[0],x=p.x*w,y=p.y*h;
- const ring=lamp.id===4,fold=Math.min(e85Params.fold,radius*(ring?.19:.7));
+ // Keep the entire 2–22px slider meaningful for a normal donut (R≈52px).
+ const ring=lamp.id===4,fold=Math.min(e85Params.fold,Math.max(2,radius*.9));
  const margin=fold+3,side=Math.ceil(2*(radius+margin));
  // Bounded offscreen raster: avoid blocking iPhone gestures on large discs.
  const resolution=Math.min(1.5,Math.max(1,dpr||1));
@@ -1579,9 +1580,9 @@ function e85Relief(lamp){
     const nx=-sx/len,ny=-sy/len,nz=1/len;
     const illumination=nx*lx+ny*ly+nz*lz;
     const flat=lz;
-    const signed=(illumination-flat)*2.15;
-    const tinyPlateau=h0/Math.max(.01,e85Params.height)*.025;
-    const strength=Math.min(.80,Math.abs(signed)*.95+tinyPlateau);
+    const signed=(illumination-flat)*3.0;
+    const tinyPlateau=h0*.012;
+    const strength=Math.min(.90,Math.abs(signed)*1.4+tinyPlateau);
     const k=(iy*pxSize+ix)*4;
     if(signed>=0){pixels.data[k]=232;pixels.data[k+1]=239;pixels.data[k+2]=252;}
     else {pixels.data[k]=1;pixels.data[k+1]=4;pixels.data[k+2]=12;}
@@ -1720,7 +1721,6 @@ function renderDrawnLights(dt){
   if(lamp.offAt!==undefined&&drawnLights.lamps[lamp.id]===lamp&&drawnLights.time-lamp.offAt>=(lamp.id<2?DECK_LINE_MEMBRANE_SECONDS:DRAWN_EXTINGUISH_SECONDS)){delete lamp.offAt;delete lamp.offLevel;lamp.displayLevel=0;}
   if(lamp.offAt!==undefined)lamp.displayLevel=lamp.offLevel; // keep native brightness; the shared layer mask fades it spatially
   else lamp.displayLevel+=(lamp.level-lamp.displayLevel)*(1-Math.exp(-dt*9));
-  if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85Relief.lastError=String(error);}}
   let layer=layers[lamp.id];if(!layer)layer=layers[lamp.id]=document.createElement('canvas');
   const scale=Math.min(lamp.id===4?3:lamp.offAt!==undefined?2.5:2,Math.max(1,dpr||1));
   const width=Math.ceil(w*scale),height=Math.ceil(h*scale);
@@ -1752,6 +1752,8 @@ function renderDrawnLights(dt){
    }finally{ctx=main;drawnLightingOnly=false;}
   }
   main.save();main.globalCompositeOperation=drawnLook.nightCanvas?'screen':'source-over';main.drawImage(layer,0,0,w,h);main.restore();
+  // Light first, surface normals second: slope shading must remain visible.
+  if(lamp.id===4||lamp.id===6){try{e85Relief(lamp);}catch(error){e85Relief.lastError=String(error);}}
  }
  for(const lamp of lamps)if(lamp&&lamp.offAt===undefined)drawUnifiedEdge(lamp);
  drawFailedDrawnStrokes();drawChevronLeadPreview();frames++;frameAcc+=dt;
