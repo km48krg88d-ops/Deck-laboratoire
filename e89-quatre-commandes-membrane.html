@@ -152,9 +152,9 @@ vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
  float dist2=dot(delta,delta);
  vec3 dir=normalize(delta);
  float diffuse=max(0.0,dot(n,dir));
- float attenuation=1.0/(1.0+dist2*0.075);
+ float attenuation=1.0/(1.0+dist2*0.09);
  vec3 halfDir=normalize(dir+vec3(0.0,0.0,1.0));
- float spec=pow(max(0.0,dot(n,halfDir)),26.0)*0.075;
+ float spec=pow(max(0.0,dot(n,halfDir)),12.0)*0.008;
  return tint*power*attenuation*(diffuse+spec);
 }
 void main(){
@@ -164,11 +164,11 @@ void main(){
  float radial=d*d*(3.0-2.0*d);
  float weight=pow(max(0.0,1.0-radial),uPaletteBalance);
  vec3 material=mix(uPaletteA,uPaletteB,weight);
- vec3 ambient=material*0.68+vec3(0.018,0.028,0.040);
- vec3 cold=illuminate(uColdPos,uColdColor,2.45*uColdEnabled,normal);
- vec3 warm=illuminate(uWarmPos,uWarmColor,2.55*uWarmEnabled,normal);
+ vec3 ambient=material*0.84+vec3(0.012,0.018,0.026);
+ vec3 cold=illuminate(uColdPos,uColdColor,1.65*uColdEnabled,normal);
+ vec3 warm=illuminate(uWarmPos,uWarmColor,1.75*uWarmEnabled,normal);
  vec3 light=ambient+cold+warm;
- vec3 color=pow(light/(vec3(1.0)+light*0.31),vec3(0.94));
+ vec3 color=pow(light/(vec3(1.0)+light*0.23),vec3(1.0));
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }
 </script>
