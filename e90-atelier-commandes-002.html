@@ -243,20 +243,52 @@ function initGL(){
 }
 function rebuildMesh(){
  if(!gl)return;
- // A single continuous membrane, rebuilt only when geometry or its softness changes.
- const n=192,vertices=(n+1)*(n+1),data=new Float32Array(vertices*5),indices=new Uint16Array(n*n*6);
- const extent=1.82,eps=.014;
- for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
-  const x=-extent+i/n*2*extent,y=-extent+j/n*2*extent,p=(j*(n+1)+i)*5;
-  data[p]=x;data[p+1]=y;data[p+2]=heightAt(x,y);
-  data[p+3]=(heightAt(x+eps,y)-heightAt(x-eps,y))/(2*eps);
-  data[p+4]=(heightAt(x,y+eps)-heightAt(x,y-eps))/(2*eps);
+ const data=[],indices=[];
+ // Sample each source-defined blue band independently: seams retain their
+ // discontinuous normals, and red faces are never rounded by the triangulation.
+ function addBand(band){
+  const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
+  const radii=[];
+  for(let j=0;j<knots.length-1;j++)
+   for(let t=0;t<3;t++)radii.push(knots[j]+(knots[j+1]-knots[j])*t/3);
+  radii.push(band.b);
+  const ANGLES=320,stride=ANGLES+1,offset=data.length/5;
+  for(const radius of radii){
+   const [depth,radialSlope]=ringYAndGradient(selected,radius,band);
+   const rr=radius/SOURCE_RADIUS*DISPLAY_RADIUS;
+   for(let i=0;i<=ANGLES;i++){
+    const a=2*Math.PI*i/ANGLES,c=Math.cos(a),sn=Math.sin(a);
+    data.push(rr*c,rr*sn,depth,radialSlope*c,radialSlope*sn);
+   }
+  }
+  for(let j=0;j<radii.length-1;j++)for(let i=0;i<ANGLES;i++){
+   const a=offset+j*stride+i,b=a+stride;
+   indices.push(a,a+1,b,a+1,b+1,b);
+  }
  }
- for(let j=0,k=0;j<n;j++)for(let i=0;i<n;i++){
-  const a=j*(n+1)+i,b=a+n+1;indices[k++]=a;indices[k++]=a+1;indices[k++]=b;indices[k++]=a+1;indices[k++]=b+1;indices[k++]=b;
+ if(selected<4){
+  for(const band of radialBands[selected])addBand(band);
+ }else{
+  // The blue line/angle section is generated directly from GLTF_32's cross-section.
+  const n=224,extent=1.82,eps=.009;
+  for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
+   const x=-extent+i*2*extent/n,y=-extent+j*2*extent/n;
+   const z=heightAt(x,y);
+   const dx=(heightAt(x+eps,y)-heightAt(x-eps,y))/(2*eps);
+   const dy=(heightAt(x,y+eps)-heightAt(x,y-eps))/(2*eps);
+   data.push(x,y,z,dx,dy);
+  }
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
+   const a=j*(n+1)+i,b=a+n+1;
+   indices.push(a,a+1,b,a+1,b+1,b);
+  }
  }
- gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
- gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+ const vertices=data.length/5;
+ if(vertices>65535)throw Error('Maillage trop grand pour WebGL1 : '+vertices+' sommets');
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
  indexCount=indices.length;meshDirty=false;
 }
 function sizeCanvas(){
