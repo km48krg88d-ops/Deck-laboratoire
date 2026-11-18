@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v6 — Allumage séquentiel</title>
+<title>DECK / E90 v7 — Allumage doux des halos</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v6 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
+<header id="top"><div><h1>DECK / E90 v7 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -160,20 +160,23 @@ float sourceDistance(vec2 p,float model){
  }
  return d;
 }
+float glowRamp(float intensity){
+ return pow(clamp(intensity,0.0,1.0),1.6);
+}
 float sourceGlow(vec2 p,float model,float softness){
  float h=0.0;
  if(model<0.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
-        ringOutGlow(p,1.45*.25934/.40021,softness)*uRingLights.y);
-  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.z);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45*.25934/.40021,softness)*glowRamp(uRingLights.y));
+  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.z));
  }else if(model<1.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
-        ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.y);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.y));
  }else if(model<2.5){
-  h=ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.x;
+  h=ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.x);
  }else if(model<3.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
-        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost*uRingLights.y);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost*glowRamp(uRingLights.y));
  }else if(model<4.5){
   // Left of the red vertical cut.
   h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
@@ -215,12 +218,20 @@ void main(){
 'use strict';
 const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
 const RING_COUNTS=[3,2,1,2];
+// The glow stays dark until every curved blue ring has formed.
+function glowEase(t){
+ t=clamp(t,0,1);
+ return Math.pow(ease(t),1.7);
+}
 function sequentialRings(model,progress){
- const count=RING_COUNTS[model]||1,t=clamp(progress,0,1);
+ const count=RING_COUNTS[model]||1;
+ const t=clamp(progress,0,1);
  const geometry=[],lights=[];
+ const geometryPart=.56,lightPart=.44;
  for(let stage=0;stage<3;stage++){
-  geometry.push(stage<count?ease(clamp(t/.56*count-stage,0,1)):1);
-  lights.push(stage<count?ease(clamp((t-.56)/.44*count-stage,0,1)):0);
+  geometry.push(stage<count?ease(clamp(t/geometryPart*count-stage,0,1)):1);
+  const raw=(t-geometryPart)/lightPart*count-stage;
+  lights.push(stage<count?glowEase(raw):0);
  }
  return {geometry,lights};
 }
@@ -566,7 +577,7 @@ for(const field of ['height','duration','diffusion','softness','peripheral']){
 }
 function exportAllSettings(){
  return {
-  version:'E90-v6',source:'COMMANDES-002.glb',date:new Date().toISOString(),
+  version:'E90-v7',source:'COMMANDES-002.glb',date:new Date().toISOString(),
   selectedModel:selected+1,selectedName:modelNames[selected],deployment:Math.round(progress*100),
   debugSources:debug,lamps:modelNames.map((name,i)=>({index:i+1,name,...configs[i]}))
  };
@@ -595,7 +606,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defau
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v6 · les cercles précèdent la lumière'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v7 · halos à montée progressive'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
