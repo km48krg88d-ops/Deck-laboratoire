@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v5 — Lumière équilibrée et export</title>
+<title>DECK / E90 v6 — Allumage séquentiel</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v5 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
+<header id="top"><div><h1>DECK / E90 v6 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -75,19 +75,22 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button><button type="button" id="copySettings">Copier tous les réglages</button></div><div id="copyStatus" role="status" aria-live="polite" class="note" style="margin:7px 0 0"></div>
 </div>
-<p class="note">La lumière sort des coupures nettes et se propage vers l’extérieur. L’intensité périphérique compense la faible réception du halo par la membrane plane. Aucun contour gris n’est dessiné par le shader. Toutes les formes restent inchangées.</p>
+<p class="note">Formes circulaires : les cercles se déploient d’abord un à un sans lumière, du centre vers l’extérieur ; puis les halos s’allument dans le même ordre. Lampe 01 : 3 cercles ; 02 et 04 : 2 cercles ; 03 : 1 cercle. La durée est celle de toute la séquence.</p>
 </section>
 </main>
 <script id="vert" type="x-shader/x-vertex">
 attribute vec2 aXY;
 attribute float aZ;
 attribute vec2 aGrad;
+attribute float aStage;
 uniform float uProgress,uHeight;
+uniform vec3 uRingGeometry;
 varying vec3 vNormal;
 varying vec2 vXY;
 void main(){
- float depth=aZ*uHeight*uProgress;
- vec2 gradient=aGrad*uHeight*uProgress;
+ float reveal=aStage<-.5?uProgress:(aStage<.5?uRingGeometry.x:(aStage<1.5?uRingGeometry.y:uRingGeometry.z));
+ float depth=aZ*uHeight*reveal;
+ vec2 gradient=aGrad*uHeight*reveal;
  vNormal=normalize(vec3(-gradient.x,-gradient.y,1.0));
  vXY=aXY;
  // Orthographic top view: changing depth never shifts the symbol in X/Y.
@@ -101,6 +104,7 @@ varying vec2 vXY;
 uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
 uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost;
+uniform vec3 uRingLights;
 
 float sdCircle(vec2 p,float radius){
  return abs(length(p)-radius);
@@ -159,17 +163,17 @@ float sourceDistance(vec2 p,float model){
 float sourceGlow(vec2 p,float model,float softness){
  float h=0.0;
  if(model<0.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45*.25934/.40021,softness));
-  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45*.25934/.40021,softness)*uRingLights.y);
+  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.z);
  }else if(model<1.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.y);
  }else if(model<2.5){
-  h=ringOutGlow(p,1.45,softness)*uRimBoost;
+  h=ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.x;
  }else if(model<3.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost*uRingLights.y);
  }else if(model<4.5){
   // Left of the red vertical cut.
   h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
@@ -210,6 +214,16 @@ void main(){
 (function(){
 'use strict';
 const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
+const RING_COUNTS=[3,2,1,2];
+function sequentialRings(model,progress){
+ const count=RING_COUNTS[model]||1,t=clamp(progress,0,1);
+ const geometry=[],lights=[];
+ for(let stage=0;stage<3;stage++){
+  geometry.push(stage<count?ease(clamp(t/.56*count-stage,0,1)):1);
+  lights.push(stage<count?ease(clamp((t-.56)/.44*count-stage,0,1)):0);
+ }
+ return {geometry,lights};
+}
 const sourceNotes=[
  'Nouvelle coupe du modèle circulaire à trois reliefs. Trois périmètres rouges extraits : lumière diffuse, non matérielle.',
  'Nouvelle coupe du plateau et de son raccord. Un périmètre lumineux rouge extérieur.',
