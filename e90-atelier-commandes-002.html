@@ -113,7 +113,6 @@ void main(){
 <script>
 (function(){
 'use strict';
-const sourceProfiles=[[82,82,82,82,83,84,86,88,90,93,97,100,105,110,115,121,127,134,141,150,158,167,177,188,199,212,225,239,254,77,79,83,86,89,93,96,100,104,109,113,117,122,126,131,136,141,147,152,158,164,170,176,183,189,196,203,211,218,226,234,242,251,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2,3,3,4,5,5,6,7,8,9,10,11,12,13,15,16,17,19,20,22,24,25,27,28,30,32,34,37,39,41,43,45,47,50,53,55,58,61,63,66,69,72,75,78,82,85,88,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[82,82,82,82,83,84,86,88,90,93,97,100,105,110,115,121,127,134,141,150,158,167,177,188,199,212,225,239,254,15,16,17,19,20,22,24,25,27,28,30,32,34,37,39,41,43,45,47,50,53,55,58,61,63,66,69,72,75,78,82,85,88,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,8,16,28,45,68,98,130,161,193,224,0]];
 const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
 const sourceNotes=[
  'Nouvelle coupe du modèle circulaire à trois reliefs. Trois périmètres rouges extraits : lumière diffuse, non matérielle.',
@@ -154,39 +153,72 @@ function palette(){
  const lerp=(x,y)=>x.map((v,i)=>v+(y[i]-v)*t);
  return {name:a[1],a:lerp(aa,bb),b:lerp(cc,dd)};
 }
-function getProfile(r){
- if(r>=1.50)return 0;
- const arr=sourceProfiles[selected],t=r/1.37;
- if(t>=1){const near=arr[arr.length-2]/255;return near*(1-ease((r-1.37)/.13));}
- const x=t*(arr.length-1),soft=configs[selected].softness/100*2.4;
- const smoothAt=k=>{
-  if(soft<.05)return arr[clamp(k,0,arr.length-1)]/255;
-  let total=0,weight=0;
-  for(let j=-4;j<=4;j++){
-   const w=Math.exp(-(j*j)/(2*soft*soft));total+=w*arr[clamp(k+j,0,arr.length-1)];weight+=w;
-  }
-  return total/(weight*255);
+
+const SOURCE_BASE=.065796,SOURCE_DEPTH=.063044,SOURCE_RADIUS=.40021,DISPLAY_RADIUS=1.45;
+// World-space radial sections measured from the four BLUE profiles of COMMANDES-002.glb.
+const blueInner=[[.00837,.023004],[.01319,.023152],[.01843,.023316],[.02846,.024248],[.03840,.025797],[.04824,.027958],[.05792,.030722],[.06741,.034079],[.07668,.038015],[.08568,.042517],[.09439,.047566],[.10277,.053143],[.11079,.059228],[.11842,.065796]];
+const blueMiddle=[[.01833,.012877],[.02889,.013059],[.04037,.013261],[.06232,.014414],[.08410,.016330],[.10564,.019002],[.12684,.022421],[.14762,.026572],[.16792,.031440],[.18764,.037007],[.20671,.043251],[.22506,.050149],[.24263,.057673],[.25934,.065796]];
+const blueOuter=[[.02828,.002752],[.04458,.002969],[.06229,.003210],[.09617,.004584],[.12979,.006866],[.16302,.010050],[.19574,.014122],[.22781,.019068],[.25913,.024867],[.28956,.031499],[.31899,.038938],[.34732,.047155],[.37443,.056119],[.40021,.065796]];
+const blueCrown=[[.34944,.023004],[.35530,.023526],[.36103,.025080],[.36649,.027628],[.37154,.031111],[.37607,.035446],[.38042,.040908],[.38476,.046371],[.40019,.065796]];
+// Each band ends at a RED vertical face. A separate band begins on the other side:
+// these boundaries retain their true sharp elevation changes (no cross-edge smoothing).
+const radialBands=[
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.25934,trace:blueMiddle},{a:.25934,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.40021,trace:blueOuter}],
+ [{a:0,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,flat:.065796},{a:.11842,b:.34944,flat:.023004},{a:.34944,b:.40019,trace:blueCrown}]
+];
+const sourceRedRadii=[[.11842,.25934,.40021],[.11842,.40021],[.40021],[.11842,.40019]];
+// Measured across BLUE strip GLTF_32, from the RED cut to the flat membrane.
+const blueLine=[[0,.065796],[.0228,.037197],[.0292,.029155],[.0356,.021114],[.0423,.014730],[.0497,.009603],[.0577,.005851],[.0662,.003564],[.0748,.002796]];
+// Shape-preserving Hermite interpolation: every section point is reached exactly,
+// and no oscillation is added between the imported concentric contours.
+function traceY(trace,r){
+ if(r<=trace[0][0])return trace[0][1];
+ const last=trace.length-1;
+ if(r>=trace[last][0])return trace[last][1];
+ let j=0;while(j<last-1&&r>trace[j+1][0])j++;
+ const sec=i=>(trace[i+1][1]-trace[i][1])/(trace[i+1][0]-trace[i][0]);
+ const tangent=i=>{
+  if(i===0)return sec(0);
+  if(i===last)return sec(last-1);
+  const p=sec(i-1),q=sec(i);
+  if(p*q<=0)return 0;
+  const a=trace[i][0]-trace[i-1][0],b=trace[i+1][0]-trace[i][0],wa=2*b+a,wb=b+2*a;
+  return (wa+wb)/(wa/p+wb/q);
  };
- const i=Math.floor(x),f=x-i;
- return smoothAt(i)*(1-f)+smoothAt(Math.min(i+1,arr.length-1))*f;
+ const [x0,y0]=trace[j],[x1,y1]=trace[j+1],dx=x1-x0,t=(r-x0)/dx;
+ return (2*t*t*t-3*t*t+1)*y0+(t*t*t-2*t*t+t)*dx*tangent(j)+(-2*t*t*t+3*t*t)*y1+(t*t*t-t*t)*dx*tangent(j+1);
 }
-function segDistance(x,y,ax,ay,bx,by){
- const vx=bx-ax,vy=by-ay,t=clamp(((x-ax)*vx+(y-ay)*vy)/(vx*vx+vy*vy),0,1);
- return Math.hypot(x-ax-t*vx,y-ay-t*vy);
+function ringYAndGradient(model,r,band){
+ const y=band.trace?traceY(band.trace,r):band.flat;
+ const eps=.00005,l=Math.max(band.a,r-eps),h=Math.min(band.b,r+eps);
+ const derivative=band.trace&&h>l?(traceY(band.trace,h)-traceY(band.trace,l))/(h-l):0;
+ return [(y-SOURCE_BASE)/SOURCE_DEPTH,derivative*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH];
 }
-function crease(d){const rise=ease((d+.055)/.07),fall=1-ease((d+.015)/.30);return Math.max(0,rise*fall)}
-function strokeHeight(x,y,angle){
- if(!angle){
-  const yy=selected===5?x:y,xx=selected===5?-y:x;
-  return .88*crease(xx)*[1-ease((Math.abs(yy)-1.04)/.22)].map(v=>clamp(v,0,1))[0];
- }
- if(selected===7)x=x-.48*y;
- const v=crease(x-.96)*clamp(1-ease((Math.abs(y+.04)-1.10)/.18),0,1);
- const h=crease(-y-.96)*clamp(1-ease((Math.abs(x+.04)-1.10)/.18),0,1);
- return .88*Math.max(v,h);
+function lineRamp(worldDist){
+ const d=worldDist*SOURCE_RADIUS/DISPLAY_RADIUS;
+ if(d<0||d>.0748)return 0;
+ return (traceY(blueLine,d)-.002796)/SOURCE_DEPTH;
 }
 function heightAt(x,y){
- return selected<4?getProfile(Math.hypot(x,y)):strokeHeight(x,y,selected>=6);
+ if(selected<4){
+  const r=Math.hypot(x,y)*SOURCE_RADIUS/DISPLAY_RADIUS;
+  const bands=radialBands[selected];
+  const band=bands.find(b=>r<=b.b)||null;
+  return band?ringYAndGradient(selected,r,band)[0]:0;
+ }
+ // 05: original straight vertical BLUE strip with the RED vertical edge at x=0.
+ if(selected===4)return y>=-1.22&&y<=1.22?lineRamp(x):0;
+ // 06: rotated original straight strip, not an independently authored GLB object.
+ if(selected===5)return x>=-1.22&&x<=1.22?lineRamp(-y):0;
+ // 07: source L corner assembled from blue GLTF_34 and GLTF_36.
+ // 08: exploratory bias of that exact source L; labelled as such in the UI.
+ let xx=x,yy=y;
+ if(selected===7)xx=x-.45*y;
+ const v=(yy>=-.83&&yy<=.83)?lineRamp(xx-.32):0;
+ const hz=(xx>=-1.33&&xx<=.32)?lineRamp(-(yy+.83)):0;
+ return Math.max(v,hz);
 }
 let gl=null,program=null,u=null,buffer=null,indexBuffer=null,indexCount=0;
 function shader(kind,text){
