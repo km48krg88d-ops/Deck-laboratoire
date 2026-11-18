@@ -124,7 +124,7 @@ const sourceNotes=[
  'Deux segments bleus et rouges raccordés en angle droit, comme dans COMMANDES-002.',
  'Essai d’angle biais : déformation géométrique du même tracé. Ce biais n’est pas un nouveau maillage identifiable dans le fichier.'
 ];
-const redRadii=[[.296,.648,1],[1],[.296,1],[.296,1]];
+// Red-face radii are now read from sourceRedRadii, derived from COMMANDES-002.
 const defaults=()=>({height:100,duration:2,diffusion:100,softness:35});
 const configs=Array.from({length:8},defaults);
 const STORAGE='deck-e90-atelier-commandes002-v1';
@@ -303,36 +303,63 @@ function lightStroke(x,y,pxScale,from,to,color){
  ctx.beginPath();ctx.moveTo(x+from[0]*pxScale,y-from[1]*pxScale);ctx.lineTo(x+to[0]*pxScale,y-to[1]*pxScale);ctx.strokeStyle=color;ctx.stroke();
 }
 function paintGlow(p){
- const w=glow.width,h=glow.height,c=configs[selected],cx=w/2,cy=h/2,sc=w*.545/2,amount=c.diffusion/100;
- ctx.clearRect(0,0,w,h);if(amount<.001)return;
- ctx.save();ctx.globalCompositeOperation=debug?'source-over':'screen';
- ctx.strokeStyle=debug?'#ff1a34':cssColor(p.b,Math.min(.8,.28*amount));
+ const w=glow.width,h=glow.height,c=configs[selected],cx=w/2,cy=h/2,scale=w*.545/2;
+ const amount=c.diffusion/100*progress;
+ ctx.clearRect(0,0,w,h);
+ if(amount<.001)return;
+ ctx.save();
  ctx.lineCap='round';ctx.lineJoin='round';
- const blur=(debug?0:(7+c.softness*.28)*w/390);
- if(selected<4){
-  for(const r of redRadii[selected]){
-   for(let pass=0;pass<(debug?1:2);pass++){
-    ctx.globalAlpha=Math.min(1,amount*(pass?0.32:0.56));
-    ctx.shadowColor=debug?'#ff1640':cssColor(p.b,.98);
-    ctx.shadowBlur=debug?0:blur*(pass?2.3:1.2);
-    ctx.lineWidth=debug?Math.max(2,w*.006):(pass?Math.max(4,w*.025):Math.max(3,w*.008));
-    ctx.beginPath();ctx.arc(cx,cy,r*1.37*sc,0,Math.PI*2);ctx.stroke();
+ const tint=debug?'#ff2748':cssColor(p.b,.98);
+ const blur=(5+c.softness*.18)*w/390;
+ const path=()=>{
+  ctx.beginPath();
+  if(selected<4){
+   for(const r of sourceRedRadii[selected]){
+    // Exact red face radius in the source model: never moves with the relief height.
+    const radius=r/SOURCE_RADIUS*DISPLAY_RADIUS*scale;
+    ctx.moveTo(cx+radius,cy);
+    ctx.arc(cx,cy,radius,0,Math.PI*2);
+   }
+  }else{
+   const poly=points=>{
+    ctx.moveTo(cx+points[0][0]*scale,cy-points[0][1]*scale);
+    for(const [x,y] of points.slice(1))ctx.lineTo(cx+x*scale,cy-y*scale);
+   };
+   if(selected===4)poly([[0,-1.22],[0,1.22]]);
+   else if(selected===5)poly([[-1.22,0],[1.22,0]]);
+   else{
+    const shear=selected===7?.45:0;
+    const turn=([x,y])=>[x+shear*y,y];
+    poly([[.32,-.83],[.32,.83]].map(turn));
+    poly([[-1.33,-.83],[.32,-.83]].map(turn));
    }
   }
- }else{
-  let a,b,shape=[];
-  if(selected===4)shape=[[[0,-1.16],[0,1.16]]];
-  if(selected===5)shape=[[[-1.16,0],[1.16,0]]];
-  if(selected===6||selected===7)shape=[[[.96,-.96],[.96,1.10]],[[-1.10,-.96],[.96,-.96]]];
-  if(selected===7)shape=shape.map(pair=>pair.map(point=>[point[0]+.48*point[1],point[1]]));
-  for(let pass=0;pass<(debug?1:3);pass++){
-   ctx.globalAlpha=Math.min(1,amount*(pass===2?.17:pass===1?.30:.64));
-   ctx.shadowColor=debug?'#ff1636':cssColor(p.b,.95);
-   ctx.shadowBlur=debug?0:blur*(pass===2?2.5:pass===1?1.7:1);
-   ctx.lineWidth=debug?Math.max(2,w*.008):Math.max(3,w*(pass===2?.04:pass===1?.018:.007));
-   for(const seg of shape)lightStroke(cx,cy,sc,seg[0],seg[1],debug?'#ff1636':cssColor(p.b,.95));
-  }
+ };
+ if(debug){
+  ctx.globalCompositeOperation='source-over';
+  ctx.globalAlpha=.95;
+  ctx.strokeStyle=tint;
+  ctx.lineWidth=Math.max(2,w*.006);
+  ctx.shadowBlur=0;
+  path();ctx.stroke();ctx.restore();return;
  }
+ // RED marks light leaking beneath a sharply cut membrane: diffuse light only,
+ // never blur or soften the BLUE relief geometry or its exact boundary.
+ ctx.globalCompositeOperation='screen';
+ for(const [width,opacity,spread] of [[.036,.06,2.8],[.018,.13,1.75],[.008,.26,1]]){
+  ctx.globalAlpha=Math.min(.9,amount*opacity);
+  ctx.strokeStyle=tint;
+  ctx.shadowColor=tint;
+  ctx.shadowBlur=blur*spread;
+  ctx.lineWidth=Math.max(2,w*width);
+  path();ctx.stroke();
+ }
+ // Unblurred lip of the red face, crisp against the blue curve and surrounding membrane.
+ ctx.globalAlpha=Math.min(.98,amount*.85);
+ ctx.strokeStyle=tint;
+ ctx.shadowBlur=0;
+ ctx.lineWidth=Math.max(1,w*.0021);
+ path();ctx.stroke();
  ctx.restore();
 }
 function draw(time){
