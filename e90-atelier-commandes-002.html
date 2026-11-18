@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 — Atelier COMMANDES-002</title>
+<title>DECK / E90 v2 — Source exacte et lumière sous membrane</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -71,10 +71,10 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="height">Hauteur du relief</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
 <div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
 <div class="setting"><label for="diffusion">Diffusion de lumière</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
-<div class="setting"><label for="softness">Douceur de la membrane et de la lumière</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
+<div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
 </div>
-<p class="note">Les quatre profils circulaires sont reconstitués à partir de coupes échantillonnées sur les maillages bleus du GLB. Les cercles rouges définissent les zones de diffusion, pas des objets rouges. La ligne et l’angle suivent les tracés bleus/rouges du fichier ; les orientations 06 et 08 sont des variantes d’étude, à valider. Cette page est indépendante d’E89 et n’en modifie aucun réglage.</p>
+<p class="note">Les rayons et hauteurs des reliefs circulaires proviennent directement du modèle bleu COMMANDES-002. Les faces rouges sont des ouvertures lumineuses aux arêtes nettes. La hauteur ne déplace jamais les symboles. Les orientations 06 et 08 restent des variantes à valider. E89 reste indépendant.</p>
 </section>
 </main>
 <script id="vert" type="x-shader/x-vertex">
@@ -85,11 +85,12 @@ uniform float uProgress,uHeight;
 varying vec3 vNormal;
 varying vec2 vXY;
 void main(){
- float h=aZ*uHeight*uProgress;
- vec2 g=aGrad*uHeight*uProgress;
- vNormal=normalize(vec3(-g.x,-g.y,1.0));
+ float depth=aZ*uHeight*uProgress;
+ vec2 gradient=aGrad*uHeight*uProgress;
+ vNormal=normalize(vec3(-gradient.x,-gradient.y,1.0));
  vXY=aXY;
- gl_Position=vec4((aXY.x+h*0.055)*0.545,(aXY.y+h*0.07)*0.545,-h*.025,1.0);
+ // Orthographic top view: changing depth never shifts the symbol in X/Y.
+ gl_Position=vec4(aXY.x*.545,aXY.y*.545,-depth*.04,1.0);
 }
 </script>
 <script id="frag" type="x-shader/x-fragment">
@@ -100,14 +101,12 @@ uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
 void main(){
  vec3 n=normalize(vNormal);
- vec3 coldDir=normalize(vec3(-1.6,1.2,0.8));
- vec3 warmDir=normalize(vec3(1.5,-1.1,0.7));
- float l1=max(0.0,dot(n,coldDir));
- float l2=max(0.0,dot(n,warmDir));
- float shade=.78+.25*l1+.20*l2-.11*max(0.0,1.0-n.z);
- vec3 base=mix(uPaletteA,uPaletteB,smoothstep(-1.75,1.75,vXY.y)*.75);
- vec3 c=base*shade;
- if(uDebug>.5)c=vec3(.04,.25,.87)*(.74+.22*l1+.17*l2);
+ vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*0.75);
+ // Soft ambient response from the membrane, no overhead specular light.
+ float direction=dot(n.xy,normalize(vec2(.70,-.71)));
+ float shade=clamp(1.0-.33*(1.0-n.z)-.33*direction,.52,1.16);
+ vec3 c=material*shade;
+ if(uDebug>.5)c=vec3(.03,.24,.92)*shade;
  gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
 }
 </script>
@@ -196,7 +195,7 @@ function shader(kind,text){
  return sh;
 }
 function initGL(){
- gl=mesh.getContext('webgl',{alpha:false,antialias:true,depth:false,preserveDrawingBuffer:false});
+ gl=mesh.getContext('webgl',{alpha:true,antialias:true,depth:false,preserveDrawingBuffer:false});
  if(!gl)throw Error('WebGL indisponible');
  program=gl.createProgram();
  gl.attachShader(program,shader(gl.VERTEX_SHADER,$('vert').textContent));
@@ -284,10 +283,13 @@ function draw(time){
  }
  const paletteNow=palette();
  $('phase').textContent=paletteNow.name;
+ const rgbCSS=a=>'rgb('+a.map(v=>Math.round(v*255)).join(',')+')';
+ const upper=paletteNow.a.map((v,i)=>v*.25+paletteNow.b[i]*.75);
+ $('stage').style.background='linear-gradient(to top,'+rgbCSS(paletteNow.a)+','+rgbCSS(upper)+')';
  if(gl){
   if(meshDirty)rebuildMesh();
   gl.useProgram(program);gl.viewport(0,0,mesh.width,mesh.height);
-  gl.clearColor(.1,.17,.25,1);gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
   gl.uniform1f(u.progress,progress);
   gl.uniform1f(u.height,configs[selected].height/100);
   gl.uniform1f(u.debug,debug?1:0);
@@ -329,7 +331,7 @@ for(const field of ['height','duration','diffusion','softness']){
  $(field).addEventListener('input',()=>{
   configs[selected][field]=Number($(field).value);
   $(field+'Out').textContent=field==='duration'?Number(configs[selected][field]).toFixed(1).replace('.',',')+' s':Math.round(configs[selected][field])+' %';
-  if(field==='softness')meshDirty=true;
+  // Softness now changes only light diffusion, never the source geometry.
   save();requestDraw();
  });
 }
