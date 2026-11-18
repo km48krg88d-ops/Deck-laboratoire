@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
-<title>DECK / E89 v8 — Huit reliefs 3D</title>
+<title>DECK / E89 v9 — Profils ronds réglables</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -58,6 +58,15 @@ button:active{background:#edf6ff32}
 #dockValue{color:#ffd2a2;font-weight:700;white-space:nowrap}
 #dockPower,#dockClose{padding:4px 8px;min-width:22px}
 #dockIntensity{display:block;width:100%;height:22px;accent-color:#f2aa76;margin:3px 0 0;touch-action:pan-x}
+#roundControls{margin:11px 0 5px;padding:11px 1px 4px;border-top:1px solid #d4e4f552}
+#roundControls h3{margin:0 0 7px;font-size:12px;font-weight:650}
+#roundChoices{display:flex;gap:6px;margin:0 0 9px}
+#roundChoices button{flex:1;min-width:0;padding:8px 3px}
+#roundChoices button[aria-pressed=true]{border-color:#f2c89e;background:#f0bb822b}
+.roundRow{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:3px;margin:8px 0}
+.roundRow label{font-size:11px}
+.roundRow output{font-size:11px;font-weight:650;color:#f8d0aa;font-variant-numeric:tabular-nums}
+.roundRow input{grid-column:1/-1;width:100%;height:24px;margin:0;accent-color:#f2aa76;touch-action:pan-x}
 #lightingControls{margin:12px 0 6px;padding:11px 1px 2px;border-top:1px solid #d4e4f552}
 #lightingTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
 #lightingTitle strong{font-size:12px;font-weight:650}
@@ -77,16 +86,25 @@ button:active{background:#edf6ff32}
 <section id="panel" hidden aria-label="Commandes du test général">
  <div id="panelHeader"><div><h2>Huit commandes sur une membrane</h2><div class="sub">Sélection, placement et relief individuels</div></div><div class="actions"><button id="placement" type="button" aria-pressed="false">Placer</button><button id="allOn" type="button">Tout ON</button><button id="allOff" type="button">Tout OFF</button></div></div>
  <div id="models" aria-label="Commandes 3D individuelles">
- <button type="button" data-id="0" aria-pressed="true"><span class="name">01 · Trois reliefs</span><span class="meta">100 % · 2,0 s</span><span class="value" id="value0">0 %</span></button>
- <button type="button" data-id="1" aria-pressed="true"><span class="name">02 · Plateau + raccord</span><span class="meta">142 % · 1,4 s</span><span class="value" id="value1">0 %</span></button>
- <button type="button" data-id="2" aria-pressed="true"><span class="name">03 · Couronne bombée</span><span class="meta">120 % · 2,0 s</span><span class="value" id="value2">0 %</span></button>
- <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
+ <button type="button" data-id="0" aria-pressed="true"><span class="name">01 · Trois reliefs</span><span class="meta" id="roundMeta0">100 % · 2,0 s</span><span class="value" id="value0">0 %</span></button>
+ <button type="button" data-id="1" aria-pressed="true"><span class="name">02 · Plateau + raccord</span><span class="meta" id="roundMeta1">142 % · 1,4 s</span><span class="value" id="value1">0 %</span></button>
+ <button type="button" data-id="2" aria-pressed="true"><span class="name">03 · Couronne bombée</span><span class="meta" id="roundMeta2">120 % · 2,0 s</span><span class="value" id="value2">0 %</span></button>
+ <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta" id="roundMeta3">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
  <button type="button" data-id="4" aria-pressed="true"><span class="name">05 · Ligne horizontale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value4">0 %</span></button>
  <button type="button" data-id="5" aria-pressed="true"><span class="name">06 · Ligne verticale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value5">0 %</span></button>
  <button type="button" data-id="6" aria-pressed="true"><span class="name">07 · Angle droit</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value6">0 %</span></button>
  <button type="button" data-id="7" aria-pressed="true"><span class="name">08 · Angle biais</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value7">0 %</span></button>
  </div>
  <div id="individual" aria-label="Réglage du relief de la lampe sélectionnée"><div id="selectedHeading"><strong id="selectedName">01 · Trois reliefs</strong><div class="selectedActions"><output id="selectedValue">100 %</output><button id="selectedPower" type="button">Éteindre</button></div></div><input id="selectedIntensity" type="range" min="0" max="100" step="1" value="100" aria-label="Déploiement de la commande sélectionnée"><div id="gestureHint">Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler</div></div>
+ <div id="roundControls" aria-label="Réglages individuels des quatre lampes rondes">
+   <h3>Profils des lampes rondes</h3>
+   <div id="roundChoices" aria-label="Choisir une lampe ronde">
+    <button type="button" data-round="0" aria-pressed="true">01</button><button type="button" data-round="1" aria-pressed="false">02</button><button type="button" data-round="2" aria-pressed="false">03</button><button type="button" data-round="3" aria-pressed="false">04</button>
+   </div>
+   <div class="roundRow"><label for="roundHeight">Hauteur du relief</label><output id="roundHeightValue" for="roundHeight">100 %</output><input id="roundHeight" type="range" min="50" max="160" value="100" step="1"></div>
+   <div class="roundRow"><label for="roundDuration">Durée d’apparition</label><output id="roundDurationValue" for="roundDuration">2,0 s</output><input id="roundDuration" type="range" min="1" max="6" value="2" step="0.1"></div>
+   <div class="sub">Indépendant pour les formes 01 à 04. <a href="./e88-atelier-commandes-3d.html?v=3" style="color:#ecf1fb">Atelier E88 des rondes</a></div>
+ </div>
  <div id="lightingControls" aria-label="Réglage global de l’éclairage de la membrane">
   <div id="lightingTitle"><strong>Éclairage de la membrane</strong><button type="button" id="resetLighting">Réinitialiser</button></div>
   <div class="lightingRow"><label for="lightingContrast">Contraste</label><output id="lightingContrastValue" for="lightingContrast">100 %</output><input id="lightingContrast" type="range" min="0" max="200" step="1" value="100"></div>
@@ -240,6 +258,16 @@ void main(){
 const models=[{"name":"Trois reliefs","id":1,"front":0.56,"profile":[7.66,7.58,7.39,7.08,6.62,5.97,5.12,3.99,2.7,1.69,0.98,0.5,0.19,0.04,0.04,0.19,0.5,0.99,1.7,2.73,4.03,5.14,5.99,6.64,7.09,7.4,7.58,7.66,7.58,7.38,7.06,6.6,5.94,5.07,3.94,2.84,1.98,1.3,0.79,0.4,0.17,0.05,0.03,0.11,0.35,0.7,1.17,1.79,2.6,3.65,4.86,5.78,6.45,6.95,7.31,7.56,7.64,7.61,7.46,7.2,6.75,6.15,5.37,4.34,3.19,2.37,1.69,1.14,0.71,0.39,0.17,0.04,0,0],"max":7.66},{"name":"Plateau + raccord","id":2,"front":1.32,"profile":[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0],"max":14.57},{"name":"Couronne bombée","id":3,"front":0.78,"profile":[2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.81,3.71,4.6,5.49,6.21,6.9,7.59,8.28,8.81,9.32,9.84,10.36,10.74,11.1,11.46,11.82,12.1,12.31,12.52,12.73,12.93,13,13.07,13.14,13.21,13.2,13.13,13.06,12.99,12.91,12.7,12.49,12.28,12.07,11.76,11.4,11.04,10.68,10.27,9.75,9.24,8.72,8.17,7.48,6.79,6.1,5.34,4.45,3.56,2.68,1.77,1.06,0.56,0.22,0.04,0.01,0],"max":13.21},{"name":"Grand plateau","id":4,"front":1.4,"profile":[13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.24,13.24,13.19,13.11,13.02,12.87,12.71,12.47,12.24,11.92,11.6,11.17,10.72,10.18,9.54,8.8,7.89,6.67,4.53,2.04,1.22,0.64,0.26,0.05,0.01,0],"max":13.25}];
 models.push(...['Ligne horizontale','Ligne verticale','Angle droit','Angle biais'].map((name,i)=>({name,id:i+5,kind:'stroke'})));
 const configs=[{"height":100,"duration":2},{"height":142,"duration":1.4},{"height":120,"duration":2},{"height":132,"duration":2},...Array.from({length:4},()=>({height:100,duration:1.8}))];
+// Independent tuning, without touching the E88 workshop's stored settings.
+const ROUND_CONFIG_KEY='deck-e89-round-configs-v1';
+try{
+ const saved=JSON.parse(localStorage.getItem(ROUND_CONFIG_KEY));
+ if(Array.isArray(saved)&&saved.length===4)for(let i=0;i<4;i++){
+  if(Number.isFinite(saved[i]?.height))configs[i].height=Math.round(Math.max(50,Math.min(160,saved[i].height)));
+  if(Number.isFinite(saved[i]?.duration))configs[i].duration=Math.round(Math.max(1,Math.min(6,saved[i].duration))*10)/10;
+ }
+}catch(_){}
+function saveRoundConfigs(){try{localStorage.setItem(ROUND_CONFIG_KEY,JSON.stringify(configs.slice(0,4)));}catch(_){}}
 const canvas=document.getElementById('surface');
 const status=document.getElementById('stats');
 const panel=document.getElementById('panel');
@@ -250,6 +278,9 @@ const placementButton=document.getElementById('placement'),selectedSlider=docume
 const settingsButton=document.getElementById('settingsButton'),placementBar=document.getElementById('placementBar');
 const finishPlacement=document.getElementById('finishPlacement'),placeChoices=[...document.querySelectorAll('#placeChoices button')];
 const selectionDock=document.getElementById('selectionDock'),dockSlider=document.getElementById('dockIntensity');
+const roundChoices=[...document.querySelectorAll('#roundChoices button')];
+const roundHeight=document.getElementById('roundHeight'),roundDuration=document.getElementById('roundDuration');
+const roundHeightValue=document.getElementById('roundHeightValue'),roundDurationValue=document.getElementById('roundDurationValue');
 const dockName=document.getElementById('dockName'),dockValue=document.getElementById('dockValue');
 const dockPower=document.getElementById('dockPower'),dockClose=document.getElementById('dockClose');
 const selectedName=document.getElementById('selectedName'),selectedValue=document.getElementById('selectedValue');
@@ -485,8 +516,10 @@ function toggleLamp(index){
  animate(index,active?0:state.lastLevels[index]);
  saveLayout();
 }
+let roundSelected=0;
 function selectLamp(index){
  state.selected=index;
+ if(index!==null&&index>=0&&index<4)roundSelected=index;
  refresh();
 }
 function changeIntensity(value){
@@ -542,7 +575,15 @@ function refresh(){
   selectedValue.textContent='—';selectedSlider.value='0';selectedPower.textContent='Allumer';
  }
  selectionDock.hidden=!valid||state.settingsOpen||state.placeMode;
- for(let j=0;j<4;j++)placeChoices[j].setAttribute('aria-pressed',String(j===i));
+ for(let j=0;j<8;j++)placeChoices[j].setAttribute('aria-pressed',String(j===i));
+ for(let j=0;j<4;j++){
+  roundChoices[j].setAttribute('aria-pressed',String(j===roundSelected));
+  document.getElementById('roundMeta'+j).textContent=configs[j].height+' % · '+configs[j].duration.toFixed(1).replace('.',',')+' s';
+ }
+ roundHeight.value=String(configs[roundSelected].height);
+ roundDuration.value=String(configs[roundSelected].duration);
+ roundHeightValue.textContent=configs[roundSelected].height+' %';
+ roundDurationValue.textContent=configs[roundSelected].duration.toFixed(1).replace('.',',')+' s';
 }
 function draw(time){
  state.requested=false;if(!state.ready)return;
@@ -610,6 +651,17 @@ for(const {key,input,output} of lightingInputs)input.addEventListener('input',()
 document.getElementById('resetLighting').addEventListener('click',()=>{
  lighting.contrast=100;lighting.intensity=100;lighting.shadows=100;
  syncLighting();saveLighting();requestDraw();
+});
+for(const choice of roundChoices)choice.addEventListener('click',()=>selectLamp(Number(choice.dataset.round)));
+roundHeight.addEventListener('input',()=>{
+ const v=Number(roundHeight.value);if(!Number.isFinite(v))return;
+ configs[roundSelected].height=Math.round(clamp(v,50,160));
+ state.meshDirty=true;saveRoundConfigs();refresh();requestDraw();
+});
+roundDuration.addEventListener('input',()=>{
+ const v=Number(roundDuration.value);if(!Number.isFinite(v))return;
+ configs[roundSelected].duration=Math.round(clamp(v,1,6)*10)/10;
+ saveRoundConfigs();refresh();requestDraw();
 });
 for(let i=0;i<8;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
 selectedSlider.addEventListener('input',()=>changeIntensity(Number(selectedSlider.value)/100));
