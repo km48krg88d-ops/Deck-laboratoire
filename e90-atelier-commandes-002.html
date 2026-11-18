@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v4 — Lumière vers l’extérieur</title>
+<title>DECK / E90 v5 — Lumière équilibrée et export</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v4 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
+<header id="top"><div><h1>DECK / E90 v5 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -71,10 +71,11 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="height">Hauteur du relief</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
 <div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
 <div class="setting"><label for="diffusion">Diffusion de lumière</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
+<div class="setting"><label for="peripheral">Intensité lumineuse périphérique</label><output id="peripheralOut">210 %</output><input id="peripheral" type="range" min="50" max="350" step="5" value="210"></div>
 <div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
-<div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
+<div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button><button type="button" id="copySettings">Copier tous les réglages</button></div><div id="copyStatus" role="status" aria-live="polite" class="note" style="margin:7px 0 0"></div>
 </div>
-<p class="note">Les coupures restent nettes. Le halo se propage uniquement vers l’extérieur de chaque cercle et du côté extérieur des lignes et angles, jamais vers l’intérieur. Les formes et leurs positions restent inchangées ; E89 reste indépendant.</p>
+<p class="note">La lumière sort des coupures nettes et se propage vers l’extérieur. L’intensité périphérique compense la faible réception du halo par la membrane plane. Aucun contour gris n’est dessiné par le shader. Toutes les formes restent inchangées.</p>
 </section>
 </main>
 <script id="vert" type="x-shader/x-vertex">
@@ -99,7 +100,7 @@ varying vec3 vNormal;
 varying vec2 vXY;
 uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
-uniform float uGlowAmount,uGlowSoftness,uModelId;
+uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost;
 
 float sdCircle(vec2 p,float radius){
  return abs(length(p)-radius);
@@ -160,15 +161,15 @@ float sourceGlow(vec2 p,float model,float softness){
  if(model<0.5){
   h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
         ringOutGlow(p,1.45*.25934/.40021,softness));
-  h=max(h,ringOutGlow(p,1.45,softness));
+  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost);
  }else if(model<1.5){
   h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45,softness));
+        ringOutGlow(p,1.45,softness)*uRimBoost);
  }else if(model<2.5){
-  h=ringOutGlow(p,1.45,softness);
+  h=ringOutGlow(p,1.45,softness)*uRimBoost;
  }else if(model<3.5){
   h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45*.40019/.40021,softness));
+        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost);
  }else if(model<4.5){
   // Left of the red vertical cut.
   h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
@@ -195,11 +196,9 @@ void main(){
  float glow=sourceGlow(vXY,uModelId,soft);
  // The curved blue faces receive most light, with a subtle spill on the adjacent
  // flat membrane outside the outermost rings or on the outward side of a line.
- float faceMask=mix(.24,1.0,smoothstep(.025,.24,length(n.xy)));
- float d=sourceDistance(vXY,uModelId);
- // A slight, narrow dark lip retains the sharp physical cut. Never a light line.
- float edge=1.0-smoothstep(0.0,.009,d);
- vec3 base=material*shade*(1.0-.17*edge);
+ float faceMask=mix(.36,1.0,smoothstep(.025,.24,length(n.xy)));
+ // The mesh itself defines the cut. No artificial grey stroke at its edge.
+ vec3 base=material*shade;
  vec3 glowColor=mix(material,vec3(1.0),.44);
  vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
  vec3 color=base+emission;
@@ -222,10 +221,10 @@ const sourceNotes=[
  'Essai d’angle biais : déformation géométrique du même tracé. Ce biais n’est pas un nouveau maillage identifiable dans le fichier.'
 ];
 // Red-face radii are now read from sourceRedRadii, derived from COMMANDES-002.
-const defaults=()=>({height:100,duration:2,diffusion:100,softness:35});
+const defaults=()=>({height:100,duration:2,diffusion:100,softness:35,peripheral:210});
 const configs=Array.from({length:8},defaults);
 const STORAGE='deck-e90-atelier-commandes002-v1';
-try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
+try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness','peripheral'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
 const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(configs))}catch(_){}};
 const $=s=>document.getElementById(s);
 const mesh=$('mesh'),glow=$('glow'),ctx=glow.getContext('2d');
@@ -335,7 +334,7 @@ function initGL(){
  u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
  a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
  debug:gl.getUniformLocation(program,'uDebug'),
- glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),
+ glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),rimBoost:gl.getUniformLocation(program,'uRimBoost'),
  xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad')};
  buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
 }
@@ -496,6 +495,7 @@ function draw(time){
   gl.uniform1f(u.glowAmount,configs[selected].diffusion/100*progress);
   gl.uniform1f(u.glowSoftness,configs[selected].softness/100);
   gl.uniform1f(u.modelId,selected);
+  gl.uniform1f(u.rimBoost,configs[selected].peripheral/100);
   gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
   gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
@@ -519,7 +519,7 @@ function sync(){
  $('selectedName').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
  $('currentNumber').textContent=String(selected+1).padStart(2,'0');
  $('sourceNote').textContent=sourceNotes[selected];
- for(const field of ['height','duration','diffusion','softness']){
+ for(const field of ['height','duration','diffusion','softness','peripheral']){
   const val=configs[selected][field];$(field).value=String(val);
   $(field+'Out').textContent=field==='duration'?Number(val).toFixed(1).replace('.',',')+' s':Math.round(val)+' %';
  }
@@ -530,7 +530,7 @@ function choose(i){
  selected=i;progress=0;anim=null;meshDirty=true;sync();animate(1,0);
 }
 buttons.forEach((b,i)=>b.addEventListener('click',()=>choose(i)));
-for(const field of ['height','duration','diffusion','softness']){
+for(const field of ['height','duration','diffusion','softness','peripheral']){
  $(field).addEventListener('input',()=>{
   configs[selected][field]=Number($(field).value);
   $(field+'Out').textContent=field==='duration'?Number(configs[selected][field]).toFixed(1).replace('.',',')+' s':Math.round(configs[selected][field])+' %';
@@ -538,6 +538,26 @@ for(const field of ['height','duration','diffusion','softness']){
   save();requestDraw();
  });
 }
+function exportAllSettings(){
+ return {
+  version:'E90-v5',source:'COMMANDES-002.glb',date:new Date().toISOString(),
+  selectedModel:selected+1,selectedName:modelNames[selected],deployment:Math.round(progress*100),
+  debugSources:debug,lamps:modelNames.map((name,i)=>({index:i+1,name,...configs[i]}))
+ };
+}
+$('copySettings').addEventListener('click',async()=>{
+ const data=JSON.stringify(exportAllSettings(),null,2);
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(data);
+  else{
+   const field=document.createElement('textarea');field.value=data;
+   field.style.position='fixed';field.style.left='-9999px';document.body.appendChild(field);
+   field.select();const ok=document.execCommand('copy');field.remove();
+   if(!ok)throw Error('copie refusée');
+  }
+  $('copyStatus').textContent='Tous les réglages des 8 lampes ont été copiés.';
+ }catch(e){$('copyStatus').textContent='Copie impossible : vérifier les autorisations du presse-papiers Safari.';}
+});
 $('deployment').addEventListener('input',()=>{
  anim=null;progress=Number($('deployment').value)/100;
  $('deploymentOut').textContent=Math.round(progress*100)+' %';requestDraw();
@@ -549,7 +569,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defau
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v4 · lumière extérieure uniquement, arêtes conservées'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v5 · halo périphérique équilibré, pas de liseré gris'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
