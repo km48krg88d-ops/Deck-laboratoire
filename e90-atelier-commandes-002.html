@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v2 — Source exacte et lumière sous membrane</title>
+<title>DECK / E90 v3 — Halo sur membrane</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v2 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
+<header id="top"><div><h1>DECK / E90 v3 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -74,7 +74,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
 </div>
-<p class="note">Les rayons et hauteurs des reliefs circulaires proviennent directement du modèle bleu COMMANDES-002. Les faces rouges sont des ouvertures lumineuses aux arêtes nettes. La hauteur ne déplace jamais les symboles. Les orientations 06 et 08 restent des variantes à valider. E89 reste indépendant.</p>
+<p class="note">Les reliefs gardent leurs coupes bleues et leurs arêtes nettes. Les coupures rouges servent uniquement de sources cachées : une lumière douce se propage sur les faces courbes de la membrane, sans tracer de ligne lumineuse. La hauteur ne déplace jamais les symboles. E89 reste indépendant.</p>
 </section>
 </main>
 <script id="vert" type="x-shader/x-vertex">
@@ -94,18 +94,71 @@ void main(){
 }
 </script>
 <script id="frag" type="x-shader/x-fragment">
-precision mediump float;
+precision highp float;
 varying vec3 vNormal;
 varying vec2 vXY;
 uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
+uniform float uGlowAmount,uGlowSoftness,uModelId;
+
+float sdCircle(vec2 p,float radius){
+ return abs(length(p)-radius);
+}
+float sdSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ba=b-a;
+ float t=clamp(dot(p-a,ba)/dot(ba,ba),0.0,1.0);
+ return length(p-a-ba*t);
+}
+// Coordinates of the hidden red cut faces, as extracted for E90 v2.
+// All distances live on the membrane, not in a separate screen-space glow layer.
+float sourceDistance(vec2 p,float model){
+ float d=100.0;
+ if(model<0.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.25934/.40021));
+  d=min(d,sdCircle(p,1.45));
+ }else if(model<1.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45));
+ }else if(model<2.5){
+  d=sdCircle(p,1.45);
+ }else if(model<3.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.40019/.40021));
+ }else if(model<4.5){
+  d=sdSegment(p,vec2(0.0,-1.22),vec2(0.0,1.22));
+ }else if(model<5.5){
+  d=sdSegment(p,vec2(-1.22,0.0),vec2(1.22,0.0));
+ }else if(model<6.5){
+  d=min(sdSegment(p,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(p,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  d=min(sdSegment(q,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(q,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }
+ return d;
+}
+float diffuseHalo(float d,float softness){
+ // No luminous line at zero distance: the light develops on adjacent blue slopes.
+ float radius=mix(.065,.32,clamp(softness,0.0,1.0));
+ float outer=1.0-smoothstep(.005,radius,d);
+ float fromCut=smoothstep(.003,.034,d);
+ return outer*fromCut;
+}
 void main(){
  vec3 n=normalize(vNormal);
- vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*0.75);
- // Soft ambient response from the membrane, no overhead specular light.
+ vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*.75);
  float direction=dot(n.xy,normalize(vec2(.70,-.71)));
  float shade=clamp(1.0-.33*(1.0-n.z)-.33*direction,.52,1.16);
- vec3 c=material*shade;
+ float d=sourceDistance(vXY,uModelId);
+ // Slope-derived mask: flat background and central plates remain essentially unlit.
+ float curvature=clamp(1.0-n.z,0.0,1.0);
+ float faceMask=smoothstep(.018,.24,curvature);
+ float halo=diffuseHalo(d,uGlowSoftness);
+ // Sharp dark cut lip without a self-luminous ring.
+ float edge=1.0-smoothstep(.001,.010,d);
+ vec3 base=material*shade*(1.0-.16*edge);
+ vec3 glowColor=mix(material,uPaletteB,.78);
+ vec3 emission=glowColor*halo*faceMask*uGlowAmount*.82;
+ vec3 c=base+emission;
  if(uDebug>.5)c=vec3(.03,.24,.92)*shade;
  gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
 }
@@ -238,6 +291,7 @@ function initGL(){
  u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
  a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
  debug:gl.getUniformLocation(program,'uDebug'),
+ glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),
  xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad')};
  buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
 }
@@ -327,63 +381,41 @@ function lightStroke(x,y,pxScale,from,to,color){
  ctx.beginPath();ctx.moveTo(x+from[0]*pxScale,y-from[1]*pxScale);ctx.lineTo(x+to[0]*pxScale,y-to[1]*pxScale);ctx.strokeStyle=color;ctx.stroke();
 }
 function paintGlow(p){
- const w=glow.width,h=glow.height,c=configs[selected],cx=w/2,cy=h/2,scale=w*.545/2;
- const amount=c.diffusion/100*progress;
+ // The 2D canvas is diagnostic only. In normal use the 3D fragment shader lights
+ // the BLUE membrane faces; there is never a separate glowing stroke.
+ const w=glow.width,h=glow.height;
  ctx.clearRect(0,0,w,h);
- if(amount<.001)return;
+ if(!debug)return;
+ const cx=w/2,cy=h/2,scale=w*.545/2;
  ctx.save();
- ctx.lineCap='round';ctx.lineJoin='round';
- const tint=debug?'#ff2748':cssColor(p.b,.98);
- const blur=(5+c.softness*.18)*w/390;
- const path=()=>{
-  ctx.beginPath();
-  if(selected<4){
-   for(const r of sourceRedRadii[selected]){
-    // Exact red face radius in the source model: never moves with the relief height.
-    const radius=r/SOURCE_RADIUS*DISPLAY_RADIUS*scale;
-    ctx.moveTo(cx+radius,cy);
-    ctx.arc(cx,cy,radius,0,Math.PI*2);
-   }
-  }else{
-   const poly=points=>{
-    ctx.moveTo(cx+points[0][0]*scale,cy-points[0][1]*scale);
-    for(const [x,y] of points.slice(1))ctx.lineTo(cx+x*scale,cy-y*scale);
-   };
-   if(selected===4)poly([[0,-1.22],[0,1.22]]);
-   else if(selected===5)poly([[-1.22,0],[1.22,0]]);
-   else{
-    const shear=selected===7?.45:0;
-    const turn=([x,y])=>[x+shear*y,y];
-    poly([[.32,-.83],[.32,.83]].map(turn));
-    poly([[-1.33,-.83],[.32,-.83]].map(turn));
-   }
-  }
- };
- if(debug){
-  ctx.globalCompositeOperation='source-over';
-  ctx.globalAlpha=.95;
-  ctx.strokeStyle=tint;
-  ctx.lineWidth=Math.max(2,w*.006);
-  ctx.shadowBlur=0;
-  path();ctx.stroke();ctx.restore();return;
- }
- // RED marks light leaking beneath a sharply cut membrane: diffuse light only,
- // never blur or soften the BLUE relief geometry or its exact boundary.
- ctx.globalCompositeOperation='screen';
- for(const [width,opacity,spread] of [[.036,.06,2.8],[.018,.13,1.75],[.008,.26,1]]){
-  ctx.globalAlpha=Math.min(.9,amount*opacity);
-  ctx.strokeStyle=tint;
-  ctx.shadowColor=tint;
-  ctx.shadowBlur=blur*spread;
-  ctx.lineWidth=Math.max(2,w*width);
-  path();ctx.stroke();
- }
- // Unblurred lip of the red face, crisp against the blue curve and surrounding membrane.
- ctx.globalAlpha=Math.min(.98,amount*.85);
- ctx.strokeStyle=tint;
+ ctx.globalCompositeOperation='source-over';
+ ctx.globalAlpha=.96;
+ ctx.strokeStyle='#ff2845';
+ ctx.lineWidth=Math.max(2,w*.006);
  ctx.shadowBlur=0;
- ctx.lineWidth=Math.max(1,w*.0021);
- path();ctx.stroke();
+ ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.beginPath();
+ if(selected<4){
+  for(const r of sourceRedRadii[selected]){
+   const radius=r/SOURCE_RADIUS*DISPLAY_RADIUS*scale;
+   ctx.moveTo(cx+radius,cy);
+   ctx.arc(cx,cy,radius,0,Math.PI*2);
+  }
+ }else{
+  const path=points=>{
+   ctx.moveTo(cx+points[0][0]*scale,cy-points[0][1]*scale);
+   for(const point of points.slice(1))ctx.lineTo(cx+point[0]*scale,cy-point[1]*scale);
+  };
+  if(selected===4)path([[0,-1.22],[0,1.22]]);
+  else if(selected===5)path([[-1.22,0],[1.22,0]]);
+  else{
+   const shear=selected===7?.45:0;
+   const shearPoints=points=>points.map(([x,y])=>[x+shear*y,y]);
+   path(shearPoints([[.32,-.83],[.32,.83]]));
+   path(shearPoints([[-1.33,-.83],[.32,-.83]]));
+  }
+ }
+ ctx.stroke();
  ctx.restore();
 }
 function draw(time){
@@ -408,6 +440,9 @@ function draw(time){
   gl.uniform1f(u.progress,progress);
   gl.uniform1f(u.height,configs[selected].height/100);
   gl.uniform1f(u.debug,debug?1:0);
+  gl.uniform1f(u.glowAmount,configs[selected].diffusion/100*progress);
+  gl.uniform1f(u.glowSoftness,configs[selected].softness/100);
+  gl.uniform1f(u.modelId,selected);
   gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
   gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
@@ -461,7 +496,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defau
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 · profils du GLB · rendu WebGL 3D / diffusion 2D'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v3 · lumière sur les faces 3D, source rouge masquée'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
