@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DECK / E90 — Atelier COMMANDES-002</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#172b42;color:#eff5f9;font:13px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+button,input{font:inherit}
+button{color:#ebf3fc;background:#e4ecff13;border:1px solid #cfdef05e;border-radius:10px;padding:9px 11px;cursor:pointer;touch-action:manipulation}
+button[aria-pressed=true]{background:#f6c28c24;border-color:#ffddadbb}
+a{color:#fed5ac}
+#top{position:sticky;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 13px) 16px 12px;background:#13263be8;backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #ffffff1f}
+#top h1{font-size:12px;letter-spacing:.12em;margin:0 0 4px}
+#top p{font-size:10px;opacity:.8;margin:0}
+#top a{white-space:nowrap;text-decoration:none;font-size:11px}
+main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(315px,.75fr);gap:20px}
+#artboard{align-self:start;position:sticky;top:82px}
+#stage{position:relative;margin:auto;width:min(100%,640px);aspect-ratio:1;border:1px solid #dbeaff40;border-radius:21px;overflow:hidden;background:#66899a;box-shadow:0 16px 45px #07172a8c;isolation:isolate}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#glow{z-index:2;pointer-events:none;mix-blend-mode:screen}
+#mesh{z-index:1;pointer-events:none}
+#understage{display:flex;gap:7px;justify-content:space-between;align-items:center;margin:11px 0 0;flex-wrap:wrap}
+#understage p{font-size:11px;opacity:.8;margin:0}
+#understage .buttons{display:flex;gap:7px}
+#workshop{min-width:0}
+#workshop h2{font-size:14px;letter-spacing:.02em;margin:4px 0 10px}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#models button{text-align:left;min-width:0;padding:11px 9px;display:flex;gap:5px;flex-direction:column}
+#models button span{font-weight:600}
+#models button small{opacity:.7;font-size:10px;font-weight:400;line-height:1.35}
+#settings{margin-top:16px;padding:15px;border:1px solid #e1ecfa39;border-radius:14px;background:#dceeff09}
+#selectedName{font-size:14px;margin:0 0 6px}
+#sourceNote{font-size:11px;line-height:1.55;opacity:.82;margin:0 0 13px}
+.setting{display:grid;grid-template-columns:1fr auto;gap:3px 8px;margin:14px 0}
+.setting label{font-size:11px}
+.setting output{font-size:11px;font-weight:700;color:#f6d0a5;font-variant-numeric:tabular-nums}
+.setting input{grid-column:1 / -1;width:100%;height:24px;margin:0;accent-color:#f2ad80;touch-action:pan-x}
+#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}
+.note{font-size:11px;line-height:1.6;color:#c4d2e1;margin:17px 3px 0}
+#status{font-size:10px;opacity:.7;margin:7px 0}
+@media(max-width:800px){main{display:block;padding:10px 11px 30px}#artboard{position:relative;top:auto}#stage{width:min(92vw,54vh,500px)}#workshop{margin-top:14px}#top{padding-left:12px;padding-right:12px}#models button{padding:8px}}
+</style>
+</head>
+<body>
+<header id="top"><div><h1>DECK / E90 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
+<main>
+<section id="artboard">
+<div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
+<div id="understage"><p>Forme <strong id="currentNumber">01</strong> · 3D continue · source COMMANDES-002</p><div class="buttons"><button type="button" id="debug" aria-pressed="false">Voir bleu / rouge</button><button type="button" id="replay">Rejouer</button></div></div>
+<div id="status" role="status">Préparation de la membrane…</div>
+</section>
+<section id="workshop">
+<h2>Choisir une commande</h2>
+<div id="models" aria-label="Huit études de forme">
+<button type="button" data-model="0" aria-pressed="true"><span>01 · Trois reliefs</span><small>Profil bleu extrait · trois bords rouges</small></button>
+<button type="button" data-model="1" aria-pressed="false"><span>02 · Plateau et raccord</span><small>Profil bleu extrait · bord rouge</small></button>
+<button type="button" data-model="2" aria-pressed="false"><span>03 · Couronne</span><small>Profil bleu extrait · deux bords rouges</small></button>
+<button type="button" data-model="3" aria-pressed="false"><span>04 · Grand plateau</span><small>Profil bleu extrait · deux bords rouges</small></button>
+<button type="button" data-model="4" aria-pressed="false"><span>05 · Ligne verticale</span><small>Tracé bleu/rouge de la source</small></button>
+<button type="button" data-model="5" aria-pressed="false"><span>06 · Ligne horizontale</span><small>Rotation du tracé source</small></button>
+<button type="button" data-model="6" aria-pressed="false"><span>07 · Angle droit</span><small>Deux segments raccordés de la source</small></button>
+<button type="button" data-model="7" aria-pressed="false"><span>08 · Angle biais</span><small>Déformation exploratoire de l’angle source</small></button>
+</div>
+<div id="settings">
+<h2 id="selectedName">01 · Trois reliefs</h2>
+<p id="sourceNote"></p>
+<div class="setting"><label for="deployment">Déploiement de la membrane</label><output id="deploymentOut">100 %</output><input id="deployment" type="range" min="0" max="100" step="1" value="100"></div>
+<div class="setting"><label for="height">Hauteur du relief</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
+<div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
+<div class="setting"><label for="diffusion">Diffusion de lumière</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
+<div class="setting"><label for="softness">Douceur de la membrane et de la lumière</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
+<div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
+</div>
+<p class="note">Les quatre profils circulaires sont reconstitués à partir de coupes échantillonnées sur les maillages bleus du GLB. Les cercles rouges définissent les zones de diffusion, pas des objets rouges. La ligne et l’angle suivent les tracés bleus/rouges du fichier ; les orientations 06 et 08 sont des variantes d’étude, à valider. Cette page est indépendante d’E89 et n’en modifie aucun réglage.</p>
+</section>
+</main>
+<script id="vert" type="x-shader/x-vertex">
+attribute vec2 aXY;
+attribute float aZ;
+attribute vec2 aGrad;
+uniform float uProgress,uHeight;
+varying vec3 vNormal;
+varying vec2 vXY;
+void main(){
+ float h=aZ*uHeight*uProgress;
+ vec2 g=aGrad*uHeight*uProgress;
+ vNormal=normalize(vec3(-g.x,-g.y,1.0));
+ vXY=aXY;
+ gl_Position=vec4((aXY.x+h*0.055)*0.545,(aXY.y+h*0.07)*0.545,-h*.025,1.0);
+}
+</script>
+<script id="frag" type="x-shader/x-fragment">
+precision mediump float;
+varying vec3 vNormal;
+varying vec2 vXY;
+uniform vec3 uPaletteA,uPaletteB;
+uniform float uDebug;
+void main(){
+ vec3 n=normalize(vNormal);
+ vec3 coldDir=normalize(vec3(-1.6,1.2,0.8));
+ vec3 warmDir=normalize(vec3(1.5,-1.1,0.7));
+ float l1=max(0.0,dot(n,coldDir));
+ float l2=max(0.0,dot(n,warmDir));
+ float shade=.78+.25*l1+.20*l2-.11*max(0.0,1.0-n.z);
+ vec3 base=mix(uPaletteA,uPaletteB,smoothstep(-1.75,1.75,vXY.y)*.75);
+ vec3 c=base*shade;
+ if(uDebug>.5)c=vec3(.04,.25,.87)*(.74+.22*l1+.17*l2);
+ gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
+}
+</script>
+<script>
+(function(){
+'use strict';
+const sourceProfiles=[[82,82,82,82,83,84,86,88,90,93,97,100,105,110,115,121,127,134,141,150,158,167,177,188,199,212,225,239,254,77,79,83,86,89,93,96,100,104,109,113,117,122,126,131,136,141,147,152,158,164,170,176,183,189,196,203,211,218,226,234,242,251,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2,3,3,4,5,5,6,7,8,9,10,11,12,13,15,16,17,19,20,22,24,25,27,28,30,32,34,37,39,41,43,45,47,50,53,55,58,61,63,66,69,72,75,78,82,85,88,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[82,82,82,82,83,84,86,88,90,93,97,100,105,110,115,121,127,134,141,150,158,167,177,188,199,212,225,239,254,15,16,17,19,20,22,24,25,27,28,30,32,34,37,39,41,43,45,47,50,53,55,58,61,63,66,69,72,75,78,82,85,88,91,95,99,102,106,110,114,118,122,126,130,135,139,143,148,153,158,163,168,173,178,183,189,194,200,205,211,217,223,230,236,242,249,0],[255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,8,16,28,45,68,98,130,161,193,224,0]];
+const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
+const sourceNotes=[
+ 'Nouvelle coupe du modèle circulaire à trois reliefs. Trois périmètres rouges extraits : lumière diffuse, non matérielle.',
+ 'Nouvelle coupe du plateau et de son raccord. Un périmètre lumineux rouge extérieur.',
+ 'Nouvelle coupe de la couronne. Deux périmètres rouges de diffusion.',
+ 'Nouveau grand plateau. Le bleu forme le volume ; les cercles rouges servent uniquement à la lumière.',
+ 'Tracé source : pente bleue adjacente au bord rouge, extrudée dans la membrane.',
+ 'Même tracé source tourné de 90° pour vérifier son orientation horizontale.',
+ 'Deux segments bleus et rouges raccordés en angle droit, comme dans COMMANDES-002.',
+ 'Essai d’angle biais : déformation géométrique du même tracé. Ce biais n’est pas un nouveau maillage identifiable dans le fichier.'
+];
+const redRadii=[[.296,.648,1],[1],[.296,1],[.296,1]];
+const defaults=()=>({height:100,duration:2,diffusion:100,softness:35});
+const configs=Array.from({length:8},defaults);
+const STORAGE='deck-e90-atelier-commandes002-v1';
+try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
+const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(configs))}catch(_){}};
+const $=s=>document.getElementById(s);
+const mesh=$('mesh'),glow=$('glow'),ctx=glow.getContext('2d');
+const buttons=[...document.querySelectorAll('[data-model]')];
+let selected=0,progress=0,anim=null,debug=false,meshDirty=true,drawRequested=false,lastPhase='';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+const palettes=[
+ [0,'Nuit profonde','#182C50','#849BC5'],[3,'Nuit calme','#182C50','#849BC5'],
+ [6,'Fin de nuit','#182C50','#849BC5'],[7,'Aube rose','#7C91AA','#DEA0B2'],
+ [9,'Matinée orange','#9CAEB1','#F2AA76'],[11,'Journée','#FFF4D7','#E8BC79'],
+ [13,'Après-midi','#C0D1DF','#FAFAF4'],[15,'Après-midi lumineux','#B7CDDF','#F9FAF5'],
+ [17,'Fin d’après-midi','#B1C4D7','#F4F6F4'],[19,'Soir orangé','#526B91','#E3A17F'],
+ [21,'Soir bleu','#2F486D','#A18FB8'],[23,'Retour à la nuit','#182C50','#849BC5']
+];
+function rgb(s){return [1,3,5].map(i=>parseInt(s.slice(i,i+2),16)/255)}
+function palette(){
+ const now=new Date(),hour=now.getHours()+now.getMinutes()/60;let k=0;
+ for(let i=1;i<12;i++)if(hour>=palettes[i][0])k=i;
+ const a=palettes[k],b=palettes[(k+1)%12],end=k===11?24:b[0],t=ease((hour-a[0])/(end-a[0]));
+ const aa=rgb(a[2]),bb=rgb(b[2]),cc=rgb(a[3]),dd=rgb(b[3]);
+ const lerp=(x,y)=>x.map((v,i)=>v+(y[i]-v)*t);
+ return {name:a[1],a:lerp(aa,bb),b:lerp(cc,dd)};
+}
+function getProfile(r){
+ if(r>=1.50)return 0;
+ const arr=sourceProfiles[selected],t=r/1.37;
+ if(t>=1){const near=arr[arr.length-2]/255;return near*(1-ease((r-1.37)/.13));}
+ const x=t*(arr.length-1),soft=configs[selected].softness/100*2.4;
+ const smoothAt=k=>{
+  if(soft<.05)return arr[clamp(k,0,arr.length-1)]/255;
+  let total=0,weight=0;
+  for(let j=-4;j<=4;j++){
+   const w=Math.exp(-(j*j)/(2*soft*soft));total+=w*arr[clamp(k+j,0,arr.length-1)];weight+=w;
+  }
+  return total/(weight*255);
+ };
+ const i=Math.floor(x),f=x-i;
+ return smoothAt(i)*(1-f)+smoothAt(Math.min(i+1,arr.length-1))*f;
+}
+function segDistance(x,y,ax,ay,bx,by){
+ const vx=bx-ax,vy=by-ay,t=clamp(((x-ax)*vx+(y-ay)*vy)/(vx*vx+vy*vy),0,1);
+ return Math.hypot(x-ax-t*vx,y-ay-t*vy);
+}
+function crease(d){const rise=ease((d+.055)/.07),fall=1-ease((d+.015)/.30);return Math.max(0,rise*fall)}
+function strokeHeight(x,y,angle){
+ if(!angle){
+  const yy=selected===5?x:y,xx=selected===5?-y:x;
+  return .88*crease(xx)*[1-ease((Math.abs(yy)-1.04)/.22)].map(v=>clamp(v,0,1))[0];
+ }
+ if(selected===7)x=x-.48*y;
+ const v=crease(x-.96)*clamp(1-ease((Math.abs(y+.04)-1.10)/.18),0,1);
+ const h=crease(-y-.96)*clamp(1-ease((Math.abs(x+.04)-1.10)/.18),0,1);
+ return .88*Math.max(v,h);
+}
+function heightAt(x,y){
+ return selected<4?getProfile(Math.hypot(x,y)):strokeHeight(x,y,selected>=6);
+}
+let gl=null,program=null,u=null,buffer=null,indexBuffer=null,indexCount=0;
+function shader(kind,text){
+ const sh=gl.createShader(kind);gl.shaderSource(sh,text);gl.compileShader(sh);
+ if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Compilation GLSL');
+ return sh;
+}
+function initGL(){
+ gl=mesh.getContext('webgl',{alpha:false,antialias:true,depth:false,preserveDrawingBuffer:false});
+ if(!gl)throw Error('WebGL indisponible');
+ program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,$('vert').textContent));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,$('frag').textContent));
+ gl.linkProgram(program);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||'Liaison GLSL');
+ gl.useProgram(program);
+ u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
+ a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
+ debug:gl.getUniformLocation(program,'uDebug'),
+ xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad')};
+ buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
+}
+function rebuildMesh(){
+ if(!gl)return;
+ // A single continuous membrane, rebuilt only when geometry or its softness changes.
+ const n=192,vertices=(n+1)*(n+1),data=new Float32Array(vertices*5),indices=new Uint16Array(n*n*6);
+ const extent=1.82,eps=.014;
+ for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
+  const x=-extent+i/n*2*extent,y=-extent+j/n*2*extent,p=(j*(n+1)+i)*5;
+  data[p]=x;data[p+1]=y;data[p+2]=heightAt(x,y);
+  data[p+3]=(heightAt(x+eps,y)-heightAt(x-eps,y))/(2*eps);
+  data[p+4]=(heightAt(x,y+eps)-heightAt(x,y-eps))/(2*eps);
+ }
+ for(let j=0,k=0;j<n;j++)for(let i=0;i<n;i++){
+  const a=j*(n+1)+i,b=a+n+1;indices[k++]=a;indices[k++]=a+1;indices[k++]=b;indices[k++]=a+1;indices[k++]=b+1;indices[k++]=b;
+ }
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+ indexCount=indices.length;meshDirty=false;
+}
+function sizeCanvas(){
+ const rect=$('stage').getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2.5);
+ const w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
+ if(mesh.width!==w||mesh.height!==h){mesh.width=w;mesh.height=h;glow.width=w;glow.height=h}
+ if(gl)gl.viewport(0,0,mesh.width,mesh.height);
+ requestDraw();
+}
+function cssColor(a,alpha){return 'rgba('+a.map(v=>Math.round(v*255)).join(',')+','+alpha+')'}
+function lightStroke(x,y,pxScale,from,to,color){
+ ctx.beginPath();ctx.moveTo(x+from[0]*pxScale,y-from[1]*pxScale);ctx.lineTo(x+to[0]*pxScale,y-to[1]*pxScale);ctx.strokeStyle=color;ctx.stroke();
+}
+function paintGlow(p){
+ const w=glow.width,h=glow.height,c=configs[selected],cx=w/2,cy=h/2,sc=w*.545/2,amount=c.diffusion/100;
+ ctx.clearRect(0,0,w,h);if(amount<.001)return;
+ ctx.save();ctx.globalCompositeOperation=debug?'source-over':'screen';
+ ctx.strokeStyle=debug?'#ff1a34':cssColor(p.b,Math.min(.8,.28*amount));
+ ctx.lineCap='round';ctx.lineJoin='round';
+ const blur=(debug?0:(7+c.softness*.28)*w/390);
+ if(selected<4){
+  for(const r of redRadii[selected]){
+   for(let pass=0;pass<(debug?1:2);pass++){
+    ctx.globalAlpha=Math.min(1,amount*(pass?0.32:0.56));
+    ctx.shadowColor=debug?'#ff1640':cssColor(p.b,.98);
+    ctx.shadowBlur=debug?0:blur*(pass?2.3:1.2);
+    ctx.lineWidth=debug?Math.max(2,w*.006):(pass?Math.max(4,w*.025):Math.max(3,w*.008));
+    ctx.beginPath();ctx.arc(cx,cy,r*1.37*sc,0,Math.PI*2);ctx.stroke();
+   }
+  }
+ }else{
+  let a,b,shape=[];
+  if(selected===4)shape=[[[0,-1.16],[0,1.16]]];
+  if(selected===5)shape=[[[-1.16,0],[1.16,0]]];
+  if(selected===6||selected===7)shape=[[[.96,-.96],[.96,1.10]],[[-1.10,-.96],[.96,-.96]]];
+  if(selected===7)shape=shape.map(pair=>pair.map(point=>[point[0]+.48*point[1],point[1]]));
+  for(let pass=0;pass<(debug?1:3);pass++){
+   ctx.globalAlpha=Math.min(1,amount*(pass===2?.17:pass===1?.30:.64));
+   ctx.shadowColor=debug?'#ff1636':cssColor(p.b,.95);
+   ctx.shadowBlur=debug?0:blur*(pass===2?2.5:pass===1?1.7:1);
+   ctx.lineWidth=debug?Math.max(2,w*.008):Math.max(3,w*(pass===2?.04:pass===1?.018:.007));
+   for(const seg of shape)lightStroke(cx,cy,sc,seg[0],seg[1],debug?'#ff1636':cssColor(p.b,.95));
+  }
+ }
+ ctx.restore();
+}
+function draw(time){
+ drawRequested=false;
+ if(anim){
+  if(anim.started===null)anim.started=time;
+  const t=clamp((time-anim.started)/Math.max(1,anim.duration),0,1);
+  progress=anim.from+(anim.to-anim.from)*ease(t);
+  if(t>=1)anim=null;
+  $('deployment').value=String(Math.round(progress*100));
+  $('deploymentOut').textContent=Math.round(progress*100)+' %';
+ }
+ const paletteNow=palette();
+ $('phase').textContent=paletteNow.name;
+ if(gl){
+  if(meshDirty)rebuildMesh();
+  gl.useProgram(program);gl.viewport(0,0,mesh.width,mesh.height);
+  gl.clearColor(.1,.17,.25,1);gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(u.progress,progress);
+  gl.uniform1f(u.height,configs[selected].height/100);
+  gl.uniform1f(u.debug,debug?1:0);
+  gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
+  gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  for(const [loc,sz,off] of [[u.xy,2,0],[u.z,1,8],[u.grad,2,12]]){
+   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,20,off);
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
+  gl.drawElements(gl.TRIANGLES,indexCount,gl.UNSIGNED_SHORT,0);
+  const error=gl.getError();if(error!==gl.NO_ERROR){$('status').textContent='Erreur WebGL : '+error;return}
+ }
+ paintGlow(paletteNow);
+ if(anim)requestDraw();
+}
+function requestDraw(){if(!drawRequested){drawRequested=true;requestAnimationFrame(draw)}}
+function animate(to,from=progress){
+ anim={started:null,from,to,duration:configs[selected].duration*1000};
+ requestDraw();
+}
+function sync(){
+ buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===selected)));
+ $('selectedName').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
+ $('currentNumber').textContent=String(selected+1).padStart(2,'0');
+ $('sourceNote').textContent=sourceNotes[selected];
+ for(const field of ['height','duration','diffusion','softness']){
+  const val=configs[selected][field];$(field).value=String(val);
+  $(field+'Out').textContent=field==='duration'?Number(val).toFixed(1).replace('.',',')+' s':Math.round(val)+' %';
+ }
+ $('deployment').value=String(Math.round(progress*100));
+ $('deploymentOut').textContent=Math.round(progress*100)+' %';
+}
+function choose(i){
+ selected=i;progress=0;anim=null;meshDirty=true;sync();animate(1,0);
+}
+buttons.forEach((b,i)=>b.addEventListener('click',()=>choose(i)));
+for(const field of ['height','duration','diffusion','softness']){
+ $(field).addEventListener('input',()=>{
+  configs[selected][field]=Number($(field).value);
+  $(field+'Out').textContent=field==='duration'?Number(configs[selected][field]).toFixed(1).replace('.',',')+' s':Math.round(configs[selected][field])+' %';
+  if(field==='softness')meshDirty=true;
+  save();requestDraw();
+ });
+}
+$('deployment').addEventListener('input',()=>{
+ anim=null;progress=Number($('deployment').value)/100;
+ $('deploymentOut').textContent=Math.round(progress*100)+' %';requestDraw();
+});
+$('debug').addEventListener('click',()=>{debug=!debug;$('debug').setAttribute('aria-pressed',String(debug));requestDraw()});
+$('replay').addEventListener('click',()=>animate(1,0));
+$('reset').addEventListener('click',()=>{configs[selected]=defaults();save();meshDirty=true;sync();requestDraw()});
+$('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defaults();save();meshDirty=true;sync();requestDraw()});
+addEventListener('resize',sizeCanvas);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
+setInterval(()=>requestDraw(),60000);
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 · profils du GLB · rendu WebGL 3D / diffusion 2D'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+})();
+</script>
+</body>
+</html>
