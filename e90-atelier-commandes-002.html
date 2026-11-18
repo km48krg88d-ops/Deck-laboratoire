@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v3 — Halo sur membrane</title>
+<title>DECK / E90 v4 — Lumière vers l’extérieur</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v3 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
+<header id="top"><div><h1>DECK / E90 v4 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -74,7 +74,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
 </div>
-<p class="note">Les reliefs gardent leurs coupes bleues et leurs arêtes nettes. Les coupures rouges servent uniquement de sources cachées : une lumière douce se propage sur les faces courbes de la membrane, sans tracer de ligne lumineuse. La hauteur ne déplace jamais les symboles. E89 reste indépendant.</p>
+<p class="note">Les coupures restent nettes. Le halo se propage uniquement vers l’extérieur de chaque cercle et du côté extérieur des lignes et angles, jamais vers l’intérieur. Les formes et leurs positions restent inchangées ; E89 reste indépendant.</p>
 </section>
 </main>
 <script id="vert" type="x-shader/x-vertex">
@@ -105,12 +105,31 @@ float sdCircle(vec2 p,float radius){
  return abs(length(p)-radius);
 }
 float sdSegment(vec2 p,vec2 a,vec2 b){
- vec2 ba=b-a;
- float t=clamp(dot(p-a,ba)/dot(ba,ba),0.0,1.0);
- return length(p-a-ba*t);
+ vec2 ab=b-a;
+ float t=clamp(dot(p-a,ab)/max(dot(ab,ab),0.000001),0.0,1.0);
+ return length(p-a-ab*t);
 }
-// Coordinates of the hidden red cut faces, as extracted for E90 v2.
-// All distances live on the membrane, not in a separate screen-space glow layer.
+float sideOfSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ return (ab.x*(p.y-a.y)-ab.y*(p.x-a.x))/max(length(ab),.00001);
+}
+float outwardProfile(float distance,float softness){
+ // Zero inside the cut, a gently rising glow just outside the knife-sharp lip.
+ if(distance<=0.0)return 0.0;
+ float peak=mix(.011,.033,softness);
+ float reach=mix(.085,.335,softness);
+ return smoothstep(0.0,peak,distance)*(1.0-smoothstep(peak,reach,distance));
+}
+float ringOutGlow(vec2 p,float radius,float softness){
+ // Signed radius prevents any diffusion into the circle.
+ return outwardProfile(length(p)-radius,softness);
+}
+float segmentOutGlow(vec2 p,vec2 a,vec2 b,float direction,float softness){
+ // Finite segment, with a single emitting side. No infinite stripe beyond endpoints.
+ float side=direction*sideOfSegment(p,a,b);
+ if(side<=0.0)return 0.0;
+ return outwardProfile(sdSegment(p,a,b),softness);
+}
 float sourceDistance(vec2 p,float model){
  float d=100.0;
  if(model<0.5){
@@ -136,31 +155,56 @@ float sourceDistance(vec2 p,float model){
  }
  return d;
 }
-float diffuseHalo(float d,float softness){
- // No luminous line at zero distance: the light develops on adjacent blue slopes.
- float radius=mix(.065,.32,clamp(softness,0.0,1.0));
- float outer=1.0-smoothstep(.005,radius,d);
- float fromCut=smoothstep(.003,.034,d);
- return outer*fromCut;
+float sourceGlow(vec2 p,float model,float softness){
+ float h=0.0;
+ if(model<0.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45*.25934/.40021,softness));
+  h=max(h,ringOutGlow(p,1.45,softness));
+ }else if(model<1.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45,softness));
+ }else if(model<2.5){
+  h=ringOutGlow(p,1.45,softness);
+ }else if(model<3.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45*.40019/.40021,softness));
+ }else if(model<4.5){
+  // Left of the red vertical cut.
+  h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
+ }else if(model<5.5){
+  // Above the red horizontal cut.
+  h=segmentOutGlow(p,vec2(-1.22,0.0),vec2(1.22,0.0),1.0,softness);
+ }else if(model<6.5){
+  // Outside of the two cut faces making the right angle.
+  h=max(segmentOutGlow(p,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(p,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  h=max(segmentOutGlow(q,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(q,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }
+ return h;
 }
 void main(){
  vec3 n=normalize(vNormal);
  vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*.75);
  float direction=dot(n.xy,normalize(vec2(.70,-.71)));
  float shade=clamp(1.0-.33*(1.0-n.z)-.33*direction,.52,1.16);
+ float soft=clamp(uGlowSoftness,0.0,1.0);
+ float glow=sourceGlow(vXY,uModelId,soft);
+ // The curved blue faces receive most light, with a subtle spill on the adjacent
+ // flat membrane outside the outermost rings or on the outward side of a line.
+ float faceMask=mix(.24,1.0,smoothstep(.025,.24,length(n.xy)));
  float d=sourceDistance(vXY,uModelId);
- // Slope-derived mask: flat background and central plates remain essentially unlit.
- float curvature=clamp(1.0-n.z,0.0,1.0);
- float faceMask=smoothstep(.018,.24,curvature);
- float halo=diffuseHalo(d,uGlowSoftness);
- // Sharp dark cut lip without a self-luminous ring.
- float edge=1.0-smoothstep(.001,.010,d);
- vec3 base=material*shade*(1.0-.16*edge);
- vec3 glowColor=mix(material,uPaletteB,.78);
- vec3 emission=glowColor*halo*faceMask*uGlowAmount*.82;
- vec3 c=base+emission;
- if(uDebug>.5)c=vec3(.03,.24,.92)*shade;
- gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
+ // A slight, narrow dark lip retains the sharp physical cut. Never a light line.
+ float edge=1.0-smoothstep(0.0,.009,d);
+ vec3 base=material*shade*(1.0-.17*edge);
+ vec3 glowColor=mix(material,vec3(1.0),.44);
+ vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
+ vec3 color=base+emission;
+ if(uDebug>.5)color=vec3(.03,.24,.92)*shade;
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }
 </script>
 <script>
@@ -300,6 +344,15 @@ function rebuildMesh(){
  const data=[],indices=[];
  // Sample each source-defined blue band independently: seams retain their
  // discontinuous normals, and red faces are never rounded by the triangulation.
+ // This perfectly flat backing surface is part of the SAME WebGL membrane.
+ // It receives light outside the outermost circle and on the outside of the
+ // line cuts; previously there were no fragments there to light up.
+ // It matches the CSS time-of-day background color exactly.
+ const planeStart=data.length/5,extent=1.84;
+ data.push(-extent,-extent,0,0,0, extent,-extent,0,0,0,
+           -extent,extent,0,0,0, extent,extent,0,0,0);
+ indices.push(planeStart,planeStart+1,planeStart+2,
+              planeStart+1,planeStart+3,planeStart+2);
  function addBand(band){
   const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
   const radii=[];
@@ -496,7 +549,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defau
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v3 · lumière sur les faces 3D, source rouge masquée'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v4 · lumière extérieure uniquement, arêtes conservées'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
