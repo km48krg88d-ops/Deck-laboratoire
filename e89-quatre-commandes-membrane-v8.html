@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
+<title>DECK / E89 v8 — Huit reliefs 3D</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#7b919d;color:#e5eef5;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+#surface{display:block;position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none;z-index:0}
+#header{position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:16px;right:16px;z-index:2;pointer-events:none;display:flex;justify-content:space-between;align-items:start;gap:10px}
+#header h1{margin:0 0 5px;font-size:12px;letter-spacing:.15em;font-weight:700;text-shadow:0 1px 3px #1c273c55}
+#header p{font-size:10px;line-height:1.4;margin:0;color:#f2f6fae0}
+#header button{pointer-events:auto;font:12px -apple-system,sans-serif;color:#fff;padding:10px 13px;border:1px solid #ecf5ffb3;background:#1d354b50;border-radius:22px;white-space:nowrap;backdrop-filter:blur(7px)}
+#stats{position:fixed;left:16px;top:calc(env(safe-area-inset-top) + 63px);font-size:10px;color:#eef4f7df;z-index:1;pointer-events:none;text-shadow:0 1px 3px #20344966}
+#panel{position:fixed;z-index:7;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;max-width:510px;margin:auto;background:#1b3045ec;border:1px solid #ecf5ff75;border-radius:17px;padding:12px 14px 11px;box-shadow:0 12px 35px #1832495e;backdrop-filter:blur(12px);max-height:72dvh;overflow:auto}
+#panel[hidden],#placementBar[hidden],#selectionDock[hidden]{display:none!important}
+#panelHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+#panelHeader .actions{flex-wrap:wrap;justify-content:flex-end}
+#panelHeader .actions button{padding:7px 8px}
+#panel h2{font-size:12px;font-weight:650;letter-spacing:.025em;margin:0}
+#panel .sub{font-size:10px;color:#c4d2e1}
+.actions{display:flex;gap:6px}
+button{background:#ecf3ff13;color:#eaf1f8;border:1px solid #b3c9dd66;border-radius:10px;font:11px -apple-system,BlinkMacSystemFont,sans-serif;padding:8px 9px;touch-action:manipulation;cursor:pointer}
+button:active{background:#edf6ff32}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#models button{text-align:left;padding:9px 10px;min-width:0;display:flex;flex-direction:column;gap:3px;align-items:stretch;border-color:#d6e7fa6b;background:#eaf3ff0b}
+#models button[aria-current=true]{border-color:#f2c89e;background:#d5e8f525}
+#models button[aria-pressed=false]{opacity:.58}
+#placement[aria-pressed=true]{border-color:#f2c89e;background:#805f41a9;color:#fff3df}
+#individual{padding:9px 1px 3px}
+#selectedHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px}
+.selectedActions{display:flex;gap:8px;align-items:center}
+#selectedValue{font-size:12px;color:#f5c69b;font-weight:700}
+#selectedPower{padding:6px 9px}
+#selectedIntensity{display:block;width:100%;accent-color:#f2aa76;height:23px;margin:5px 0 2px;touch-action:pan-x}
+#gestureHint{font-size:10px;line-height:1.3;color:#c8d6e6}
+#models button[aria-current=true] .name:before{content:"● ";color:#f6c99c}
+#models .name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+#models .meta{color:#d2dce9;font-size:10px;line-height:1.25}
+#models .value{color:#f8d0aa;font-weight:700;font-size:11px}
+#panelFooter{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;margin-top:9px}
+#panelFooter button{padding:7px 9px;font-size:10px}
+#panelFooter .lights{display:flex;gap:5px}
+#panelFooter button[aria-pressed=false]{opacity:.52}
+#description{font-size:10px;color:#c4d2e1;line-height:1.45;margin:8px 0 0}
+#placementBar{position:fixed;z-index:8;top:calc(env(safe-area-inset-top) + 70px);left:12px;right:12px;max-width:470px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:7px;border:1px solid #e5f3ff83;background:#14293ecc;border-radius:16px;padding:8px 9px;box-shadow:0 12px 25px #162d4860;backdrop-filter:blur(8px)}
+#placementBar>span{font-size:11px;font-weight:600}
+#placeChoices{display:flex;gap:4px;min-width:0;overflow-x:auto;touch-action:pan-x;overscroll-behavior-x:contain}
+#placeChoices button{padding:8px 9px;flex:0 0 auto}
+#placeChoices button[aria-pressed=true]{background:#f0bb8244;border-color:#ffe2b5}
+#finishPlacement{color:#ffe2bb;border-color:#f2bb8c}
+#selectionDock{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;margin:auto;max-width:400px;background:#1b3045d9;border:1px solid #ecf5ff6c;border-radius:14px;padding:9px 12px 6px;backdrop-filter:blur(9px)}
+.dockTop{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:11px}
+#dockName{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#dockValue{color:#ffd2a2;font-weight:700;white-space:nowrap}
+#dockPower,#dockClose{padding:4px 8px;min-width:22px}
+#dockIntensity{display:block;width:100%;height:22px;accent-color:#f2aa76;margin:3px 0 0;touch-action:pan-x}
+#lightingControls{margin:12px 0 6px;padding:11px 1px 2px;border-top:1px solid #d4e4f552}
+#lightingTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+#lightingTitle strong{font-size:12px;font-weight:650}
+#lightingTitle button{font-size:10px;padding:6px 9px}
+.lightingRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:3px;margin-bottom:9px}
+.lightingRow label{font-size:11px;color:#e4ebf4}
+.lightingRow output{font-size:11px;font-weight:650;color:#f8d0aa;font-variant-numeric:tabular-nums}
+.lightingRow input{grid-column:1/-1;display:block;width:100%;height:23px;margin:0;accent-color:#f2aa76;touch-action:pan-x}
+@media(max-width:360px){#panel{padding:10px 11px}#models .name{font-size:10px}button{padding:7px}#placementBar{gap:4px;left:7px;right:7px;padding:7px}#placeChoices button{padding:7px}}
+
+</style>
+</head>
+<body>
+<canvas id="surface" aria-label="Une surface 3D continue contenant huit commandes indépendantes, chacune animée géométriquement"></canvas>
+<header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Placement libre · <span id="clockPhase">couleurs selon l’heure</span></p></div><button id="settingsButton" type="button" aria-expanded="false" aria-controls="panel">Réglages</button></header>
+<div id="stats" role="status">Initialisation des huit reliefs…</div>
+<section id="panel" hidden aria-label="Commandes du test général">
+ <div id="panelHeader"><div><h2>Huit commandes sur une membrane</h2><div class="sub">Sélection, placement et relief individuels</div></div><div class="actions"><button id="placement" type="button" aria-pressed="false">Placer</button><button id="allOn" type="button">Tout ON</button><button id="allOff" type="button">Tout OFF</button></div></div>
+ <div id="models" aria-label="Commandes 3D individuelles">
+ <button type="button" data-id="0" aria-pressed="true"><span class="name">01 · Trois reliefs</span><span class="meta">100 % · 2,0 s</span><span class="value" id="value0">0 %</span></button>
+ <button type="button" data-id="1" aria-pressed="true"><span class="name">02 · Plateau + raccord</span><span class="meta">142 % · 1,4 s</span><span class="value" id="value1">0 %</span></button>
+ <button type="button" data-id="2" aria-pressed="true"><span class="name">03 · Couronne bombée</span><span class="meta">120 % · 2,0 s</span><span class="value" id="value2">0 %</span></button>
+ <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
+ <button type="button" data-id="4" aria-pressed="true"><span class="name">05 · Ligne horizontale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value4">0 %</span></button>
+ <button type="button" data-id="5" aria-pressed="true"><span class="name">06 · Ligne verticale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value5">0 %</span></button>
+ <button type="button" data-id="6" aria-pressed="true"><span class="name">07 · Angle droit</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value6">0 %</span></button>
+ <button type="button" data-id="7" aria-pressed="true"><span class="name">08 · Angle biais</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value7">0 %</span></button>
+ </div>
+ <div id="individual" aria-label="Réglage du relief de la lampe sélectionnée"><div id="selectedHeading"><strong id="selectedName">01 · Trois reliefs</strong><div class="selectedActions"><output id="selectedValue">100 %</output><button id="selectedPower" type="button">Éteindre</button></div></div><input id="selectedIntensity" type="range" min="0" max="100" step="1" value="100" aria-label="Déploiement de la commande sélectionnée"><div id="gestureHint">Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler</div></div>
+ <div id="lightingControls" aria-label="Réglage global de l’éclairage de la membrane">
+  <div id="lightingTitle"><strong>Éclairage de la membrane</strong><button type="button" id="resetLighting">Réinitialiser</button></div>
+  <div class="lightingRow"><label for="lightingContrast">Contraste</label><output id="lightingContrastValue" for="lightingContrast">100 %</output><input id="lightingContrast" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="lightingRow"><label for="lightingIntensity">Intensité lumineuse</label><output id="lightingIntensityValue" for="lightingIntensity">100 %</output><input id="lightingIntensity" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="lightingRow"><label for="lightingShadows">Force des ombres</label><output id="lightingShadowsValue" for="lightingShadows">100 %</output><input id="lightingShadows" type="range" min="0" max="200" step="1" value="100"></div>
+  <div class="sub">Réglage global du rendu sans changer les hauteurs.</div>
+ </div>
+ <div id="panelFooter"><button type="button" id="replay">Rejouer les huit apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
+ <p id="description">Position libre sur toute la membrane. Sélectionner une lampe, puis toucher un emplacement en mode Placer. <a href="./e88-atelier-commandes-3d.html?v=3" style="color:#ecf1fb">Atelier E88</a></p>
+</section>
+
+<div id="placementBar" hidden aria-label="Placement libre des lampes">
+  <span>Placer</span>
+  <div id="placeChoices">
+    <button type="button" data-place="0" aria-pressed="false">01</button>
+    <button type="button" data-place="1" aria-pressed="false">02</button>
+    <button type="button" data-place="2" aria-pressed="false">03</button>
+    <button type="button" data-place="3" aria-pressed="false">04</button>
+    <button type="button" data-place="4" aria-pressed="false">05</button>
+    <button type="button" data-place="5" aria-pressed="false">06</button>
+    <button type="button" data-place="6" aria-pressed="false">07</button>
+    <button type="button" data-place="7" aria-pressed="false">08</button>
+  </div>
+  <button id="finishPlacement" type="button">Terminer</button>
+</div>
+<div id="selectionDock" hidden aria-label="Intensité de la commande sélectionnée">
+  <div class="dockTop"><span id="dockName">Commande sélectionnée</span><output id="dockValue">100 %</output><button id="dockPower" type="button">Éteindre</button><button id="dockClose" type="button" aria-label="Fermer le réglage">×</button></div>
+  <input id="dockIntensity" type="range" min="0" max="100" value="100" step="1" aria-label="Déploiement de la commande">
+</div>
+<script id="vert" type="x-shader/x-vertex">
+attribute vec2 aXY;
+attribute vec4 aHeights;
+attribute vec4 aSlopes;
+uniform vec2 uViewport;
+uniform float uUnit;
+uniform vec2 uCenters[4];
+uniform vec4 uShapes;
+uniform vec4 uStarts;
+uniform vec2 uStrokeCenters[4];
+uniform vec4 uStrokeShapes;
+varying vec3 vPos;
+varying vec3 vNormal;
+varying vec2 vScreen;
+float ease(float v){v=clamp(v,0.0,1.0);return v*v*(3.0-2.0*v);}
+vec3 morph(vec2 d,float h,float dh,float p,float start){
+ float r=length(d);
+ float rise=ease(p);
+ float travel=ease((p-0.035)/0.92);
+ float front=mix(start,2.10,travel);
+ float width=0.36;
+ float x=clamp((front-r)/width,0.0,1.0);
+ float reveal=ease(x);
+ float dr=(x>0.0&&x<1.0)?-6.0*x*(1.0-x)/width:0.0;
+ float factor=rise*reveal;
+ float slope=rise*(dh*reveal+h*dr);
+ return vec3(h*factor, -slope*d/max(r,0.00001));
+}
+// Sculpted stroke and angle heights share the existing continuous 3D mesh.
+float segDist(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ float t=clamp(dot(p-a,ab)/dot(ab,ab),0.0,1.0);
+ return length(p-(a+t*ab));
+}
+float strokeHeight(vec2 d,float kind){
+ float dist=100.0;
+ if(kind<0.5)dist=segDist(d,vec2(-1.32,0.0),vec2(1.32,0.0));
+ else if(kind<1.5)dist=segDist(d,vec2(0.0,-1.32),vec2(0.0,1.32));
+ else if(kind<2.5)dist=min(segDist(d,vec2(-1.03,-0.91),vec2(-1.03,0.85)),segDist(d,vec2(-1.03,0.85),vec2(1.05,0.85)));
+ else dist=min(segDist(d,vec2(-1.19,-0.75),vec2(0.0,0.70)),segDist(d,vec2(0.0,0.70),vec2(1.19,-0.75)));
+ float x=clamp((0.31-dist)/0.31,0.0,1.0);
+ return 0.93*x*x*(3.0-2.0*x);
+}
+vec3 strokeMorph(vec2 p,vec2 center,float kind,float progress){
+ vec2 d=p-center;
+ float rise=ease(progress);
+ float e=0.018;
+ float height=strokeHeight(d,kind);
+ float dx=(strokeHeight(d+vec2(e,0.0),kind)-strokeHeight(d-vec2(e,0.0),kind))/(2.0*e);
+ float dy=(strokeHeight(d+vec2(0.0,e),kind)-strokeHeight(d-vec2(0.0,e),kind))/(2.0*e);
+ return vec3(height*rise,-dx*rise,-dy*rise);
+}
+void main(){
+ vec2 d0=aXY-uCenters[0];
+ vec2 d1=aXY-uCenters[1];
+ vec2 d2=aXY-uCenters[2];
+ vec2 d3=aXY-uCenters[3];
+ vec3 m0=morph(d0,aHeights.x,aSlopes.x,uShapes.x,uStarts.x);
+ vec3 m1=morph(d1,aHeights.y,aSlopes.y,uShapes.y,uStarts.y);
+ vec3 m2=morph(d2,aHeights.z,aSlopes.z,uShapes.z,uStarts.z);
+ vec3 m3=morph(d3,aHeights.w,aSlopes.w,uShapes.w,uStarts.w);
+ vec3 m4=strokeMorph(aXY,uStrokeCenters[0],0.0,uStrokeShapes.x);
+ vec3 m5=strokeMorph(aXY,uStrokeCenters[1],1.0,uStrokeShapes.y);
+ vec3 m6=strokeMorph(aXY,uStrokeCenters[2],2.0,uStrokeShapes.z);
+ vec3 m7=strokeMorph(aXY,uStrokeCenters[3],3.0,uStrokeShapes.w);
+ float z=m0.x+m1.x+m2.x+m3.x+m4.x+m5.x+m6.x+m7.x;
+ vec2 xyNormal=m0.yz+m1.yz+m2.yz+m3.yz+m4.yz+m5.yz+m6.yz+m7.yz;
+ vec3 n=normalize(vec3(xyNormal,1.0));
+ gl_Position=vec4(aXY.x*uUnit/uViewport.x*2.0-1.0,1.0-aXY.y*uUnit/uViewport.y*2.0,0.0,1.0);
+ vPos=vec3(aXY-vec2(uViewport.x*.5,uViewport.y*.41)/uUnit,z);
+ vNormal=n;
+ vScreen=aXY*uUnit;
+}
+</script>
+<script id="frag" type="x-shader/x-fragment">
+precision highp float;
+varying vec3 vPos;
+varying vec3 vNormal;
+varying vec2 vScreen;
+uniform vec3 uColdPos,uWarmPos,uColdColor,uWarmColor;
+uniform vec3 uPaletteA,uPaletteB;
+uniform vec2 uPaletteOrigin;
+uniform float uPaletteRadius,uPaletteBalance;
+uniform float uColdEnabled,uWarmEnabled;
+uniform float uContrast,uLightIntensity,uShadowStrength;
+vec3 illuminate(vec3 position,vec3 tint,float power,vec3 n){
+ vec3 delta=position-vPos;
+ float dist2=dot(delta,delta);
+ vec3 dir=normalize(delta);
+ float flatDiffuse=max(0.0,dir.z);
+ float diffuse=clamp(flatDiffuse+(max(0.0,dot(n,dir))-flatDiffuse)*uShadowStrength,0.0,1.0);
+ float attenuation=1.0/(1.0+dist2*0.09);
+ vec3 halfDir=normalize(dir+vec3(0.0,0.0,1.0));
+ float spec=pow(max(0.0,dot(n,halfDir)),12.0)*0.008*min(1.0,uShadowStrength);
+ return tint*power*attenuation*(diffuse+spec);
+}
+void main(){
+ vec3 normal=normalize(vNormal);
+ // Same radial time-of-day color distribution as DECK, now on a lit 3D material.
+ float d=clamp(length(vScreen-uPaletteOrigin)/max(1.0,uPaletteRadius),0.0,1.0);
+ float radial=d*d*(3.0-2.0*d);
+ float weight=pow(max(0.0,1.0-radial),uPaletteBalance);
+ vec3 material=mix(uPaletteA,uPaletteB,weight);
+ vec3 ambient=material*0.84+vec3(0.012,0.018,0.026);
+ // Extra soft shading above 100%; the current E89 v6 is preserved at 100%.
+ vec3 coldDir=normalize(uColdPos-vPos);
+ vec3 warmDir=normalize(uWarmPos-vPos);
+ float coldShade=uColdEnabled*clamp((max(0.0,coldDir.z)-max(0.0,dot(normal,coldDir)))/max(0.2,coldDir.z),0.0,1.0);
+ float warmShade=uWarmEnabled*clamp((max(0.0,warmDir.z)-max(0.0,dot(normal,warmDir)))/max(0.2,warmDir.z),0.0,1.0);
+ ambient*=1.0-0.45*max(0.0,uShadowStrength-1.0)*max(coldShade,warmShade);
+ vec3 cold=illuminate(uColdPos,uColdColor,1.65*uColdEnabled*uLightIntensity,normal);
+ vec3 warm=illuminate(uWarmPos,uWarmColor,1.75*uWarmEnabled*uLightIntensity,normal);
+ vec3 light=ambient+cold+warm;
+ vec3 color=pow(light/(vec3(1.0)+light*0.23),vec3(1.0));
+ color=(color-vec3(0.5))*uContrast+vec3(0.5);
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+}
+</script>
+<script>
+(function(){
+'use strict';
+const models=[{"name":"Trois reliefs","id":1,"front":0.56,"profile":[7.66,7.58,7.39,7.08,6.62,5.97,5.12,3.99,2.7,1.69,0.98,0.5,0.19,0.04,0.04,0.19,0.5,0.99,1.7,2.73,4.03,5.14,5.99,6.64,7.09,7.4,7.58,7.66,7.58,7.38,7.06,6.6,5.94,5.07,3.94,2.84,1.98,1.3,0.79,0.4,0.17,0.05,0.03,0.11,0.35,0.7,1.17,1.79,2.6,3.65,4.86,5.78,6.45,6.95,7.31,7.56,7.64,7.61,7.46,7.2,6.75,6.15,5.37,4.34,3.19,2.37,1.69,1.14,0.71,0.39,0.17,0.04,0,0],"max":7.66},{"name":"Plateau + raccord","id":2,"front":1.32,"profile":[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0],"max":14.57},{"name":"Couronne bombée","id":3,"front":0.78,"profile":[2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.81,3.71,4.6,5.49,6.21,6.9,7.59,8.28,8.81,9.32,9.84,10.36,10.74,11.1,11.46,11.82,12.1,12.31,12.52,12.73,12.93,13,13.07,13.14,13.21,13.2,13.13,13.06,12.99,12.91,12.7,12.49,12.28,12.07,11.76,11.4,11.04,10.68,10.27,9.75,9.24,8.72,8.17,7.48,6.79,6.1,5.34,4.45,3.56,2.68,1.77,1.06,0.56,0.22,0.04,0.01,0],"max":13.21},{"name":"Grand plateau","id":4,"front":1.4,"profile":[13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.24,13.24,13.19,13.11,13.02,12.87,12.71,12.47,12.24,11.92,11.6,11.17,10.72,10.18,9.54,8.8,7.89,6.67,4.53,2.04,1.22,0.64,0.26,0.05,0.01,0],"max":13.25}];
+models.push(...['Ligne horizontale','Ligne verticale','Angle droit','Angle biais'].map((name,i)=>({name,id:i+5,kind:'stroke'})));
+const configs=[{"height":100,"duration":2},{"height":142,"duration":1.4},{"height":120,"duration":2},{"height":132,"duration":2},...Array.from({length:4},()=>({height:100,duration:1.8}))];
+const canvas=document.getElementById('surface');
+const status=document.getElementById('stats');
+const panel=document.getElementById('panel');
+const buttons=[...document.querySelectorAll('#models button')];
+const cool=document.getElementById('cool'),warm=document.getElementById('warm');
+const quality=document.getElementById('quality'),clockPhase=document.getElementById('clockPhase');
+const placementButton=document.getElementById('placement'),selectedSlider=document.getElementById('selectedIntensity');
+const settingsButton=document.getElementById('settingsButton'),placementBar=document.getElementById('placementBar');
+const finishPlacement=document.getElementById('finishPlacement'),placeChoices=[...document.querySelectorAll('#placeChoices button')];
+const selectionDock=document.getElementById('selectionDock'),dockSlider=document.getElementById('dockIntensity');
+const dockName=document.getElementById('dockName'),dockValue=document.getElementById('dockValue');
+const dockPower=document.getElementById('dockPower'),dockClose=document.getElementById('dockClose');
+const selectedName=document.getElementById('selectedName'),selectedValue=document.getElementById('selectedValue');
+const selectedPower=document.getElementById('selectedPower'),gestureHint=document.getElementById('gestureHint');
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const LIGHTING_KEY='deck-e89-lighting-v1';
+const lighting={contrast:100,intensity:100,shadows:100};
+try{
+ const saved=JSON.parse(localStorage.getItem(LIGHTING_KEY));
+ if(saved&&typeof saved==='object')for(const key of Object.keys(lighting))if(Number.isFinite(saved[key]))lighting[key]=clamp(Math.round(saved[key]),0,200);
+}catch(_){}
+function saveLighting(){try{localStorage.setItem(LIGHTING_KEY,JSON.stringify(lighting));}catch(_){}}
+const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:Array(8).fill(0),targets:Array(8).fill(1),lastLevels:Array(8).fill(1),animations:Array(8).fill(null),lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:null,settingsOpen:false,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
+// V8 keeps E89 v7 coordinates intact and writes the extended layout to a new key.
+const POSITION_KEY='deck-e89-lamp-layout-v2';
+const PREVIOUS_POSITION_KEY='deck-e89-lamp-layout-v1';
+const DEFAULT_POSITIONS=[[.25,.35],[.76,.46],[.31,.64],[.71,.77],[.50,.14],[.49,.87],[.15,.57],[.86,.19]];
+try{
+ const saved=JSON.parse(localStorage.getItem(POSITION_KEY))||JSON.parse(localStorage.getItem(PREVIOUS_POSITION_KEY));
+ if(saved&&Array.isArray(saved.positions)&&[4,8].includes(saved.positions.length)&&saved.positions.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite))){
+  state.positionFractions=saved.positions.map(p=>p.map(v=>clamp(v,0,1)));
+  if(state.positionFractions.length===4)state.positionFractions.push(...DEFAULT_POSITIONS.slice(4).map(p=>p.slice()));
+ }
+ if(saved&&Array.isArray(saved.levels)&&[4,8].includes(saved.levels.length)&&saved.levels.every(Number.isFinite)){
+  state.targets=saved.levels.map(v=>clamp(v,0,1));
+  while(state.targets.length<8)state.targets.push(1);
+  state.lastLevels=state.targets.map(v=>v>.001?v:1);
+ }
+}catch(_){}
+function saveLayout(){
+ try{localStorage.setItem(POSITION_KEY,JSON.stringify({version:2,positions:state.positionFractions,levels:state.targets}));}catch(_){}
+}
+const dayCycleDefaults=[
+ [0,'Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
+ [3,'Nuit calme','#182C50','#849BC5',.72,.68,1.18,1.80],
+ [6,'Fin de nuit','#182C50','#849BC5',.52,1.12,1.34,1.80],
+ [7,'Aube rose','#7C91AA','#DEA0B2',.48,1.08,1.20,1.25],
+ [9,'Matinée orange','#9CAEB1','#F2AA76',.38,.93,1.12,1.25],
+ [11,'Journée · blanc chaud','#FFF4D7','#E8BC79',.48,.70,1.06,1.30],
+ [13,'Après-midi · bleu blanc','#C0D1DF','#FAFAF4',.56,.30,1.10,1.15],
+ [15,'Après-midi lumineux','#B7CDDF','#F9FAF5',.58,-.05,1.10,1.30],
+ [17,'Fin d’après-midi','#B1C4D7','#F4F6F4',.42,-.08,1.18,1.45],
+ [19,'Soir orangé','#526B91','#E3A17F',.20,.14,1.14,1.65],
+ [21,'Soir bleu','#2F486D','#A18FB8',-.10,.43,1.20,1.85],
+ [23,'Retour à la nuit','#182C50','#849BC5',.28,.56,1.12,1.80]
+].map(p=>({hour:p[0],name:p[1],a:p[2],b:p[3],x:p[4],y:p[5],spread:p[6],balance:p[7]}));
+let dayCycle=dayCycleDefaults.map(p=>({...p}));
+try{
+ const saved=JSON.parse(localStorage.getItem('deck-daycycle-v3'));
+ if(Array.isArray(saved)&&saved.length===12&&saved.every(p=>p&&/^#[\da-f]{6}$/i.test(p.a)&&/^#[\da-f]{6}$/i.test(p.b)&&['x','y','spread','balance'].every(k=>Number.isFinite(p[k])))){
+  dayCycle=saved.map((p,i)=>({...dayCycleDefaults[i],a:p.a,b:p.b,x:clamp(p.x,-.3,1.3),y:clamp(p.y,-.3,1.3),spread:clamp(p.spread,.4,2),balance:clamp(p.balance,.4,3)}));
+ }
+}catch(_){}
+const hexRGB=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+const lerpRGB=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+function paletteForCurrentTime(){
+ const date=new Date(),hour=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
+ let i=0;for(let k=1;k<dayCycle.length;k++)if(hour>=dayCycle[k].hour)i=k;
+ const a=dayCycle[i],b=dayCycle[(i+1)%12],end=i===11?24:b.hour;
+ const u=clamp((hour-a.hour)/(end-a.hour),0,1),t=u*u*(3-2*u);
+ return {
+  name:a.name,minute:date.getHours()*60+date.getMinutes(),
+  a:lerpRGB(hexRGB(a.a),hexRGB(b.a),t),
+  b:lerpRGB(hexRGB(a.b),hexRGB(b.b),t),
+  x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,
+  spread:a.spread+(b.spread-a.spread)*t,balance:a.balance+(b.balance-a.balance)*t
+ };
+}
+
+function sample(profile,r){
+ const x=clamp(r/1.55*36.5*2,0,73),i=Math.min(72,Math.floor(x)),t=clamp(x-i,0,1);
+ const h0=profile[i],h1=profile[i+1];
+ const d0=h0-profile[Math.max(0,i-1)],d1=h1-h0,d2=profile[Math.min(73,i+2)]-h1;
+ const derivative=(a,b)=>a*b<=0?0:2*a*b/(a+b);
+ const m0=i===0?d1:derivative(d0,d1),m1=i===72?d1:derivative(d1,d2);
+ const t2=t*t,t3=t2*t;
+ return Math.max(0,(2*t3-3*t2+1)*h0+(t3-2*t2+t)*m0+(-2*t3+3*t2)*h1+(t3-t2)*m1);
+}
+function createShader(gl,kind,src){
+ const shader=gl.createShader(kind);gl.shaderSource(shader,src);gl.compileShader(shader);
+ if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader)||'Erreur GLSL');
+ return shader;
+}
+function initialize(){
+ const gl=canvas.getContext('webgl',{alpha:false,antialias:true,depth:false});
+ if(!gl)throw Error('WebGL indisponible sur cet appareil');
+ const p=gl.createProgram();
+ gl.attachShader(p,createShader(gl,gl.VERTEX_SHADER,document.getElementById('vert').textContent));
+ gl.attachShader(p,createShader(gl,gl.FRAGMENT_SHADER,document.getElementById('frag').textContent));
+ gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison WebGL impossible');
+ gl.useProgram(p);
+ const a={xy:gl.getAttribLocation(p,'aXY'),heights:gl.getAttribLocation(p,'aHeights'),slopes:gl.getAttribLocation(p,'aSlopes')};
+ const u={strokeCenters:gl.getUniformLocation(p,'uStrokeCenters[0]'),strokeShapes:gl.getUniformLocation(p,'uStrokeShapes'),viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance'),contrast:gl.getUniformLocation(p,'uContrast'),lightIntensity:gl.getUniformLocation(p,'uLightIntensity'),shadowStrength:gl.getUniformLocation(p,'uShadowStrength')};
+ state.gl=gl;state.p=p;state.a=a;state.u=u;
+ state.uint32Supported=!!gl.getExtension('OES_element_index_uint');
+ state.highQuality=state.uint32Supported;
+ quality.setAttribute('aria-pressed',String(state.highQuality));
+ quality.textContent=state.highQuality?'Précision : fine':'Précision : normale';
+ state.buffers={xy:gl.createBuffer(),heights:gl.createBuffer(),slopes:gl.createBuffer(),index:gl.createBuffer()};
+ state.ready=true;
+ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();state.ready=false;status.textContent='Contexte WebGL perdu — recharge la page';});
+ resize();
+}
+// Five joined coordinate intervals form a single manifold 3D surface. The
+// vertex budget is concentrated on both circular embossings, not empty areas.
+// Reallocate mesh density around the ACTUAL positions of all four forms,
+// including when the user has moved them off the original 2×2 grid.
+// An invertible cumulative density keeps one continuous, nondegenerate mesh.
+function adaptiveAxis(count,extent,centres,unit){
+ const bins=640,acc=new Float32Array(bins+1);
+ const spread=unit*1.64;
+ for(let i=1;i<=bins;i++){
+  const x=(i-.5)*extent/bins;
+  let density=.17;
+  for(const center of centres){const t=(x-center)/spread;density+=1.7*Math.exp(-Math.pow(Math.abs(t),4));}
+  acc[i]=acc[i-1]+density;
+ }
+ const arr=new Float32Array(count+1),total=acc[bins];
+ arr[0]=0;arr[count]=extent;
+ let j=1;
+ for(let i=1;i<count;i++){
+  const target=total*i/count;
+  while(j<bins&&acc[j]<target)j++;
+  const p=(target-acc[j-1])/Math.max(1e-8,acc[j]-acc[j-1]);
+  arr[i]=(j-1+p)*extent/bins;
+ }
+ return arr;
+}
+function upload(name,data,size){
+ const gl=state.gl,attr=state.a[name];
+ gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers[name]);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+ gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,size,gl.FLOAT,false,0,0);
+}
+function placementBounds(w,h,unit){
+ // No panel/grid constraints: the center may approach any screen edge.
+ // The material surface extends under the interface, as in the 2D DECK.
+ return {minX:4,maxX:Math.max(5,w-4),minY:4,maxY:Math.max(5,h-4)};
+}
+function resize(){
+ if(!state.ready)return;
+ const w=innerWidth,h=innerHeight,dpr=Math.min(3,devicePixelRatio||1);
+ const width=Math.max(1,Math.round(w*dpr)),height=Math.max(1,Math.round(h*dpr));
+ if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+ canvas.style.width=w+'px';canvas.style.height=h+'px';
+ const unit=clamp(w*.105,34,49);
+ const b=placementBounds(w,h,unit);
+ // Free scattered starting arrangement, not a compulsory 2×2 grid.
+ // Previously saved locations always win.
+ if(state.positionFractions.length!==8){
+  state.positionFractions=DEFAULT_POSITIONS.map(p=>p.slice());
+ }
+ state.w=w;state.h=h;state.unit=unit;state.bounds=b;
+ state.screenPositions=state.positionFractions.map(([x,y])=>[clamp(x*w,b.minX,b.maxX),clamp(y*h,b.minY,b.maxY)]);
+ state.centers=state.screenPositions.map(([x,y])=>[x/unit,y/unit]);
+ state.meshDirty=true;requestDraw();
+}
+// Precompute high-resolution profiles and their filtered analytical slopes
+// only once; dragging then moves the actual 3D relief without huge CPU cost.
+const RADIAL_STEPS=2048,RADIAL_MAX=1.58;
+const radialTables=models.slice(0,4).map(m=>{
+ const h=new Float32Array(RADIAL_STEPS+1),s=new Float32Array(RADIAL_STEPS+1);
+ for(let i=0;i<=RADIAL_STEPS;i++){
+  const r=i/RADIAL_STEPS*RADIAL_MAX,eps=.014;
+  h[i]=sample(m.profile,r);
+  s[i]=(sample(m.profile,r+eps)-sample(m.profile,Math.max(0,r-eps)))/(r<eps?r+eps:2*eps);
+ }
+ return {h,s};
+});
+function lookup(table,r){
+ if(r>=RADIAL_MAX)return 0;
+ const x=Math.max(0,r)*RADIAL_STEPS/RADIAL_MAX,i=Math.min(RADIAL_STEPS-1,Math.floor(x)),t=x-i;
+ return table[i]+(table[i+1]-table[i])*t;
+}
+function rebuildGeometry(){
+ if(!state.ready)return;
+ const gl=state.gl,w=state.w,h=state.h,unit=state.unit,centers=state.centers;
+ const cols=state.highQuality?344:248,rows=cols,vertices=(cols+1)*(rows+1);
+ const xy=new Float32Array(vertices*2),heights=new Float32Array(vertices*4),slopes=new Float32Array(vertices*4);
+ const indices=state.highQuality?new Uint32Array(cols*rows*6):new Uint16Array(cols*rows*6);
+ const xs=adaptiveAxis(cols,w,state.screenPositions.map(p=>p[0]),unit);
+ const ys=adaptiveAxis(rows,h,state.screenPositions.map(p=>p[1]),unit);
+ for(let iy=0;iy<=rows;iy++)for(let ix=0;ix<=cols;ix++){
+  const k=iy*(cols+1)+ix,p2=k*2,p4=k*4,x=xs[ix]/unit,y=ys[iy]/unit;
+  xy[p2]=x;xy[p2+1]=y;
+  for(let j=0;j<4;j++){
+   const [cx,cy]=centers[j],r=Math.hypot(x-cx,y-cy),scale=configs[j].height/100/11;
+   heights[p4+j]=lookup(radialTables[j].h,r)*scale;
+   slopes[p4+j]=lookup(radialTables[j].s,r)*scale;
+  }
+ }
+ for(let iy=0,k=0;iy<rows;iy++)for(let ix=0;ix<cols;ix++){
+  const a=iy*(cols+1)+ix,b=a+cols+1;
+  indices[k++]=a;indices[k++]=a+1;indices[k++]=b;
+  indices[k++]=a+1;indices[k++]=b+1;indices[k++]=b;
+ }
+ upload('xy',xy,2);upload('heights',heights,4);upload('slopes',slopes,4);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+ Object.assign(state,{indices:indices.length,faces:indices.length/3,indexType:state.highQuality?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,meshDirty:false});
+}
+function movePlacement(index,x,y){
+ if(index<0||index>=8||!state.ready)return;
+ const b=state.bounds,w=state.w,h=state.h,unit=state.unit;
+ x=clamp(x,b.minX,b.maxX);y=clamp(y,b.minY,b.maxY);
+ state.positionFractions[index]=[x/w,y/h];
+ state.screenPositions[index]=[x,y];
+ state.centers[index]=[x/unit,y/unit];
+ state.meshDirty=true;requestDraw();
+}
+function requestDraw(){
+ if(!state.ready||state.requested)return;
+ state.requested=true;requestAnimationFrame(draw);
+}
+function animate(index,target,reset=false,delay=0){
+ const next=clamp(target,0,1);
+ const from=reset?0:state.levels[index];
+ state.targets[index]=next;state.levels[index]=from;
+ if(next>.001)state.lastLevels[index]=next;
+ if(Math.abs(next-from)<.0005){state.levels[index]=next;state.animations[index]=null;refresh();requestDraw();return;}
+ state.animations[index]={start:null,from,to:next,delay,duration:Math.max(250,configs[index].duration*1000*Math.abs(next-from)*(next>from?1:.75))};
+ refresh();requestDraw();
+}
+function allTo(value,reset=false){
+ for(let i=0;i<8;i++)animate(i,value?state.lastLevels[i]:0,reset,i*115);
+ saveLayout();
+}
+function toggleLamp(index){
+ if(index<0||index>=8)return;
+ const active=state.targets[index]>.001;
+ if(active)state.lastLevels[index]=state.targets[index];
+ animate(index,active?0:state.lastLevels[index]);
+ saveLayout();
+}
+function selectLamp(index){
+ state.selected=index;
+ refresh();
+}
+function changeIntensity(value){
+ const i=state.selected;if(i===null||i===undefined)return;
+ value=clamp(value,0,1);
+ state.animations[i]=null;state.targets[i]=value;state.levels[i]=value;
+ if(value>.001)state.lastLevels[i]=value;
+ refresh();requestDraw();saveLayout();
+}
+function showSettings(on){
+ state.settingsOpen=!!on;
+ panel.hidden=!state.settingsOpen;
+ settingsButton.setAttribute('aria-expanded',String(state.settingsOpen));
+ settingsButton.textContent=state.settingsOpen?'Fermer':'Réglages';
+ if(state.settingsOpen&&state.placeMode)setPlaceMode(false);
+ refresh();
+}
+function setPlaceMode(on){
+ state.placeMode=!!on;
+ placementButton.setAttribute('aria-pressed',String(state.placeMode));
+ placementButton.textContent=state.placeMode?'Terminer':'Placer';
+ placementBar.hidden=!state.placeMode;
+ gestureHint.textContent=state.placeMode?'Placement : touche une zone libre ou glisse chaque relief':'Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler';
+ canvas.style.cursor=state.placeMode?'move':'default';
+ if(state.placeMode){
+  state.settingsOpen=false;panel.hidden=true;
+  settingsButton.setAttribute('aria-expanded','false');settingsButton.textContent='Réglages';
+ }
+ refresh();
+ if(!state.placeMode)saveLayout();
+}
+function refresh(){
+ for(let i=0;i<8;i++){
+  const v=Math.round(state.levels[i]*100);
+  document.getElementById('value'+i).textContent=v+' %';
+  buttons[i].setAttribute('aria-pressed',String(state.targets[i]>0.001));
+  buttons[i].setAttribute('aria-current',String(state.selected===i));
+ }
+ const i=state.selected;
+ const valid=i!==null&&i!==undefined;
+ selectedSlider.disabled=!valid;selectedPower.disabled=!valid;
+ if(valid){
+  selectedName.textContent=String(i+1).padStart(2,'0')+' · '+models[i].name;
+  selectedSlider.value=String(Math.round(state.levels[i]*100));
+  selectedValue.textContent=Math.round(state.levels[i]*100)+' %';
+  selectedPower.textContent=state.targets[i]>.001?'Éteindre':'Allumer';
+  dockName.textContent=selectedName.textContent;
+  dockValue.textContent=selectedValue.textContent;
+  dockSlider.value=selectedSlider.value;
+  dockPower.textContent=selectedPower.textContent;
+ }else{
+  selectedName.textContent='Sélectionner une commande';
+  selectedValue.textContent='—';selectedSlider.value='0';selectedPower.textContent='Allumer';
+ }
+ selectionDock.hidden=!valid||state.settingsOpen||state.placeMode;
+ for(let j=0;j<4;j++)placeChoices[j].setAttribute('aria-pressed',String(j===i));
+}
+function draw(time){
+ state.requested=false;if(!state.ready)return;
+ if(state.meshDirty)rebuildGeometry();
+ for(let i=0;i<8;i++){
+  const a=state.animations[i];if(!a)continue;
+  if(a.start===null)a.start=time;
+  const t=clamp((time-a.start-a.delay)/a.duration,0,1);
+  state.levels[i]=a.from+(a.to-a.from)*ease(t);
+  if(t>=1){state.levels[i]=a.to;state.animations[i]=null;}
+ }
+ refresh();
+ const gl=state.gl,u=state.u;
+ gl.viewport(0,0,canvas.width,canvas.height);
+ gl.clearColor(.29,.38,.45,1);gl.clear(gl.COLOR_BUFFER_BIT);
+ gl.useProgram(state.p);
+ gl.uniform2f(u.viewport,state.w,state.h);
+ gl.uniform1f(u.unit,state.unit);
+ gl.uniform2fv(u.centers,new Float32Array(state.centers.slice(0,4).flat()));
+ gl.uniform4f(u.shapes,...state.levels.slice(0,4));
+ gl.uniform4f(u.starts,...models.slice(0,4).map(m=>m.front));
+ gl.uniform2fv(u.strokeCenters,new Float32Array(state.centers.slice(4).flat()));
+ gl.uniform4f(u.strokeShapes,...state.levels.slice(4));
+ gl.uniform3f(u.coldPos,-6.0,-6.6,2.7);
+ gl.uniform3f(u.warmPos,5.5,7.0,2.5);
+ const palette=paletteForCurrentTime();
+ gl.uniform3f(u.coldColor,...palette.a);
+ gl.uniform3f(u.warmColor,...palette.b);
+ gl.uniform3f(u.paletteA,...palette.a);
+ gl.uniform3f(u.paletteB,...palette.b);
+ gl.uniform2f(u.paletteOrigin,palette.x*state.w,palette.y*state.h);
+ gl.uniform1f(u.paletteRadius,Math.max(state.w,state.h)*palette.spread);
+ gl.uniform1f(u.paletteBalance,palette.balance);
+ if(state.phase!==palette.name||state.minute!==palette.minute){
+  state.phase=palette.name;state.minute=palette.minute;
+  clockPhase.textContent=palette.name;
+  const bottomColor=palette.a.map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('');
+  document.getElementById('deckThemeColor').setAttribute('content','#'+bottomColor);
+ }
+ gl.uniform1f(u.coldOn,state.lights[0]?1:0);
+ gl.uniform1f(u.warmOn,state.lights[1]?1:0);
+ gl.uniform1f(u.contrast,lighting.contrast/100);
+ gl.uniform1f(u.lightIntensity,lighting.intensity/100);
+ gl.uniform1f(u.shadowStrength,lighting.shadows/100);
+ for(const [name,size] of [['xy',2],['heights',4],['slopes',4]]){
+  gl.bindBuffer(gl.ARRAY_BUFFER,state.buffers[name]);
+  gl.enableVertexAttribArray(state.a[name]);
+  gl.vertexAttribPointer(state.a[name],size,gl.FLOAT,false,0,0);
+ }
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,state.buffers.index);
+ gl.drawElements(gl.TRIANGLES,state.indices,state.indexType,0);
+ const err=gl.getError();
+ if(err!==gl.NO_ERROR){status.textContent='Erreur WebGL '+err;return;}
+ status.textContent='Membrane 3D nette · '+state.faces.toLocaleString('fr-FR')+' triangles · '+state.phase;
+ if(state.animations.some(Boolean))requestDraw();
+}
+const lightingInputs=[['contrast','lightingContrast','lightingContrastValue'],['intensity','lightingIntensity','lightingIntensityValue'],['shadows','lightingShadows','lightingShadowsValue']].map(([key,inputId,outputId])=>({key,input:document.getElementById(inputId),output:document.getElementById(outputId)}));
+function syncLighting(){for(const {key,input,output} of lightingInputs){input.value=String(lighting[key]);output.textContent=lighting[key]+' %';}}
+syncLighting();
+for(const {key,input,output} of lightingInputs)input.addEventListener('input',()=>{
+ lighting[key]=clamp(Number(input.value),0,200);
+ output.textContent=lighting[key]+' %';
+ saveLighting();requestDraw();
+});
+document.getElementById('resetLighting').addEventListener('click',()=>{
+ lighting.contrast=100;lighting.intensity=100;lighting.shadows=100;
+ syncLighting();saveLighting();requestDraw();
+});
+for(let i=0;i<8;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
+selectedSlider.addEventListener('input',()=>changeIntensity(Number(selectedSlider.value)/100));
+dockSlider.addEventListener('input',()=>changeIntensity(Number(dockSlider.value)/100));
+dockPower.addEventListener('click',()=>{if(state.selected!==null)toggleLamp(state.selected);});
+dockClose.addEventListener('click',()=>selectLamp(null));
+settingsButton.addEventListener('click',()=>showSettings(!state.settingsOpen));
+finishPlacement.addEventListener('click',()=>setPlaceMode(false));
+for(const b of placeChoices)b.addEventListener('click',()=>selectLamp(Number(b.dataset.place)));
+selectedPower.addEventListener('click',()=>{if(state.selected!==null)toggleLamp(state.selected);});
+placementButton.addEventListener('click',()=>setPlaceMode(!state.placeMode));
+document.getElementById('allOn').addEventListener('click',()=>allTo(1));
+document.getElementById('allOff').addEventListener('click',()=>allTo(0));
+document.getElementById('replay').addEventListener('click',()=>allTo(1,true));
+quality.addEventListener('click',()=>{
+ if(!state.ready)return;
+ if(!state.uint32Supported&&state.highQuality)return;
+ state.highQuality=state.uint32Supported?!state.highQuality:false;
+ quality.setAttribute('aria-pressed',String(state.highQuality));
+ quality.textContent=state.highQuality?'Précision : fine':'Précision : normale';
+ resize();
+});
+for(const [i,element] of [[0,cool],[1,warm]]){
+ element.addEventListener('click',()=>{state.lights[i]=!state.lights[i];element.setAttribute('aria-pressed',String(state.lights[i]));requestDraw();});
+}
+// 2D DECK gesture vocabulary adapted to the real 3D membrane:
+// tap selects, double-tap toggles, pinch adjusts depth/intensity,
+// and "Placer" switches one-finger dragging on.
+function segDistance2D(p,a,b){
+ const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy),0,1);
+ return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);
+}
+function strokeHitDistance(i,x,y){
+ const c=state.screenPositions[i],u=state.unit,p=[(x-c[0])/u,(y-c[1])/u];
+ if(i===4)return segDistance2D(p,[-1.32,0],[1.32,0]);
+ if(i===5)return segDistance2D(p,[0,-1.32],[0,1.32]);
+ if(i===6)return Math.min(segDistance2D(p,[-1.03,-.91],[-1.03,.85]),segDistance2D(p,[-1.03,.85],[1.05,.85]));
+ return Math.min(segDistance2D(p,[-1.19,-.75],[0,.70]),segDistance2D(p,[0,.70],[1.19,-.75]));
+}
+function locateLamp(x,y){
+ let nearest=-1,best=.48;
+ for(let i=4;i<8;i++){const d=strokeHitDistance(i,x,y);if(d<best){nearest=i;best=d;}}
+ if(nearest>=0)return nearest;
+ best=Infinity;
+ for(let i=0;i<4;i++){const c=state.screenPositions[i],d=Math.hypot(x-c[0],y-c[1]);if(d<state.unit*1.7&&d<best){best=d;nearest=i;}}
+ return nearest;
+}
+function pointerPosition(event){
+ const rect=canvas.getBoundingClientRect();
+ return {x:event.clientX-rect.left,y:event.clientY-rect.top};
+}
+canvas.addEventListener('pointerdown',e=>{
+ if(!state.ready)return;
+ const p=pointerPosition(e),hit=locateLamp(p.x,p.y);
+ state.pointers.set(e.pointerId,p);
+ if(canvas.setPointerCapture)try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+ if(state.pointers.size>=2){
+  state.multitouch=true;state.gesture=null;
+  if(!state.placeMode&&state.selected!==null&&state.pointers.size===2){
+   const [a,b]=[...state.pointers.values()];
+   state.pinch={distance:Math.max(8,Math.hypot(a.x-b.x,a.y-b.y)),base:state.levels[state.selected]};
+  }
+  return;
+ }
+ if(hit>=0)selectLamp(hit);
+ state.gesture={id:e.pointerId,hit,x:p.x,y:p.y,moved:false,dragged:false};
+});
+canvas.addEventListener('pointermove',e=>{
+ if(!state.pointers.has(e.pointerId))return;
+ const p=pointerPosition(e);state.pointers.set(e.pointerId,p);
+ if(state.multitouch&&state.pointers.size===2){
+  if(state.pinch&&!state.placeMode&&state.selected!==null){
+   const [a,b]=[...state.pointers.values()];
+   const dist=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y));
+   if(Math.abs(dist-state.pinch.distance)>5){
+    const next=clamp(state.pinch.base+Math.log(dist/state.pinch.distance)*.9,0,1);
+    if(Math.abs(next-state.levels[state.selected])>.002)changeIntensity(next);
+   }
+  }
+  return;
+ }
+ const g=state.gesture;
+ if(!g||g.id!==e.pointerId)return;
+ if(Math.hypot(p.x-g.x,p.y-g.y)>7)g.moved=true;
+ if(state.placeMode&&g.moved&&(g.hit>=0||state.selected!==null)){
+  g.dragged=true;movePlacement(g.hit>=0?g.hit:state.selected,p.x,p.y);
+ }
+});
+function finishPointer(e,cancelled){
+ const g=state.gesture,wasMulti=state.multitouch;
+ const p=state.pointers.get(e.pointerId)||pointerPosition(e);
+ state.pointers.delete(e.pointerId);
+ if(state.pointers.size<2)state.pinch=null;
+ if(state.pointers.size===0)state.multitouch=false;
+ if(g&&g.id===e.pointerId){
+  if(g.dragged){saveLayout();}
+  else if(!cancelled&&!wasMulti&&!g.moved&&state.placeMode){
+   // Tap anywhere on the membrane moves the selected model there.
+   if(g.hit<0&&state.selected!==null){movePlacement(state.selected,p.x,p.y);saveLayout();}
+   else if(g.hit>=0)selectLamp(g.hit);
+  }
+  else if(!cancelled&&!wasMulti&&!g.moved&&!state.placeMode){
+   if(g.hit>=0){
+    const now=performance.now(),last=state.lastTap;
+    if(last&&last.id===g.hit&&now-last.t<430&&Math.hypot(last.x-p.x,last.y-p.y)<25){
+     toggleLamp(g.hit);state.lastTap=null;
+    }else{selectLamp(g.hit);state.lastTap={id:g.hit,x:p.x,y:p.y,t:now};}
+   }else{state.lastTap=null;selectLamp(null);}
+  }
+  state.gesture=null;
+ }
+}
+canvas.addEventListener('pointerup',e=>finishPointer(e,false));
+canvas.addEventListener('pointercancel',e=>finishPointer(e,true));
+addEventListener('resize',resize);
+addEventListener('focus',()=>{if(state.ready)requestDraw();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.ready)requestDraw();});
+setInterval(()=>{if(state.ready)requestDraw();},30000);
+refresh();
+try{
+ initialize();
+ // Appear at the saved independent levels, or at 100% on first visit.
+ for(let i=0;i<8;i++)animate(i,state.targets[i],true,i*115);
+}catch(e){status.textContent='Erreur 3D : '+String(e.message||e);status.style.color='#ffe5cf';}
+})();
+</script>
+</body></html>
