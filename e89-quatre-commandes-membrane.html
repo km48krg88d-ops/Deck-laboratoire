@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" id="deckThemeColor" content="#9CAEB1">
-<title>DECK / E89 v7 — Éclairage réglable</title>
+<title>DECK / E89 v8 — Huit reliefs 3D</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -48,8 +48,8 @@ button:active{background:#edf6ff32}
 #description{font-size:10px;color:#c4d2e1;line-height:1.45;margin:8px 0 0}
 #placementBar{position:fixed;z-index:8;top:calc(env(safe-area-inset-top) + 70px);left:12px;right:12px;max-width:470px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:7px;border:1px solid #e5f3ff83;background:#14293ecc;border-radius:16px;padding:8px 9px;box-shadow:0 12px 25px #162d4860;backdrop-filter:blur(8px)}
 #placementBar>span{font-size:11px;font-weight:600}
-#placeChoices{display:flex;gap:4px}
-#placeChoices button{padding:8px 9px}
+#placeChoices{display:flex;gap:4px;min-width:0;overflow-x:auto;touch-action:pan-x;overscroll-behavior-x:contain}
+#placeChoices button{padding:8px 9px;flex:0 0 auto}
 #placeChoices button[aria-pressed=true]{background:#f0bb8244;border-color:#ffe2b5}
 #finishPlacement{color:#ffe2bb;border-color:#f2bb8c}
 #selectionDock{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;margin:auto;max-width:400px;background:#1b3045d9;border:1px solid #ecf5ff6c;border-radius:14px;padding:9px 12px 6px;backdrop-filter:blur(9px)}
@@ -71,16 +71,20 @@ button:active{background:#edf6ff32}
 </style>
 </head>
 <body>
-<canvas id="surface" aria-label="Une surface 3D continue contenant quatre commandes indépendantes, chacune animée géométriquement"></canvas>
+<canvas id="surface" aria-label="Une surface 3D continue contenant huit commandes indépendantes, chacune animée géométriquement"></canvas>
 <header id="header"><div><h1>DECK / E89 · MEMBRANE 3D</h1><p>Placement libre · <span id="clockPhase">couleurs selon l’heure</span></p></div><button id="settingsButton" type="button" aria-expanded="false" aria-controls="panel">Réglages</button></header>
-<div id="stats" role="status">Initialisation des quatre reliefs…</div>
+<div id="stats" role="status">Initialisation des huit reliefs…</div>
 <section id="panel" hidden aria-label="Commandes du test général">
- <div id="panelHeader"><div><h2>Quatre commandes sur une membrane</h2><div class="sub">Sélection, placement et relief individuels</div></div><div class="actions"><button id="placement" type="button" aria-pressed="false">Placer</button><button id="allOn" type="button">Tout ON</button><button id="allOff" type="button">Tout OFF</button></div></div>
+ <div id="panelHeader"><div><h2>Huit commandes sur une membrane</h2><div class="sub">Sélection, placement et relief individuels</div></div><div class="actions"><button id="placement" type="button" aria-pressed="false">Placer</button><button id="allOn" type="button">Tout ON</button><button id="allOff" type="button">Tout OFF</button></div></div>
  <div id="models" aria-label="Commandes 3D individuelles">
  <button type="button" data-id="0" aria-pressed="true"><span class="name">01 · Trois reliefs</span><span class="meta">100 % · 2,0 s</span><span class="value" id="value0">0 %</span></button>
  <button type="button" data-id="1" aria-pressed="true"><span class="name">02 · Plateau + raccord</span><span class="meta">142 % · 1,4 s</span><span class="value" id="value1">0 %</span></button>
  <button type="button" data-id="2" aria-pressed="true"><span class="name">03 · Couronne bombée</span><span class="meta">120 % · 2,0 s</span><span class="value" id="value2">0 %</span></button>
  <button type="button" data-id="3" aria-pressed="true"><span class="name">04 · Grand plateau</span><span class="meta">132 % · 2,0 s</span><span class="value" id="value3">0 %</span></button>
+ <button type="button" data-id="4" aria-pressed="true"><span class="name">05 · Ligne horizontale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value4">0 %</span></button>
+ <button type="button" data-id="5" aria-pressed="true"><span class="name">06 · Ligne verticale</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value5">0 %</span></button>
+ <button type="button" data-id="6" aria-pressed="true"><span class="name">07 · Angle droit</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value6">0 %</span></button>
+ <button type="button" data-id="7" aria-pressed="true"><span class="name">08 · Angle biais</span><span class="meta">100 % · 1,8 s</span><span class="value" id="value7">0 %</span></button>
  </div>
  <div id="individual" aria-label="Réglage du relief de la lampe sélectionnée"><div id="selectedHeading"><strong id="selectedName">01 · Trois reliefs</strong><div class="selectedActions"><output id="selectedValue">100 %</output><button id="selectedPower" type="button">Éteindre</button></div></div><input id="selectedIntensity" type="range" min="0" max="100" step="1" value="100" aria-label="Déploiement de la commande sélectionnée"><div id="gestureHint">Toucher : sélectionner · Double-toucher : ON/OFF · Pincer : régler</div></div>
  <div id="lightingControls" aria-label="Réglage global de l’éclairage de la membrane">
@@ -90,7 +94,7 @@ button:active{background:#edf6ff32}
   <div class="lightingRow"><label for="lightingShadows">Force des ombres</label><output id="lightingShadowsValue" for="lightingShadows">100 %</output><input id="lightingShadows" type="range" min="0" max="200" step="1" value="100"></div>
   <div class="sub">Réglage global du rendu sans changer les hauteurs.</div>
  </div>
- <div id="panelFooter"><button type="button" id="replay">Rejouer les quatre apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
+ <div id="panelFooter"><button type="button" id="replay">Rejouer les huit apparitions</button><button type="button" id="quality" aria-pressed="true">Précision : fine</button><div class="lights"><button type="button" id="cool" aria-pressed="true">◯ Bleu-gris</button><button type="button" id="warm" aria-pressed="true">◯ Orange doux</button></div></div>
  <p id="description">Position libre sur toute la membrane. Sélectionner une lampe, puis toucher un emplacement en mode Placer. <a href="./e88-atelier-commandes-3d.html?v=3" style="color:#ecf1fb">Atelier E88</a></p>
 </section>
 
@@ -101,6 +105,10 @@ button:active{background:#edf6ff32}
     <button type="button" data-place="1" aria-pressed="false">02</button>
     <button type="button" data-place="2" aria-pressed="false">03</button>
     <button type="button" data-place="3" aria-pressed="false">04</button>
+    <button type="button" data-place="4" aria-pressed="false">05</button>
+    <button type="button" data-place="5" aria-pressed="false">06</button>
+    <button type="button" data-place="6" aria-pressed="false">07</button>
+    <button type="button" data-place="7" aria-pressed="false">08</button>
   </div>
   <button id="finishPlacement" type="button">Terminer</button>
 </div>
@@ -117,6 +125,8 @@ uniform float uUnit;
 uniform vec2 uCenters[4];
 uniform vec4 uShapes;
 uniform vec4 uStarts;
+uniform vec2 uStrokeCenters[4];
+uniform vec4 uStrokeShapes;
 varying vec3 vPos;
 varying vec3 vNormal;
 varying vec2 vScreen;
@@ -134,6 +144,30 @@ vec3 morph(vec2 d,float h,float dh,float p,float start){
  float slope=rise*(dh*reveal+h*dr);
  return vec3(h*factor, -slope*d/max(r,0.00001));
 }
+// Sculpted stroke and angle heights share the existing continuous 3D mesh.
+float segDist(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ float t=clamp(dot(p-a,ab)/dot(ab,ab),0.0,1.0);
+ return length(p-(a+t*ab));
+}
+float strokeHeight(vec2 d,float kind){
+ float dist=100.0;
+ if(kind<0.5)dist=segDist(d,vec2(-1.32,0.0),vec2(1.32,0.0));
+ else if(kind<1.5)dist=segDist(d,vec2(0.0,-1.32),vec2(0.0,1.32));
+ else if(kind<2.5)dist=min(segDist(d,vec2(-1.03,-0.91),vec2(-1.03,0.85)),segDist(d,vec2(-1.03,0.85),vec2(1.05,0.85)));
+ else dist=min(segDist(d,vec2(-1.19,-0.75),vec2(0.0,0.70)),segDist(d,vec2(0.0,0.70),vec2(1.19,-0.75)));
+ float x=clamp((0.31-dist)/0.31,0.0,1.0);
+ return 0.93*x*x*(3.0-2.0*x);
+}
+vec3 strokeMorph(vec2 p,vec2 center,float kind,float progress){
+ vec2 d=p-center;
+ float rise=ease(progress);
+ float e=0.018;
+ float height=strokeHeight(d,kind);
+ float dx=(strokeHeight(d+vec2(e,0.0),kind)-strokeHeight(d-vec2(e,0.0),kind))/(2.0*e);
+ float dy=(strokeHeight(d+vec2(0.0,e),kind)-strokeHeight(d-vec2(0.0,e),kind))/(2.0*e);
+ return vec3(height*rise,-dx*rise,-dy*rise);
+}
 void main(){
  vec2 d0=aXY-uCenters[0];
  vec2 d1=aXY-uCenters[1];
@@ -143,8 +177,12 @@ void main(){
  vec3 m1=morph(d1,aHeights.y,aSlopes.y,uShapes.y,uStarts.y);
  vec3 m2=morph(d2,aHeights.z,aSlopes.z,uShapes.z,uStarts.z);
  vec3 m3=morph(d3,aHeights.w,aSlopes.w,uShapes.w,uStarts.w);
- float z=m0.x+m1.x+m2.x+m3.x;
- vec2 xyNormal=m0.yz+m1.yz+m2.yz+m3.yz;
+ vec3 m4=strokeMorph(aXY,uStrokeCenters[0],0.0,uStrokeShapes.x);
+ vec3 m5=strokeMorph(aXY,uStrokeCenters[1],1.0,uStrokeShapes.y);
+ vec3 m6=strokeMorph(aXY,uStrokeCenters[2],2.0,uStrokeShapes.z);
+ vec3 m7=strokeMorph(aXY,uStrokeCenters[3],3.0,uStrokeShapes.w);
+ float z=m0.x+m1.x+m2.x+m3.x+m4.x+m5.x+m6.x+m7.x;
+ vec2 xyNormal=m0.yz+m1.yz+m2.yz+m3.yz+m4.yz+m5.yz+m6.yz+m7.yz;
  vec3 n=normalize(vec3(xyNormal,1.0));
  gl_Position=vec4(aXY.x*uUnit/uViewport.x*2.0-1.0,1.0-aXY.y*uUnit/uViewport.y*2.0,0.0,1.0);
  vPos=vec3(aXY-vec2(uViewport.x*.5,uViewport.y*.41)/uUnit,z);
@@ -200,7 +238,8 @@ void main(){
 (function(){
 'use strict';
 const models=[{"name":"Trois reliefs","id":1,"front":0.56,"profile":[7.66,7.58,7.39,7.08,6.62,5.97,5.12,3.99,2.7,1.69,0.98,0.5,0.19,0.04,0.04,0.19,0.5,0.99,1.7,2.73,4.03,5.14,5.99,6.64,7.09,7.4,7.58,7.66,7.58,7.38,7.06,6.6,5.94,5.07,3.94,2.84,1.98,1.3,0.79,0.4,0.17,0.05,0.03,0.11,0.35,0.7,1.17,1.79,2.6,3.65,4.86,5.78,6.45,6.95,7.31,7.56,7.64,7.61,7.46,7.2,6.75,6.15,5.37,4.34,3.19,2.37,1.69,1.14,0.71,0.39,0.17,0.04,0,0],"max":7.66},{"name":"Plateau + raccord","id":2,"front":1.32,"profile":[14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.57,14.38,14.03,13.08,9.72,8.4,7.4,6.54,5.88,5.24,4.71,4.22,3.75,3.38,3,2.64,2.35,2.07,1.78,1.56,1.35,1.14,0.95,0.81,0.66,0.52,0.41,0.32,0.23,0.15,0.1,0.07,0.05,0.02,0],"max":14.57},{"name":"Couronne bombée","id":3,"front":0.78,"profile":[2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.42,2.81,3.71,4.6,5.49,6.21,6.9,7.59,8.28,8.81,9.32,9.84,10.36,10.74,11.1,11.46,11.82,12.1,12.31,12.52,12.73,12.93,13,13.07,13.14,13.21,13.2,13.13,13.06,12.99,12.91,12.7,12.49,12.28,12.07,11.76,11.4,11.04,10.68,10.27,9.75,9.24,8.72,8.17,7.48,6.79,6.1,5.34,4.45,3.56,2.68,1.77,1.06,0.56,0.22,0.04,0.01,0],"max":13.21},{"name":"Grand plateau","id":4,"front":1.4,"profile":[13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.25,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.24,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.23,13.24,13.24,13.19,13.11,13.02,12.87,12.71,12.47,12.24,11.92,11.6,11.17,10.72,10.18,9.54,8.8,7.89,6.67,4.53,2.04,1.22,0.64,0.26,0.05,0.01,0],"max":13.25}];
-const configs=[{"height":100,"duration":2},{"height":142,"duration":1.4},{"height":120,"duration":2},{"height":132,"duration":2}];
+models.push(...['Ligne horizontale','Ligne verticale','Angle droit','Angle biais'].map((name,i)=>({name,id:i+5,kind:'stroke'})));
+const configs=[{"height":100,"duration":2},{"height":142,"duration":1.4},{"height":120,"duration":2},{"height":132,"duration":2},...Array.from({length:4},()=>({height:100,duration:1.8}))];
 const canvas=document.getElementById('surface');
 const status=document.getElementById('stats');
 const panel=document.getElementById('panel');
@@ -224,20 +263,25 @@ try{
 }catch(_){}
 function saveLighting(){try{localStorage.setItem(LIGHTING_KEY,JSON.stringify(lighting));}catch(_){}}
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
-const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:[0,0,0,0],targets:[1,1,1,1],lastLevels:[1,1,1,1],animations:[null,null,null,null],lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:null,settingsOpen:false,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
-const POSITION_KEY='deck-e89-lamp-layout-v1';
+const state={ready:false,requested:false,unit:45,centers:[],positionFractions:[],screenPositions:[],levels:Array(8).fill(0),targets:Array(8).fill(1),lastLevels:Array(8).fill(1),animations:Array(8).fill(null),lights:[true,true],last:0,gl:null,draws:0,highQuality:true,indexType:0,phase:"",meshDirty:false,selected:null,settingsOpen:false,placeMode:false,pointers:new Map(),gesture:null,pinch:null,multitouch:false,lastTap:null};
+// V8 keeps E89 v7 coordinates intact and writes the extended layout to a new key.
+const POSITION_KEY='deck-e89-lamp-layout-v2';
+const PREVIOUS_POSITION_KEY='deck-e89-lamp-layout-v1';
+const DEFAULT_POSITIONS=[[.25,.35],[.76,.46],[.31,.64],[.71,.77],[.50,.14],[.49,.87],[.15,.57],[.86,.19]];
 try{
- const saved=JSON.parse(localStorage.getItem(POSITION_KEY));
- if(saved&&Array.isArray(saved.positions)&&saved.positions.length===4&&saved.positions.every(p=>Array.isArray(p)&&p.length===2&&p.every(v=>Number.isFinite(v)))){
+ const saved=JSON.parse(localStorage.getItem(POSITION_KEY))||JSON.parse(localStorage.getItem(PREVIOUS_POSITION_KEY));
+ if(saved&&Array.isArray(saved.positions)&&[4,8].includes(saved.positions.length)&&saved.positions.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite))){
   state.positionFractions=saved.positions.map(p=>p.map(v=>clamp(v,0,1)));
+  if(state.positionFractions.length===4)state.positionFractions.push(...DEFAULT_POSITIONS.slice(4).map(p=>p.slice()));
  }
- if(saved&&Array.isArray(saved.levels)&&saved.levels.length===4&&saved.levels.every(v=>Number.isFinite(v))){
+ if(saved&&Array.isArray(saved.levels)&&[4,8].includes(saved.levels.length)&&saved.levels.every(Number.isFinite)){
   state.targets=saved.levels.map(v=>clamp(v,0,1));
+  while(state.targets.length<8)state.targets.push(1);
   state.lastLevels=state.targets.map(v=>v>.001?v:1);
  }
 }catch(_){}
 function saveLayout(){
- try{localStorage.setItem(POSITION_KEY,JSON.stringify({version:1,positions:state.positionFractions,levels:state.targets}));}catch(_){}
+ try{localStorage.setItem(POSITION_KEY,JSON.stringify({version:2,positions:state.positionFractions,levels:state.targets}));}catch(_){}
 }
 const dayCycleDefaults=[
  [0,'Nuit profonde','#182C50','#849BC5',.82,.48,1.12,1.65],
@@ -300,7 +344,7 @@ function initialize(){
  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Liaison WebGL impossible');
  gl.useProgram(p);
  const a={xy:gl.getAttribLocation(p,'aXY'),heights:gl.getAttribLocation(p,'aHeights'),slopes:gl.getAttribLocation(p,'aSlopes')};
- const u={viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance'),contrast:gl.getUniformLocation(p,'uContrast'),lightIntensity:gl.getUniformLocation(p,'uLightIntensity'),shadowStrength:gl.getUniformLocation(p,'uShadowStrength')};
+ const u={strokeCenters:gl.getUniformLocation(p,'uStrokeCenters[0]'),strokeShapes:gl.getUniformLocation(p,'uStrokeShapes'),viewport:gl.getUniformLocation(p,'uViewport'),unit:gl.getUniformLocation(p,'uUnit'),centers:gl.getUniformLocation(p,'uCenters[0]'),shapes:gl.getUniformLocation(p,'uShapes'),starts:gl.getUniformLocation(p,'uStarts'),coldPos:gl.getUniformLocation(p,'uColdPos'),warmPos:gl.getUniformLocation(p,'uWarmPos'),coldColor:gl.getUniformLocation(p,'uColdColor'),warmColor:gl.getUniformLocation(p,'uWarmColor'),coldOn:gl.getUniformLocation(p,'uColdEnabled'),warmOn:gl.getUniformLocation(p,'uWarmEnabled'),paletteA:gl.getUniformLocation(p,'uPaletteA'),paletteB:gl.getUniformLocation(p,'uPaletteB'),paletteOrigin:gl.getUniformLocation(p,'uPaletteOrigin'),paletteRadius:gl.getUniformLocation(p,'uPaletteRadius'),paletteBalance:gl.getUniformLocation(p,'uPaletteBalance'),contrast:gl.getUniformLocation(p,'uContrast'),lightIntensity:gl.getUniformLocation(p,'uLightIntensity'),shadowStrength:gl.getUniformLocation(p,'uShadowStrength')};
  state.gl=gl;state.p=p;state.a=a;state.u=u;
  state.uint32Supported=!!gl.getExtension('OES_element_index_uint');
  state.highQuality=state.uint32Supported;
@@ -356,8 +400,8 @@ function resize(){
  const b=placementBounds(w,h,unit);
  // Free scattered starting arrangement, not a compulsory 2×2 grid.
  // Previously saved locations always win.
- if(state.positionFractions.length!==4){
-  state.positionFractions=[[.25,.35],[.76,.46],[.31,.64],[.71,.77]];
+ if(state.positionFractions.length!==8){
+  state.positionFractions=DEFAULT_POSITIONS.map(p=>p.slice());
  }
  state.w=w;state.h=h;state.unit=unit;state.bounds=b;
  state.screenPositions=state.positionFractions.map(([x,y])=>[clamp(x*w,b.minX,b.maxX),clamp(y*h,b.minY,b.maxY)]);
@@ -367,7 +411,7 @@ function resize(){
 // Precompute high-resolution profiles and their filtered analytical slopes
 // only once; dragging then moves the actual 3D relief without huge CPU cost.
 const RADIAL_STEPS=2048,RADIAL_MAX=1.58;
-const radialTables=models.map(m=>{
+const radialTables=models.slice(0,4).map(m=>{
  const h=new Float32Array(RADIAL_STEPS+1),s=new Float32Array(RADIAL_STEPS+1);
  for(let i=0;i<=RADIAL_STEPS;i++){
   const r=i/RADIAL_STEPS*RADIAL_MAX,eps=.014;
@@ -409,7 +453,7 @@ function rebuildGeometry(){
  Object.assign(state,{indices:indices.length,faces:indices.length/3,indexType:state.highQuality?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,meshDirty:false});
 }
 function movePlacement(index,x,y){
- if(index<0||index>=4||!state.ready)return;
+ if(index<0||index>=8||!state.ready)return;
  const b=state.bounds,w=state.w,h=state.h,unit=state.unit;
  x=clamp(x,b.minX,b.maxX);y=clamp(y,b.minY,b.maxY);
  state.positionFractions[index]=[x/w,y/h];
@@ -431,11 +475,11 @@ function animate(index,target,reset=false,delay=0){
  refresh();requestDraw();
 }
 function allTo(value,reset=false){
- for(let i=0;i<4;i++)animate(i,value?state.lastLevels[i]:0,reset,i*115);
+ for(let i=0;i<8;i++)animate(i,value?state.lastLevels[i]:0,reset,i*115);
  saveLayout();
 }
 function toggleLamp(index){
- if(index<0||index>=4)return;
+ if(index<0||index>=8)return;
  const active=state.targets[index]>.001;
  if(active)state.lastLevels[index]=state.targets[index];
  animate(index,active?0:state.lastLevels[index]);
@@ -475,7 +519,7 @@ function setPlaceMode(on){
  if(!state.placeMode)saveLayout();
 }
 function refresh(){
- for(let i=0;i<4;i++){
+ for(let i=0;i<8;i++){
   const v=Math.round(state.levels[i]*100);
   document.getElementById('value'+i).textContent=v+' %';
   buttons[i].setAttribute('aria-pressed',String(state.targets[i]>0.001));
@@ -503,7 +547,7 @@ function refresh(){
 function draw(time){
  state.requested=false;if(!state.ready)return;
  if(state.meshDirty)rebuildGeometry();
- for(let i=0;i<4;i++){
+ for(let i=0;i<8;i++){
   const a=state.animations[i];if(!a)continue;
   if(a.start===null)a.start=time;
   const t=clamp((time-a.start-a.delay)/a.duration,0,1);
@@ -517,9 +561,11 @@ function draw(time){
  gl.useProgram(state.p);
  gl.uniform2f(u.viewport,state.w,state.h);
  gl.uniform1f(u.unit,state.unit);
- gl.uniform2fv(u.centers,new Float32Array(state.centers.flat()));
- gl.uniform4f(u.shapes,...state.levels);
- gl.uniform4f(u.starts,...models.map(m=>m.front));
+ gl.uniform2fv(u.centers,new Float32Array(state.centers.slice(0,4).flat()));
+ gl.uniform4f(u.shapes,...state.levels.slice(0,4));
+ gl.uniform4f(u.starts,...models.slice(0,4).map(m=>m.front));
+ gl.uniform2fv(u.strokeCenters,new Float32Array(state.centers.slice(4).flat()));
+ gl.uniform4f(u.strokeShapes,...state.levels.slice(4));
  gl.uniform3f(u.coldPos,-6.0,-6.6,2.7);
  gl.uniform3f(u.warmPos,5.5,7.0,2.5);
  const palette=paletteForCurrentTime();
@@ -565,7 +611,7 @@ document.getElementById('resetLighting').addEventListener('click',()=>{
  lighting.contrast=100;lighting.intensity=100;lighting.shadows=100;
  syncLighting();saveLighting();requestDraw();
 });
-for(let i=0;i<4;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
+for(let i=0;i<8;i++)buttons[i].addEventListener('click',()=>selectLamp(i));
 selectedSlider.addEventListener('input',()=>changeIntensity(Number(selectedSlider.value)/100));
 dockSlider.addEventListener('input',()=>changeIntensity(Number(dockSlider.value)/100));
 dockPower.addEventListener('click',()=>{if(state.selected!==null)toggleLamp(state.selected);});
@@ -592,13 +638,24 @@ for(const [i,element] of [[0,cool],[1,warm]]){
 // 2D DECK gesture vocabulary adapted to the real 3D membrane:
 // tap selects, double-tap toggles, pinch adjusts depth/intensity,
 // and "Placer" switches one-finger dragging on.
+function segDistance2D(p,a,b){
+ const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy),0,1);
+ return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);
+}
+function strokeHitDistance(i,x,y){
+ const c=state.screenPositions[i],u=state.unit,p=[(x-c[0])/u,(y-c[1])/u];
+ if(i===4)return segDistance2D(p,[-1.32,0],[1.32,0]);
+ if(i===5)return segDistance2D(p,[0,-1.32],[0,1.32]);
+ if(i===6)return Math.min(segDistance2D(p,[-1.03,-.91],[-1.03,.85]),segDistance2D(p,[-1.03,.85],[1.05,.85]));
+ return Math.min(segDistance2D(p,[-1.19,-.75],[0,.70]),segDistance2D(p,[0,.70],[1.19,-.75]));
+}
 function locateLamp(x,y){
- let best=-1,distance=Infinity;
- for(let i=0;i<4;i++){
-  const c=state.screenPositions[i],d=Math.hypot(x-c[0],y-c[1]);
-  if(d<state.unit*1.7&&d<distance){distance=d;best=i;}
- }
- return best;
+ let nearest=-1,best=.48;
+ for(let i=4;i<8;i++){const d=strokeHitDistance(i,x,y);if(d<best){nearest=i;best=d;}}
+ if(nearest>=0)return nearest;
+ best=Infinity;
+ for(let i=0;i<4;i++){const c=state.screenPositions[i],d=Math.hypot(x-c[0],y-c[1]);if(d<state.unit*1.7&&d<best){best=d;nearest=i;}}
+ return nearest;
 }
 function pointerPosition(event){
  const rect=canvas.getBoundingClientRect();
@@ -675,7 +732,7 @@ refresh();
 try{
  initialize();
  // Appear at the saved independent levels, or at 100% on first visit.
- for(let i=0;i<4;i++)animate(i,state.targets[i],true,i*115);
+ for(let i=0;i<8;i++)animate(i,state.targets[i],true,i*115);
 }catch(e){status.textContent='Erreur 3D : '+String(e.message||e);status.style.color='#ffe5cf';}
 })();
 </script>
