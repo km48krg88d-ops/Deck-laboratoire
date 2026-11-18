@@ -56,7 +56,7 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 <button type="button" data-model="7">08 · Angle biais</button>
 </div>
 <h2 id="selectedTitle">01 · Trois reliefs</h2>
-<div class="setting"><label for="level">Déploiement / intensité</label><output id="levelOut">100 %</output><input id="level" type="range" min="0" max="100" step="1" value="100"></div>
+<div class="setting"><label for="level">Intensité lumineuse</label><output id="levelOut">100 %</output><input id="level" type="range" min="0" max="100" step="1" value="100"></div>
 <div class="setting"><label for="height">Hauteur</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
 <div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
 <div class="setting"><label for="diffusion">Diffusion lumineuse</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
@@ -436,6 +436,7 @@ try{
  selected=0;
 }catch(err){$('message').textContent='Erreur du moteur 3D : '+err.message;return}
 let requested=false,lastTime=0,animation=Array(8).fill(null);
+let reveal=levels.map(v=>v>0?1:0);
 function redraw(){if(!requested){requested=true;requestAnimationFrame(draw)}}
 function screen(){return {w:canvas.clientWidth,h:canvas.clientHeight,dpr:canvas.width/Math.max(1,canvas.clientWidth),unit:Math.min(canvas.clientWidth,canvas.clientHeight)*.103}}
 function resize(){
@@ -445,9 +446,18 @@ function resize(){
 }
 function setLevel(i,target,animate=false){
  target=clamp(target,0,1);
+ const previous=levels[i];
  if(animate){
-  animation[i]={from:levels[i],to:target,start:null,duration:Math.max(240,configs[i].duration*1000*Math.abs(target-levels[i]))};
- }else{animation[i]=null;levels[i]=target;}
+  // ON replays all geometry before any light. OFF reverses: halos disappear first.
+  const to=target>0?1:0;
+  animation[i]={from:to?0:(reveal[i]>0?reveal[i]:1),to,start:null,
+    duration:Math.max(400,configs[i].duration*1000),brightnessStart:previous};
+  if(to)reveal[i]=0;
+ }else{
+  animation[i]=null;
+  reveal[i]=target>0?1:0;
+ }
+ levels[i]=target;
  saveLayout();sync();redraw();
 }
 function draw(time){
@@ -457,8 +467,8 @@ function draw(time){
   const an=animation[i];if(!an)continue;
   moving=true;if(an.start===null)an.start=time;
   const t=clamp((time-an.start)/an.duration,0,1);
-  levels[i]=an.from+(an.to-an.from)*ease(t);
-  if(t>=1){levels[i]=an.to;animation[i]=null;saveLayout();}
+  reveal[i]=an.from+(an.to-an.from)*(i<4?t:ease(t));
+  if(t>=1){reveal[i]=an.to;animation[i]=null;saveLayout();}
  }
  const p=palette(),s=screen();
  const toCSS=a=>'rgb('+a.map(v=>Math.round(v*255)).join(',')+')';
@@ -470,8 +480,13 @@ function draw(time){
  for(const i of order){
   const unit=s.unit*s.dpr*position[i].scale/100;
   gl.uniform2f(u.center,position[i].x*canvas.width,position[i].y*canvas.height);
-  gl.uniform1f(u.unit,unit);gl.uniform1f(u.level,levels[i]);gl.uniform1f(u.height,configs[i].height/100);
-  gl.uniform1f(u.model,i);gl.uniform1f(u.glow,configs[i].diffusion/100*levels[i]);
+  const phases=i<4?sequentialRings(i,reveal[i]):null;
+  const brightness=animation[i]&&animation[i].to===0?animation[i].brightnessStart:levels[i];
+  gl.uniform1f(u.unit,unit);gl.uniform1f(u.level,reveal[i]);gl.uniform1f(u.height,configs[i].height/100);
+  gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
+  gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
+  gl.uniform1f(u.model,i);
+  gl.uniform1f(u.glow,configs[i].diffusion/100*brightness*(i<4?1:reveal[i]));
   gl.uniform1f(u.soft,configs[i].softness/100);gl.uniform1f(u.rim,configs[i].peripheral/100);
   gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
   for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
@@ -505,6 +520,7 @@ $('level').addEventListener('input',()=>setLevel(selected,Number($('level').valu
 $('dockIntensity').addEventListener('input',()=>setLevel(selected,Number($('dockIntensity').value)/100,false));
 $('scale').addEventListener('input',()=>{position[selected].scale=Number($('scale').value);saveLayout();sync();redraw()});
 $('on').addEventListener('click',()=>setLevel(selected,1,true));
+$('replay').addEventListener('click',()=>setLevel(selected,levels[selected]>0?levels[selected]:1,true));
 $('off').addEventListener('click',()=>setLevel(selected,0,true));
 $('allOn').addEventListener('click',()=>{for(let i=0;i<8;i++)setLevel(i,1,true)});
 $('allOff').addEventListener('click',()=>{for(let i=0;i<8;i++)setLevel(i,0,true)});
@@ -548,7 +564,7 @@ canvas.addEventListener('pointerup',e=>{
  lastTapModel=i;lastTapTime=now;
 });
 function exportAll(){
- return {version:'DECK-E90-comparaison-3D',source:'COMMANDES-002.glb',
+ return {version:'DECK-E90-comparaison-3D-v2',source:'COMMANDES-002.glb',
   currentModel:selected+1,lamps:modelNames.map((name,i)=>({number:i+1,name,...configs[i],...position[i],level:Math.round(levels[i]*100)}))};
 }
 $('copyAll').addEventListener('click',async()=>{
