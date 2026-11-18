@@ -327,7 +327,7 @@ function heightAt(x,y){
 
 function geometryFor(model){
  selected=model;
- const data=[],indices=[];
+ const data=[],indices=[],stages=[];
  
  // Sample each source-defined blue band independently: seams retain their
  // discontinuous normals, and red faces are never rounded by the triangulation.
@@ -340,7 +340,8 @@ function geometryFor(model){
            -extent,extent,0,0,0, extent,extent,0,0,0);
  indices.push(planeStart,planeStart+1,planeStart+2,
               planeStart+1,planeStart+3,planeStart+2);
- function addBand(band){
+ stages.push(-1,-1,-1,-1);
+ function addBand(band,stageId){
   const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
   const radii=[];
   for(let j=0;j<knots.length-1;j++)
@@ -353,6 +354,7 @@ function geometryFor(model){
    for(let i=0;i<=ANGLES;i++){
     const a=2*Math.PI*i/ANGLES,c=Math.cos(a),sn=Math.sin(a);
     data.push(rr*c,rr*sn,depth,radialSlope*c,radialSlope*sn);
+    stages.push(stageId);
    }
   }
   for(let j=0;j<radii.length-1;j++)for(let i=0;i<ANGLES;i++){
@@ -361,7 +363,7 @@ function geometryFor(model){
   }
  }
  if(selected<4){
-  for(const band of radialBands[selected])addBand(band);
+  radialBands[selected].forEach((band,j)=>addBand(band,selected===3?Math.min(j,1):j));
  }else{
   // Lines and angles use strips aligned with the ORIGINAL blue section and red cut.
   // No square-grid interpolation means no triangular teeth along their edges.
@@ -387,6 +389,7 @@ function geometryFor(model){
      const x=ax+dx*t+nx*across,y=ay+dy*t+ny*across;
      const gx=gradient*nx,gy=gradient*ny;
      data.push(x+SHEAR*y,y,depth,gx,gy-SHEAR*gx);
+     stages.push(-1);
     }
    }
    for(let j=0;j<dList.length-1;j++)for(let i=0;i<N;i++){
@@ -404,10 +407,12 @@ function geometryFor(model){
 
  const count=data.length/5;
  if(count>65535)throw Error('Trop de sommets pour WebGL 1');
- const packed=new Float32Array(count*6);
+ if(stages.length!==count)throw Error('Étapes des cercles incomplètes');
+ const packed=new Float32Array(count*7);
  for(let i=0;i<count;i++){
-  for(let k=0;k<5;k++)packed[i*6+k]=data[i*5+k];
-  packed[i*6+5]=i<4?1:0;
+  for(let k=0;k<5;k++)packed[i*7+k]=data[i*5+k];
+  packed[i*7+5]=i<4?1:0;
+  packed[i*7+6]=stages[i];
  }
  return {packed,indices:new Uint16Array(indices)};
 }
@@ -420,8 +425,8 @@ try{
  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||'Programme WebGL invalide');
  gl.useProgram(program);gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
  u={resolution:gl.getUniformLocation(program,'uResolution'),center:gl.getUniformLocation(program,'uCenter'),unit:gl.getUniformLocation(program,'uUnit'),level:gl.getUniformLocation(program,'uLevel'),height:gl.getUniformLocation(program,'uHeight'),
- palA:gl.getUniformLocation(program,'uPaletteA'),palB:gl.getUniformLocation(program,'uPaletteB'),model:gl.getUniformLocation(program,'uModelId'),glow:gl.getUniformLocation(program,'uGlowAmount'),soft:gl.getUniformLocation(program,'uGlowSoftness'),rim:gl.getUniformLocation(program,'uRimBoost'),debug:gl.getUniformLocation(program,'uDebug')};
- a={xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad'),base:gl.getAttribLocation(program,'aIsPlane')};
+ palA:gl.getUniformLocation(program,'uPaletteA'),palB:gl.getUniformLocation(program,'uPaletteB'),model:gl.getUniformLocation(program,'uModelId'),glow:gl.getUniformLocation(program,'uGlowAmount'),soft:gl.getUniformLocation(program,'uGlowSoftness'),rim:gl.getUniformLocation(program,'uRimBoost'),ringGeometry:gl.getUniformLocation(program,'uRingGeometry'),ringLights:gl.getUniformLocation(program,'uRingLights'),debug:gl.getUniformLocation(program,'uDebug')};
+ a={xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad'),base:gl.getAttribLocation(program,'aIsPlane'),stage:gl.getAttribLocation(program,'aStage')};
  for(let i=0;i<8;i++){
   const g=geometryFor(i),vertex=gl.createBuffer(),indices=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,vertex);gl.bufferData(gl.ARRAY_BUFFER,g.packed,gl.STATIC_DRAW);
@@ -469,8 +474,8 @@ function draw(time){
   gl.uniform1f(u.model,i);gl.uniform1f(u.glow,configs[i].diffusion/100*levels[i]);
   gl.uniform1f(u.soft,configs[i].softness/100);gl.uniform1f(u.rim,configs[i].peripheral/100);
   gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
-  for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20]]){
-   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,24,offset);
+  for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
+   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,28,offset);
   }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,meshes[i].indices);
   gl.drawElements(gl.TRIANGLES,meshes[i].count,gl.UNSIGNED_SHORT,0);
