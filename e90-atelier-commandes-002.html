@@ -269,18 +269,42 @@ function rebuildMesh(){
  if(selected<4){
   for(const band of radialBands[selected])addBand(band);
  }else{
-  // The blue line/angle section is generated directly from GLTF_32's cross-section.
-  const n=224,extent=1.82,eps=.009;
-  for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
-   const x=-extent+i*2*extent/n,y=-extent+j*2*extent/n;
-   const z=heightAt(x,y);
-   const dx=(heightAt(x+eps,y)-heightAt(x-eps,y))/(2*eps);
-   const dy=(heightAt(x,y+eps)-heightAt(x,y-eps))/(2*eps);
-   data.push(x,y,z,dx,dy);
+  // Lines and angles use strips aligned with the ORIGINAL blue section and red cut.
+  // No square-grid interpolation means no triangular teeth along their edges.
+  const SHEAR=selected===7?.45:0;
+  function addStrip(ax,ay,bx,by){
+   const dx=bx-ax,dy=by-ay,length=Math.hypot(dx,dy);
+   const nx=dy/length,ny=-dx/length; // the BLUE surface lies on the right of the red edge
+   const N=256,stride=N+1,offset=data.length/5;
+   const sourceKnots=blueLine.map(row=>row[0]);
+   const dList=[];
+   for(let i=0;i<sourceKnots.length-1;i++)
+    for(let k=0;k<3;k++)dList.push(sourceKnots[i]+(sourceKnots[i+1]-sourceKnots[i])*k/3);
+   dList.push(sourceKnots.at(-1));
+   for(const d of dList){
+    const e=.00005,left=Math.max(0,d-e),right=Math.min(.0748,d+e);
+    const yy=traceY(blueLine,d);
+    const slope=right>left?(traceY(blueLine,right)-traceY(blueLine,left))/(right-left):0;
+    const depth=(yy-.002796)/SOURCE_DEPTH;
+    const gradient=slope*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH;
+    const across=d*DISPLAY_RADIUS/SOURCE_RADIUS;
+    for(let i=0;i<=N;i++){
+     const t=i/N;
+     const x=ax+dx*t+nx*across,y=ay+dy*t+ny*across;
+     const gx=gradient*nx,gy=gradient*ny;
+     data.push(x+SHEAR*y,y,depth,gx,gy-SHEAR*gx);
+    }
+   }
+   for(let j=0;j<dList.length-1;j++)for(let i=0;i<N;i++){
+    const a=offset+j*stride+i,b=a+stride;
+    indices.push(a,a+1,b,a+1,b+1,b);
+   }
   }
-  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
-   const a=j*(n+1)+i,b=a+n+1;
-   indices.push(a,a+1,b,a+1,b+1,b);
+  if(selected===4)addStrip(0,-1.22,0,1.22);
+  else if(selected===5)addStrip(-1.22,0,1.22,0);
+  else{
+   addStrip(.32,-.83,.32,.83);
+   addStrip(-1.33,-.83,.32,-.83);
   }
  }
  const vertices=data.length/5;
