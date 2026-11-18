@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#c3d1df">
-<title>DECK · Comparaison 3D — COMMANDES-002</title>
+<title>DECK · Comparaison 3D v2 — allumage successif</title>
 <style>
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
@@ -39,12 +39,12 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </head>
 <body>
 <canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
-<div id="top"><strong>DECK · 3D / COMMANDES-002</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<div id="top"><strong>DECK · 3D / COMMANDES-002 · v2</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
 <h2>DECK · Réglages des lampes 3D</h2>
-<div class="small">Copie de l’interface de réglages : 8 formes 3D de l’atelier E90 sur une membrane commune. La scène 2D reste inchangée.</div>
+<div class="small">Copie de l’interface de réglages : huit formes 3D sur une membrane commune. Les rondes se forment une à une sans lumière, puis les halos s’allument successivement. La scène 2D reste inchangée.</div>
 <div id="models">
 <button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
 <button type="button" data-model="1">02 · Plateau et raccord</button>
@@ -63,7 +63,7 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 <div class="setting"><label for="softness">Douceur de diffusion</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div class="setting"><label for="peripheral">Lumière périphérique</label><output id="peripheralOut">210 %</output><input id="peripheral" type="range" min="50" max="350" step="5" value="210"></div>
 <div class="setting"><label for="scale">Taille à l’écran</label><output id="scaleOut">100 %</output><input id="scale" type="range" min="60" max="145" step="1" value="100"></div>
-<div id="actions"><button type="button" id="on">Allumer</button><button type="button" id="off">Éteindre</button><button type="button" id="allOn">Tout ON</button><button type="button" id="allOff">Tout OFF</button><button type="button" id="copyAll">Copier tous les réglages</button></div>
+<div id="actions"><button type="button" id="on">Allumer</button><button type="button" id="replay">Rejouer</button><button type="button" id="off">Éteindre</button><button type="button" id="allOn">Tout ON</button><button type="button" id="allOff">Tout OFF</button><button type="button" id="copyAll">Copier tous les réglages</button></div>
 <div id="message" role="status" aria-live="polite"></div>
 <div class="small">Tap : sélectionner · Double-tap : allumer/éteindre · « Placer » : glisser une forme. Les réglages de matière sont partagés avec l’atelier E90 ; la disposition 3D possède sa propre sauvegarde.</div>
 </section>
@@ -71,14 +71,17 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 attribute float aZ;
 attribute vec2 aGrad;
 attribute float aIsPlane;
+attribute float aStage;
 uniform vec2 uResolution,uCenter;
 uniform float uUnit,uLevel,uHeight;
+uniform vec3 uRingGeometry;
 varying vec3 vNormal;
 varying vec2 vXY;
 varying float vIsPlane;
 void main(){
- float depth=aZ*uHeight*uLevel;
- vec2 gradient=aGrad*uHeight*uLevel;
+ float reveal=aStage<-.5?uLevel:(aStage<.5?uRingGeometry.x:(aStage<1.5?uRingGeometry.y:uRingGeometry.z));
+ float depth=aZ*uHeight*reveal;
+ vec2 gradient=aGrad*uHeight*reveal;
  vNormal=normalize(vec3(-gradient.x,-gradient.y,1.0));
  vXY=aXY;
  vIsPlane=aIsPlane;
@@ -92,6 +95,7 @@ varying float vIsPlane;
 uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
 uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost;
+uniform vec3 uRingLights;
 
 float sdCircle(vec2 p,float radius){
  return abs(length(p)-radius);
@@ -150,17 +154,17 @@ float sourceDistance(vec2 p,float model){
 float sourceGlow(vec2 p,float model,float softness){
  float h=0.0;
  if(model<0.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45*.25934/.40021,softness));
-  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45*.25934/.40021,softness)*uRingLights.y);
+  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.z);
  }else if(model<1.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.y);
  }else if(model<2.5){
-  h=ringOutGlow(p,1.45,softness)*uRimBoost;
+  h=ringOutGlow(p,1.45,softness)*uRimBoost*uRingLights.x;
  }else if(model<3.5){
-  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
-        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost);
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*uRingLights.x,
+        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost*uRingLights.y);
  }else if(model<4.5){
   // Left of the red vertical cut.
   h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
@@ -204,6 +208,15 @@ const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
 const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
+const RING_COUNTS=[3,2,1,2];
+function sequentialRings(model,progress){
+ const count=RING_COUNTS[model]||1,t=clamp(progress,0,1),geometry=[],lights=[];
+ for(let k=0;k<3;k++){
+  geometry.push(k<count?ease(clamp(t/.56*count-k,0,1)):1);
+  lights.push(k<count?ease(clamp((t-.56)/.44*count-k,0,1)):0);
+ }
+ return {geometry,lights};
+}
 const SHARED_SETTINGS_KEY='deck-e90-atelier-commandes002-v1';
 const LAYOUT_KEY='deck-e90-preview-3d-layout-v1';
 const defaults=()=>({height:100,duration:2,diffusion:100,softness:35,peripheral:210});
