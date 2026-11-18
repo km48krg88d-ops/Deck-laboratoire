@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DECK / E90 v4 — Lumière vers l’extérieur</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#172b42;color:#eff5f9;font:13px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+button,input{font:inherit}
+button{color:#ebf3fc;background:#e4ecff13;border:1px solid #cfdef05e;border-radius:10px;padding:9px 11px;cursor:pointer;touch-action:manipulation}
+button[aria-pressed=true]{background:#f6c28c24;border-color:#ffddadbb}
+a{color:#fed5ac}
+#top{position:sticky;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 13px) 16px 12px;background:#13263be8;backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #ffffff1f}
+#top h1{font-size:12px;letter-spacing:.12em;margin:0 0 4px}
+#top p{font-size:10px;opacity:.8;margin:0}
+#top a{white-space:nowrap;text-decoration:none;font-size:11px}
+main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(315px,.75fr);gap:20px}
+#artboard{align-self:start;position:sticky;top:82px}
+#stage{position:relative;margin:auto;width:min(100%,640px);aspect-ratio:1;border:1px solid #dbeaff40;border-radius:21px;overflow:hidden;background:#66899a;box-shadow:0 16px 45px #07172a8c;isolation:isolate}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#glow{z-index:2;pointer-events:none;mix-blend-mode:screen}
+#mesh{z-index:1;pointer-events:none}
+#understage{display:flex;gap:7px;justify-content:space-between;align-items:center;margin:11px 0 0;flex-wrap:wrap}
+#understage p{font-size:11px;opacity:.8;margin:0}
+#understage .buttons{display:flex;gap:7px}
+#workshop{min-width:0}
+#workshop h2{font-size:14px;letter-spacing:.02em;margin:4px 0 10px}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#models button{text-align:left;min-width:0;padding:11px 9px;display:flex;gap:5px;flex-direction:column}
+#models button span{font-weight:600}
+#models button small{opacity:.7;font-size:10px;font-weight:400;line-height:1.35}
+#settings{margin-top:16px;padding:15px;border:1px solid #e1ecfa39;border-radius:14px;background:#dceeff09}
+#selectedName{font-size:14px;margin:0 0 6px}
+#sourceNote{font-size:11px;line-height:1.55;opacity:.82;margin:0 0 13px}
+.setting{display:grid;grid-template-columns:1fr auto;gap:3px 8px;margin:14px 0}
+.setting label{font-size:11px}
+.setting output{font-size:11px;font-weight:700;color:#f6d0a5;font-variant-numeric:tabular-nums}
+.setting input{grid-column:1 / -1;width:100%;height:24px;margin:0;accent-color:#f2ad80;touch-action:pan-x}
+#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}
+.note{font-size:11px;line-height:1.6;color:#c4d2e1;margin:17px 3px 0}
+#status{font-size:10px;opacity:.7;margin:7px 0}
+@media(max-width:800px){main{display:block;padding:10px 11px 30px}#artboard{position:relative;top:auto}#stage{width:min(92vw,54vh,500px)}#workshop{margin-top:14px}#top{padding-left:12px;padding-right:12px}#models button{padding:8px}}
+</style>
+</head>
+<body>
+<header id="top"><div><h1>DECK / E90 v4 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e89-quatre-commandes-membrane.html?v=9">E89 v9</a></header>
+<main>
+<section id="artboard">
+<div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
+<div id="understage"><p>Forme <strong id="currentNumber">01</strong> · 3D continue · source COMMANDES-002</p><div class="buttons"><button type="button" id="debug" aria-pressed="false">Voir bleu / rouge</button><button type="button" id="replay">Rejouer</button></div></div>
+<div id="status" role="status">Préparation de la membrane…</div>
+</section>
+<section id="workshop">
+<h2>Choisir une commande</h2>
+<div id="models" aria-label="Huit études de forme">
+<button type="button" data-model="0" aria-pressed="true"><span>01 · Trois reliefs</span><small>Profil bleu extrait · trois bords rouges</small></button>
+<button type="button" data-model="1" aria-pressed="false"><span>02 · Plateau et raccord</span><small>Profil bleu extrait · bord rouge</small></button>
+<button type="button" data-model="2" aria-pressed="false"><span>03 · Couronne</span><small>Profil bleu extrait · deux bords rouges</small></button>
+<button type="button" data-model="3" aria-pressed="false"><span>04 · Grand plateau</span><small>Profil bleu extrait · deux bords rouges</small></button>
+<button type="button" data-model="4" aria-pressed="false"><span>05 · Ligne verticale</span><small>Tracé bleu/rouge de la source</small></button>
+<button type="button" data-model="5" aria-pressed="false"><span>06 · Ligne horizontale</span><small>Rotation du tracé source</small></button>
+<button type="button" data-model="6" aria-pressed="false"><span>07 · Angle droit</span><small>Deux segments raccordés de la source</small></button>
+<button type="button" data-model="7" aria-pressed="false"><span>08 · Angle biais</span><small>Déformation exploratoire de l’angle source</small></button>
+</div>
+<div id="settings">
+<h2 id="selectedName">01 · Trois reliefs</h2>
+<p id="sourceNote"></p>
+<div class="setting"><label for="deployment">Déploiement de la membrane</label><output id="deploymentOut">100 %</output><input id="deployment" type="range" min="0" max="100" step="1" value="100"></div>
+<div class="setting"><label for="height">Hauteur du relief</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
+<div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
+<div class="setting"><label for="diffusion">Diffusion de lumière</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
+<div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
+<div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button></div>
+</div>
+<p class="note">Les coupures restent nettes. Le halo se propage uniquement vers l’extérieur de chaque cercle et du côté extérieur des lignes et angles, jamais vers l’intérieur. Les formes et leurs positions restent inchangées ; E89 reste indépendant.</p>
+</section>
+</main>
+<script id="vert" type="x-shader/x-vertex">
+attribute vec2 aXY;
+attribute float aZ;
+attribute vec2 aGrad;
+uniform float uProgress,uHeight;
+varying vec3 vNormal;
+varying vec2 vXY;
+void main(){
+ float depth=aZ*uHeight*uProgress;
+ vec2 gradient=aGrad*uHeight*uProgress;
+ vNormal=normalize(vec3(-gradient.x,-gradient.y,1.0));
+ vXY=aXY;
+ // Orthographic top view: changing depth never shifts the symbol in X/Y.
+ gl_Position=vec4(aXY.x*.545,aXY.y*.545,-depth*.04,1.0);
+}
+</script>
+<script id="frag" type="x-shader/x-fragment">
+precision highp float;
+varying vec3 vNormal;
+varying vec2 vXY;
+uniform vec3 uPaletteA,uPaletteB;
+uniform float uDebug;
+uniform float uGlowAmount,uGlowSoftness,uModelId;
+
+float sdCircle(vec2 p,float radius){
+ return abs(length(p)-radius);
+}
+float sdSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ float t=clamp(dot(p-a,ab)/max(dot(ab,ab),0.000001),0.0,1.0);
+ return length(p-a-ab*t);
+}
+float sideOfSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ return (ab.x*(p.y-a.y)-ab.y*(p.x-a.x))/max(length(ab),.00001);
+}
+float outwardProfile(float distance,float softness){
+ // Zero inside the cut, a gently rising glow just outside the knife-sharp lip.
+ if(distance<=0.0)return 0.0;
+ float peak=mix(.011,.033,softness);
+ float reach=mix(.085,.335,softness);
+ return smoothstep(0.0,peak,distance)*(1.0-smoothstep(peak,reach,distance));
+}
+float ringOutGlow(vec2 p,float radius,float softness){
+ // Signed radius prevents any diffusion into the circle.
+ return outwardProfile(length(p)-radius,softness);
+}
+float segmentOutGlow(vec2 p,vec2 a,vec2 b,float direction,float softness){
+ // Finite segment, with a single emitting side. No infinite stripe beyond endpoints.
+ float side=direction*sideOfSegment(p,a,b);
+ if(side<=0.0)return 0.0;
+ return outwardProfile(sdSegment(p,a,b),softness);
+}
+float sourceDistance(vec2 p,float model){
+ float d=100.0;
+ if(model<0.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.25934/.40021));
+  d=min(d,sdCircle(p,1.45));
+ }else if(model<1.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45));
+ }else if(model<2.5){
+  d=sdCircle(p,1.45);
+ }else if(model<3.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.40019/.40021));
+ }else if(model<4.5){
+  d=sdSegment(p,vec2(0.0,-1.22),vec2(0.0,1.22));
+ }else if(model<5.5){
+  d=sdSegment(p,vec2(-1.22,0.0),vec2(1.22,0.0));
+ }else if(model<6.5){
+  d=min(sdSegment(p,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(p,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  d=min(sdSegment(q,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(q,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }
+ return d;
+}
+float sourceGlow(vec2 p,float model,float softness){
+ float h=0.0;
+ if(model<0.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45*.25934/.40021,softness));
+  h=max(h,ringOutGlow(p,1.45,softness));
+ }else if(model<1.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45,softness));
+ }else if(model<2.5){
+  h=ringOutGlow(p,1.45,softness);
+ }else if(model<3.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness),
+        ringOutGlow(p,1.45*.40019/.40021,softness));
+ }else if(model<4.5){
+  // Left of the red vertical cut.
+  h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
+ }else if(model<5.5){
+  // Above the red horizontal cut.
+  h=segmentOutGlow(p,vec2(-1.22,0.0),vec2(1.22,0.0),1.0,softness);
+ }else if(model<6.5){
+  // Outside of the two cut faces making the right angle.
+  h=max(segmentOutGlow(p,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(p,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  h=max(segmentOutGlow(q,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(q,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }
+ return h;
+}
+void main(){
+ vec3 n=normalize(vNormal);
+ vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*.75);
+ float direction=dot(n.xy,normalize(vec2(.70,-.71)));
+ float shade=clamp(1.0-.33*(1.0-n.z)-.33*direction,.52,1.16);
+ float soft=clamp(uGlowSoftness,0.0,1.0);
+ float glow=sourceGlow(vXY,uModelId,soft);
+ // The curved blue faces receive most light, with a subtle spill on the adjacent
+ // flat membrane outside the outermost rings or on the outward side of a line.
+ float faceMask=mix(.24,1.0,smoothstep(.025,.24,length(n.xy)));
+ float d=sourceDistance(vXY,uModelId);
+ // A slight, narrow dark lip retains the sharp physical cut. Never a light line.
+ float edge=1.0-smoothstep(0.0,.009,d);
+ vec3 base=material*shade*(1.0-.17*edge);
+ vec3 glowColor=mix(material,vec3(1.0),.44);
+ vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
+ vec3 color=base+emission;
+ if(uDebug>.5)color=vec3(.03,.24,.92)*shade;
+ gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+}
+</script>
+<script>
+(function(){
+'use strict';
+const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
+const sourceNotes=[
+ 'Nouvelle coupe du modèle circulaire à trois reliefs. Trois périmètres rouges extraits : lumière diffuse, non matérielle.',
+ 'Nouvelle coupe du plateau et de son raccord. Un périmètre lumineux rouge extérieur.',
+ 'Nouvelle coupe de la couronne. Deux périmètres rouges de diffusion.',
+ 'Nouveau grand plateau. Le bleu forme le volume ; les cercles rouges servent uniquement à la lumière.',
+ 'Tracé source : pente bleue adjacente au bord rouge, extrudée dans la membrane.',
+ 'Même tracé source tourné de 90° pour vérifier son orientation horizontale.',
+ 'Deux segments bleus et rouges raccordés en angle droit, comme dans COMMANDES-002.',
+ 'Essai d’angle biais : déformation géométrique du même tracé. Ce biais n’est pas un nouveau maillage identifiable dans le fichier.'
+];
+// Red-face radii are now read from sourceRedRadii, derived from COMMANDES-002.
+const defaults=()=>({height:100,duration:2,diffusion:100,softness:35});
+const configs=Array.from({length:8},defaults);
+const STORAGE='deck-e90-atelier-commandes002-v1';
+try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
+const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(configs))}catch(_){}};
+const $=s=>document.getElementById(s);
+const mesh=$('mesh'),glow=$('glow'),ctx=glow.getContext('2d');
+const buttons=[...document.querySelectorAll('[data-model]')];
+let selected=0,progress=0,anim=null,debug=false,meshDirty=true,drawRequested=false,lastPhase='';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+const palettes=[
+ [0,'Nuit profonde','#182C50','#849BC5'],[3,'Nuit calme','#182C50','#849BC5'],
+ [6,'Fin de nuit','#182C50','#849BC5'],[7,'Aube rose','#7C91AA','#DEA0B2'],
+ [9,'Matinée orange','#9CAEB1','#F2AA76'],[11,'Journée','#FFF4D7','#E8BC79'],
+ [13,'Après-midi','#C0D1DF','#FAFAF4'],[15,'Après-midi lumineux','#B7CDDF','#F9FAF5'],
+ [17,'Fin d’après-midi','#B1C4D7','#F4F6F4'],[19,'Soir orangé','#526B91','#E3A17F'],
+ [21,'Soir bleu','#2F486D','#A18FB8'],[23,'Retour à la nuit','#182C50','#849BC5']
+];
+function rgb(s){return [1,3,5].map(i=>parseInt(s.slice(i,i+2),16)/255)}
+function palette(){
+ const now=new Date(),hour=now.getHours()+now.getMinutes()/60;let k=0;
+ for(let i=1;i<12;i++)if(hour>=palettes[i][0])k=i;
+ const a=palettes[k],b=palettes[(k+1)%12],end=k===11?24:b[0],t=ease((hour-a[0])/(end-a[0]));
+ const aa=rgb(a[2]),bb=rgb(b[2]),cc=rgb(a[3]),dd=rgb(b[3]);
+ const lerp=(x,y)=>x.map((v,i)=>v+(y[i]-v)*t);
+ return {name:a[1],a:lerp(aa,bb),b:lerp(cc,dd)};
+}
+
+const SOURCE_BASE=.065796,SOURCE_DEPTH=.063044,SOURCE_RADIUS=.40021,DISPLAY_RADIUS=1.45;
+// World-space radial sections measured from the four BLUE profiles of COMMANDES-002.glb.
+const blueInner=[[.00837,.023004],[.01319,.023152],[.01843,.023316],[.02846,.024248],[.03840,.025797],[.04824,.027958],[.05792,.030722],[.06741,.034079],[.07668,.038015],[.08568,.042517],[.09439,.047566],[.10277,.053143],[.11079,.059228],[.11842,.065796]];
+const blueMiddle=[[.01833,.012877],[.02889,.013059],[.04037,.013261],[.06232,.014414],[.08410,.016330],[.10564,.019002],[.12684,.022421],[.14762,.026572],[.16792,.031440],[.18764,.037007],[.20671,.043251],[.22506,.050149],[.24263,.057673],[.25934,.065796]];
+const blueOuter=[[.02828,.002752],[.04458,.002969],[.06229,.003210],[.09617,.004584],[.12979,.006866],[.16302,.010050],[.19574,.014122],[.22781,.019068],[.25913,.024867],[.28956,.031499],[.31899,.038938],[.34732,.047155],[.37443,.056119],[.40021,.065796]];
+const blueCrown=[[.34944,.023004],[.35530,.023526],[.36103,.025080],[.36649,.027628],[.37154,.031111],[.37607,.035446],[.38042,.040908],[.38476,.046371],[.40019,.065796]];
+// Each band ends at a RED vertical face. A separate band begins on the other side:
+// these boundaries retain their true sharp elevation changes (no cross-edge smoothing).
+const radialBands=[
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.25934,trace:blueMiddle},{a:.25934,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.40021,trace:blueOuter}],
+ [{a:0,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,flat:.065796},{a:.11842,b:.34944,flat:.023004},{a:.34944,b:.40019,trace:blueCrown}]
+];
+const sourceRedRadii=[[.11842,.25934,.40021],[.11842,.40021],[.40021],[.11842,.40019]];
+// Measured across BLUE strip GLTF_32, from the RED cut to the flat membrane.
+const blueLine=[[0,.065796],[.0228,.037197],[.0292,.029155],[.0356,.021114],[.0423,.014730],[.0497,.009603],[.0577,.005851],[.0662,.003564],[.0748,.002796]];
+// Shape-preserving Hermite interpolation: every section point is reached exactly,
+// and no oscillation is added between the imported concentric contours.
+function traceY(trace,r){
+ if(r<=trace[0][0])return trace[0][1];
+ const last=trace.length-1;
+ if(r>=trace[last][0])return trace[last][1];
+ let j=0;while(j<last-1&&r>trace[j+1][0])j++;
+ const sec=i=>(trace[i+1][1]-trace[i][1])/(trace[i+1][0]-trace[i][0]);
+ const tangent=i=>{
+  if(i===0)return sec(0);
+  if(i===last)return sec(last-1);
+  const p=sec(i-1),q=sec(i);
+  if(p*q<=0)return 0;
+  const a=trace[i][0]-trace[i-1][0],b=trace[i+1][0]-trace[i][0],wa=2*b+a,wb=b+2*a;
+  return (wa+wb)/(wa/p+wb/q);
+ };
+ const [x0,y0]=trace[j],[x1,y1]=trace[j+1],dx=x1-x0,t=(r-x0)/dx;
+ return (2*t*t*t-3*t*t+1)*y0+(t*t*t-2*t*t+t)*dx*tangent(j)+(-2*t*t*t+3*t*t)*y1+(t*t*t-t*t)*dx*tangent(j+1);
+}
+function ringYAndGradient(model,r,band){
+ const y=band.trace?traceY(band.trace,r):band.flat;
+ const eps=.00005,l=Math.max(band.a,r-eps),h=Math.min(band.b,r+eps);
+ const derivative=band.trace&&h>l?(traceY(band.trace,h)-traceY(band.trace,l))/(h-l):0;
+ return [(y-SOURCE_BASE)/SOURCE_DEPTH,derivative*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH];
+}
+function lineRamp(worldDist){
+ const d=worldDist*SOURCE_RADIUS/DISPLAY_RADIUS;
+ if(d<0||d>.0748)return 0;
+ return (traceY(blueLine,d)-.002796)/SOURCE_DEPTH;
+}
+function heightAt(x,y){
+ if(selected<4){
+  const r=Math.hypot(x,y)*SOURCE_RADIUS/DISPLAY_RADIUS;
+  const bands=radialBands[selected];
+  const band=bands.find(b=>r<=b.b)||null;
+  return band?ringYAndGradient(selected,r,band)[0]:0;
+ }
+ // 05: original straight vertical BLUE strip with the RED vertical edge at x=0.
+ if(selected===4)return y>=-1.22&&y<=1.22?lineRamp(x):0;
+ // 06: rotated original straight strip, not an independently authored GLB object.
+ if(selected===5)return x>=-1.22&&x<=1.22?lineRamp(-y):0;
+ // 07: source L corner assembled from blue GLTF_34 and GLTF_36.
+ // 08: exploratory bias of that exact source L; labelled as such in the UI.
+ let xx=x,yy=y;
+ if(selected===7)xx=x-.45*y;
+ const v=(yy>=-.83&&yy<=.83)?lineRamp(xx-.32):0;
+ const hz=(xx>=-1.33&&xx<=.32)?lineRamp(-(yy+.83)):0;
+ return Math.max(v,hz);
+}
+let gl=null,program=null,u=null,buffer=null,indexBuffer=null,indexCount=0;
+function shader(kind,text){
+ const sh=gl.createShader(kind);gl.shaderSource(sh,text);gl.compileShader(sh);
+ if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Compilation GLSL');
+ return sh;
+}
+function initGL(){
+ gl=mesh.getContext('webgl',{alpha:true,antialias:true,depth:false,preserveDrawingBuffer:false});
+ if(!gl)throw Error('WebGL indisponible');
+ program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,$('vert').textContent));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,$('frag').textContent));
+ gl.linkProgram(program);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||'Liaison GLSL');
+ gl.useProgram(program);
+ u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
+ a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
+ debug:gl.getUniformLocation(program,'uDebug'),
+ glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),
+ xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad')};
+ buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
+}
+function rebuildMesh(){
+ if(!gl)return;
+ const data=[],indices=[];
+ // Sample each source-defined blue band independently: seams retain their
+ // discontinuous normals, and red faces are never rounded by the triangulation.
+ // This perfectly flat backing surface is part of the SAME WebGL membrane.
+ // It receives light outside the outermost circle and on the outside of the
+ // line cuts; previously there were no fragments there to light up.
+ // It matches the CSS time-of-day background color exactly.
+ const planeStart=data.length/5,extent=1.84;
+ data.push(-extent,-extent,0,0,0, extent,-extent,0,0,0,
+           -extent,extent,0,0,0, extent,extent,0,0,0);
+ indices.push(planeStart,planeStart+1,planeStart+2,
+              planeStart+1,planeStart+3,planeStart+2);
+ function addBand(band){
+  const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
+  const radii=[];
+  for(let j=0;j<knots.length-1;j++)
+   for(let t=0;t<3;t++)radii.push(knots[j]+(knots[j+1]-knots[j])*t/3);
+  radii.push(band.b);
+  const ANGLES=320,stride=ANGLES+1,offset=data.length/5;
+  for(const radius of radii){
+   const [depth,radialSlope]=ringYAndGradient(selected,radius,band);
+   const rr=radius/SOURCE_RADIUS*DISPLAY_RADIUS;
+   for(let i=0;i<=ANGLES;i++){
+    const a=2*Math.PI*i/ANGLES,c=Math.cos(a),sn=Math.sin(a);
+    data.push(rr*c,rr*sn,depth,radialSlope*c,radialSlope*sn);
+   }
+  }
+  for(let j=0;j<radii.length-1;j++)for(let i=0;i<ANGLES;i++){
+   const a=offset+j*stride+i,b=a+stride;
+   indices.push(a,a+1,b,a+1,b+1,b);
+  }
+ }
+ if(selected<4){
+  for(const band of radialBands[selected])addBand(band);
+ }else{
+  // Lines and angles use strips aligned with the ORIGINAL blue section and red cut.
+  // No square-grid interpolation means no triangular teeth along their edges.
+  const SHEAR=selected===7?.45:0;
+  function addStrip(ax,ay,bx,by){
+   const dx=bx-ax,dy=by-ay,length=Math.hypot(dx,dy);
+   const nx=dy/length,ny=-dx/length; // the BLUE surface lies on the right of the red edge
+   const N=256,stride=N+1,offset=data.length/5;
+   const sourceKnots=blueLine.map(row=>row[0]);
+   const dList=[];
+   for(let i=0;i<sourceKnots.length-1;i++)
+    for(let k=0;k<3;k++)dList.push(sourceKnots[i]+(sourceKnots[i+1]-sourceKnots[i])*k/3);
+   dList.push(sourceKnots.at(-1));
+   for(const d of dList){
+    const e=.00005,left=Math.max(0,d-e),right=Math.min(.0748,d+e);
+    const yy=traceY(blueLine,d);
+    const slope=right>left?(traceY(blueLine,right)-traceY(blueLine,left))/(right-left):0;
+    const depth=(yy-.002796)/SOURCE_DEPTH;
+    const gradient=slope*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH;
+    const across=d*DISPLAY_RADIUS/SOURCE_RADIUS;
+    for(let i=0;i<=N;i++){
+     const t=i/N;
+     const x=ax+dx*t+nx*across,y=ay+dy*t+ny*across;
+     const gx=gradient*nx,gy=gradient*ny;
+     data.push(x+SHEAR*y,y,depth,gx,gy-SHEAR*gx);
+    }
+   }
+   for(let j=0;j<dList.length-1;j++)for(let i=0;i<N;i++){
+    const a=offset+j*stride+i,b=a+stride;
+    indices.push(a,a+1,b,a+1,b+1,b);
+   }
+  }
+  if(selected===4)addStrip(0,-1.22,0,1.22);
+  else if(selected===5)addStrip(-1.22,0,1.22,0);
+  else{
+   addStrip(.32,-.83,.32,.83);
+   addStrip(-1.33,-.83,.32,-.83);
+  }
+ }
+ const vertices=data.length/5;
+ if(vertices>65535)throw Error('Maillage trop grand pour WebGL1 : '+vertices+' sommets');
+ gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
+ indexCount=indices.length;meshDirty=false;
+}
+function sizeCanvas(){
+ const rect=$('stage').getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2.5);
+ const w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
+ if(mesh.width!==w||mesh.height!==h){mesh.width=w;mesh.height=h;glow.width=w;glow.height=h}
+ if(gl)gl.viewport(0,0,mesh.width,mesh.height);
+ requestDraw();
+}
+function cssColor(a,alpha){return 'rgba('+a.map(v=>Math.round(v*255)).join(',')+','+alpha+')'}
+function lightStroke(x,y,pxScale,from,to,color){
+ ctx.beginPath();ctx.moveTo(x+from[0]*pxScale,y-from[1]*pxScale);ctx.lineTo(x+to[0]*pxScale,y-to[1]*pxScale);ctx.strokeStyle=color;ctx.stroke();
+}
+function paintGlow(p){
+ // The 2D canvas is diagnostic only. In normal use the 3D fragment shader lights
+ // the BLUE membrane faces; there is never a separate glowing stroke.
+ const w=glow.width,h=glow.height;
+ ctx.clearRect(0,0,w,h);
+ if(!debug)return;
+ const cx=w/2,cy=h/2,scale=w*.545/2;
+ ctx.save();
+ ctx.globalCompositeOperation='source-over';
+ ctx.globalAlpha=.96;
+ ctx.strokeStyle='#ff2845';
+ ctx.lineWidth=Math.max(2,w*.006);
+ ctx.shadowBlur=0;
+ ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.beginPath();
+ if(selected<4){
+  for(const r of sourceRedRadii[selected]){
+   const radius=r/SOURCE_RADIUS*DISPLAY_RADIUS*scale;
+   ctx.moveTo(cx+radius,cy);
+   ctx.arc(cx,cy,radius,0,Math.PI*2);
+  }
+ }else{
+  const path=points=>{
+   ctx.moveTo(cx+points[0][0]*scale,cy-points[0][1]*scale);
+   for(const point of points.slice(1))ctx.lineTo(cx+point[0]*scale,cy-point[1]*scale);
+  };
+  if(selected===4)path([[0,-1.22],[0,1.22]]);
+  else if(selected===5)path([[-1.22,0],[1.22,0]]);
+  else{
+   const shear=selected===7?.45:0;
+   const shearPoints=points=>points.map(([x,y])=>[x+shear*y,y]);
+   path(shearPoints([[.32,-.83],[.32,.83]]));
+   path(shearPoints([[-1.33,-.83],[.32,-.83]]));
+  }
+ }
+ ctx.stroke();
+ ctx.restore();
+}
+function draw(time){
+ drawRequested=false;
+ if(anim){
+  if(anim.started===null)anim.started=time;
+  const t=clamp((time-anim.started)/Math.max(1,anim.duration),0,1);
+  progress=anim.from+(anim.to-anim.from)*ease(t);
+  if(t>=1)anim=null;
+  $('deployment').value=String(Math.round(progress*100));
+  $('deploymentOut').textContent=Math.round(progress*100)+' %';
+ }
+ const paletteNow=palette();
+ $('phase').textContent=paletteNow.name;
+ const rgbCSS=a=>'rgb('+a.map(v=>Math.round(v*255)).join(',')+')';
+ const upper=paletteNow.a.map((v,i)=>v*.25+paletteNow.b[i]*.75);
+ $('stage').style.background='linear-gradient(to top,'+rgbCSS(paletteNow.a)+','+rgbCSS(upper)+')';
+ if(gl){
+  if(meshDirty)rebuildMesh();
+  gl.useProgram(program);gl.viewport(0,0,mesh.width,mesh.height);
+  gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(u.progress,progress);
+  gl.uniform1f(u.height,configs[selected].height/100);
+  gl.uniform1f(u.debug,debug?1:0);
+  gl.uniform1f(u.glowAmount,configs[selected].diffusion/100*progress);
+  gl.uniform1f(u.glowSoftness,configs[selected].softness/100);
+  gl.uniform1f(u.modelId,selected);
+  gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
+  gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  for(const [loc,sz,off] of [[u.xy,2,0],[u.z,1,8],[u.grad,2,12]]){
+   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,20,off);
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
+  gl.drawElements(gl.TRIANGLES,indexCount,gl.UNSIGNED_SHORT,0);
+  const error=gl.getError();if(error!==gl.NO_ERROR){$('status').textContent='Erreur WebGL : '+error;return}
+ }
+ paintGlow(paletteNow);
+ if(anim)requestDraw();
+}
+function requestDraw(){if(!drawRequested){drawRequested=true;requestAnimationFrame(draw)}}
+function animate(to,from=progress){
+ anim={started:null,from,to,duration:configs[selected].duration*1000};
+ requestDraw();
+}
+function sync(){
+ buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===selected)));
+ $('selectedName').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
+ $('currentNumber').textContent=String(selected+1).padStart(2,'0');
+ $('sourceNote').textContent=sourceNotes[selected];
+ for(const field of ['height','duration','diffusion','softness']){
+  const val=configs[selected][field];$(field).value=String(val);
+  $(field+'Out').textContent=field==='duration'?Number(val).toFixed(1).replace('.',',')+' s':Math.round(val)+' %';
+ }
+ $('deployment').value=String(Math.round(progress*100));
+ $('deploymentOut').textContent=Math.round(progress*100)+' %';
+}
+function choose(i){
+ selected=i;progress=0;anim=null;meshDirty=true;sync();animate(1,0);
+}
+buttons.forEach((b,i)=>b.addEventListener('click',()=>choose(i)));
+for(const field of ['height','duration','diffusion','softness']){
+ $(field).addEventListener('input',()=>{
+  configs[selected][field]=Number($(field).value);
+  $(field+'Out').textContent=field==='duration'?Number(configs[selected][field]).toFixed(1).replace('.',',')+' s':Math.round(configs[selected][field])+' %';
+  // Softness now changes only light diffusion, never the source geometry.
+  save();requestDraw();
+ });
+}
+$('deployment').addEventListener('input',()=>{
+ anim=null;progress=Number($('deployment').value)/100;
+ $('deploymentOut').textContent=Math.round(progress*100)+' %';requestDraw();
+});
+$('debug').addEventListener('click',()=>{debug=!debug;$('debug').setAttribute('aria-pressed',String(debug));requestDraw()});
+$('replay').addEventListener('click',()=>animate(1,0));
+$('reset').addEventListener('click',()=>{configs[selected]=defaults();save();meshDirty=true;sync();requestDraw()});
+$('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defaults();save();meshDirty=true;sync();requestDraw()});
+addEventListener('resize',sizeCanvas);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
+setInterval(()=>requestDraw(),60000);
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v4 · lumière extérieure uniquement, arêtes conservées'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+})();
+</script>
+</body>
+</html>
