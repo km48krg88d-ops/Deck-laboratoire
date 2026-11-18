@@ -348,13 +348,13 @@ function initGL(){
  u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
  a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
  debug:gl.getUniformLocation(program,'uDebug'),
- glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),rimBoost:gl.getUniformLocation(program,'uRimBoost'),
- xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad')};
+ glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),rimBoost:gl.getUniformLocation(program,'uRimBoost'),ringGeometry:gl.getUniformLocation(program,'uRingGeometry'),ringLights:gl.getUniformLocation(program,'uRingLights'),
+ xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad'),stage:gl.getAttribLocation(program,'aStage')};
  buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
 }
 function rebuildMesh(){
  if(!gl)return;
- const data=[],indices=[];
+ const data=[],indices=[],stages=[];
  // Sample each source-defined blue band independently: seams retain their
  // discontinuous normals, and red faces are never rounded by the triangulation.
  // This perfectly flat backing surface is part of the SAME WebGL membrane.
@@ -366,7 +366,8 @@ function rebuildMesh(){
            -extent,extent,0,0,0, extent,extent,0,0,0);
  indices.push(planeStart,planeStart+1,planeStart+2,
               planeStart+1,planeStart+3,planeStart+2);
- function addBand(band){
+ stages.push(-1,-1,-1,-1);
+ function addBand(band,stageId){
   const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
   const radii=[];
   for(let j=0;j<knots.length-1;j++)
@@ -379,6 +380,7 @@ function rebuildMesh(){
    for(let i=0;i<=ANGLES;i++){
     const a=2*Math.PI*i/ANGLES,c=Math.cos(a),sn=Math.sin(a);
     data.push(rr*c,rr*sn,depth,radialSlope*c,radialSlope*sn);
+    stages.push(stageId);
    }
   }
   for(let j=0;j<radii.length-1;j++)for(let i=0;i<ANGLES;i++){
@@ -387,7 +389,7 @@ function rebuildMesh(){
   }
  }
  if(selected<4){
-  for(const band of radialBands[selected])addBand(band);
+  radialBands[selected].forEach((band,j)=>addBand(band,selected===3?Math.min(j,1):j));
  }else{
   // Lines and angles use strips aligned with the ORIGINAL blue section and red cut.
   // No square-grid interpolation means no triangular teeth along their edges.
@@ -413,6 +415,7 @@ function rebuildMesh(){
      const x=ax+dx*t+nx*across,y=ay+dy*t+ny*across;
      const gx=gradient*nx,gy=gradient*ny;
      data.push(x+SHEAR*y,y,depth,gx,gy-SHEAR*gx);
+     stages.push(-1);
     }
    }
    for(let j=0;j<dList.length-1;j++)for(let i=0;i<N;i++){
@@ -430,7 +433,13 @@ function rebuildMesh(){
  const vertices=data.length/5;
  if(vertices>65535)throw Error('Maillage trop grand pour WebGL1 : '+vertices+' sommets');
  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
- gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
+ if(stages.length!==vertices)throw Error('Niveaux de géométrie incomplets');
+ const packed=new Float32Array(vertices*6);
+ for(let i=0;i<vertices;i++){
+  for(let k=0;k<5;k++)packed[i*6+k]=data[i*5+k];
+  packed[i*6+5]=stages[i];
+ }
+ gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STATIC_DRAW);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
  indexCount=indices.length;meshDirty=false;
@@ -489,7 +498,7 @@ function draw(time){
  if(anim){
   if(anim.started===null)anim.started=time;
   const t=clamp((time-anim.started)/Math.max(1,anim.duration),0,1);
-  progress=anim.from+(anim.to-anim.from)*ease(t);
+  progress=anim.from+(anim.to-anim.from)*(selected<4?t:ease(t));
   if(t>=1)anim=null;
   $('deployment').value=String(Math.round(progress*100));
   $('deploymentOut').textContent=Math.round(progress*100)+' %';
@@ -503,18 +512,21 @@ function draw(time){
   if(meshDirty)rebuildMesh();
   gl.useProgram(program);gl.viewport(0,0,mesh.width,mesh.height);
   gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+  const phases=selected<4?sequentialRings(selected,progress):null;
   gl.uniform1f(u.progress,progress);
+  gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
+  gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
   gl.uniform1f(u.height,configs[selected].height/100);
   gl.uniform1f(u.debug,debug?1:0);
-  gl.uniform1f(u.glowAmount,configs[selected].diffusion/100*progress);
+  gl.uniform1f(u.glowAmount,configs[selected].diffusion/100*(selected<4?1:progress));
   gl.uniform1f(u.glowSoftness,configs[selected].softness/100);
   gl.uniform1f(u.modelId,selected);
   gl.uniform1f(u.rimBoost,configs[selected].peripheral/100);
   gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
   gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-  for(const [loc,sz,off] of [[u.xy,2,0],[u.z,1,8],[u.grad,2,12]]){
-   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,20,off);
+  for(const [loc,sz,off] of [[u.xy,2,0],[u.z,1,8],[u.grad,2,12],[u.stage,1,20]]){
+   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,sz,gl.FLOAT,false,24,off);
   }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
   gl.drawElements(gl.TRIANGLES,indexCount,gl.UNSIGNED_SHORT,0);
@@ -554,7 +566,7 @@ for(const field of ['height','duration','diffusion','softness','peripheral']){
 }
 function exportAllSettings(){
  return {
-  version:'E90-v5',source:'COMMANDES-002.glb',date:new Date().toISOString(),
+  version:'E90-v6',source:'COMMANDES-002.glb',date:new Date().toISOString(),
   selectedModel:selected+1,selectedName:modelNames[selected],deployment:Math.round(progress*100),
   debugSources:debug,lamps:modelNames.map((name,i)=>({index:i+1,name,...configs[i]}))
  };
@@ -583,7 +595,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++)configs[i]=defau
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v5 · halo périphérique équilibré, pas de liseré gris'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v6 · les cercles précèdent la lumière'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
