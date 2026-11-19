@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#c3d1df">
-<title>DECK · Comparaison 3D v3 — halos progressifs</title>
+<title>DECK · Comparaison 3D v4 — calibrations 10/90</title>
 <style>
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
@@ -39,7 +39,7 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </head>
 <body>
 <canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
-<div id="top"><strong>DECK · 3D / COMMANDES-002 · v3</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<div id="top"><strong>DECK · 3D / COMMANDES-002 · v4</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
@@ -57,6 +57,8 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </div>
 <h2 id="selectedTitle">01 · Trois reliefs</h2>
 <div class="setting"><label for="level">Intensité lumineuse</label><output id="levelOut">100 %</output><input id="level" type="range" min="0" max="100" step="1" value="100"></div>
+<div style="display:flex;gap:7px;margin:2px 0 9px"><button type="button" id="intensity10">Calibration 10 %</button><button type="button" id="intensity90">Calibration 90 %</button></div>
+<div id="calibrationInfo" class="small"></div>
 <div class="setting"><label for="height">Hauteur</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
 <div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
 <div class="setting"><label for="diffusion">Diffusion lumineuse</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
@@ -152,7 +154,7 @@ float sourceDistance(vec2 p,float model){
  return d;
 }
 float glowRamp(float intensity){
- return pow(clamp(intensity,0.0,1.0),1.6);
+ return clamp(intensity,0.0,1.0);
 }
 float sourceGlow(vec2 p,float model,float softness){
  float h=0.0;
@@ -213,19 +215,16 @@ const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
 const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
 const RING_COUNTS=[3,2,1,2];
 // The glow stays dark until every curved blue ring has formed.
-function glowEase(t){
- t=clamp(t,0,1);
- return Math.pow(ease(t),1.7);
-}
+// First all blue rings form, then clearly visible, overlapping gentle light fades.
+function glowEase(t){return ease(clamp(t,0,1))}
 function sequentialRings(model,progress){
- const count=RING_COUNTS[model]||1;
- const t=clamp(progress,0,1);
- const geometry=[],lights=[];
- const geometryPart=.56,lightPart=.44;
- for(let stage=0;stage<3;stage++){
-  geometry.push(stage<count?ease(clamp(t/geometryPart*count-stage,0,1)):1);
-  const raw=(t-geometryPart)/lightPart*count-stage;
-  lights.push(stage<count?glowEase(raw):0);
+ const count=RING_COUNTS[model]||1,t=clamp(progress,0,1);
+ const geometry=[],lights=[],geometryEnd=.40;
+ const stagger=count===3?.13:count===2?.20:0;
+ const lightLength=1-geometryEnd-stagger*(count-1);
+ for(let j=0;j<3;j++){
+  geometry.push(j<count?ease(clamp(t/geometryEnd*count-j,0,1)):1);
+  lights.push(j<count?glowEase((t-geometryEnd-j*stagger)/lightLength):0);
  }
  return {geometry,lights};
 }
@@ -238,9 +237,62 @@ try{
  if(Array.isArray(saved)&&saved.length===8)for(let i=0;i<8;i++)
   for(const key of Object.keys(defaults()))if(Number.isFinite(saved[i]?.[key]))configs[i][key]=saved[i][key];
 }catch(_){}
-const saveSettings=()=>{try{localStorage.setItem(SHARED_SETTINGS_KEY,JSON.stringify(configs))}catch(_){}};
+const saveSettings=()=>{try{localStorage.setItem(SHARED_SETTINGS_KEY,JSON.stringify(configs))}catch(_){}saveLightCalibration();};
+// Real luminance references supplied for the first seven lamps.
+const CALIBRATION_10=[
+ [18,100,265],[20,97,220],[37,100,95],[58,100,120],
+ [63,100,130],[58,100,155],[59,100,130],null
+];
+const CALIBRATION_90=[
+ [54,100,305],[52,97,220],[118,100,95],[112,100,120],
+ [120,100,130],[120,100,155],[113,100,130],null
+];
+const CALIBRATION_STORAGE='deck-e90-calibrations-v8';
+const LEVELS_STORAGE='deck-e90-lamp-intensities-v8';
+const keys=['diffusion','softness','peripheral'];
+const profile=a=>Object.fromEntries(keys.map((k,j)=>[k,a[j]]));
+let calibrated=CALIBRATION_10.map((a,i)=>a?{low:profile(a),high:profile(CALIBRATION_90[i])}:null);
+try{
+ const saved=JSON.parse(localStorage.getItem(CALIBRATION_STORAGE));
+ if(Array.isArray(saved)&&saved.length===8)for(let i=0;i<7;i++){
+  const x=saved[i];
+  if(x?.low&&x?.high&&keys.every(k=>Number.isFinite(x.low[k])&&Number.isFinite(x.high[k])))
+   calibrated[i]={low:{...x.low},high:{...x.high}};
+ }
+}catch(_){}
+const lampIntensities=Array(8).fill(90);
+try{
+ const old=JSON.parse(localStorage.getItem(LEVELS_STORAGE));
+ if(Array.isArray(old)&&old.length===8)for(let i=0;i<8;i++)if(Number.isFinite(old[i]))
+  lampIntensities[i]=Math.max(0,Math.min(100,old[i]));
+}catch(_){}
+function calibratedLight(i,intensity=lampIntensities[i]){
+ const level=Math.max(0,Math.min(100,intensity)),p=calibrated[i];
+ if(!p)return {diffusion:configs[i].diffusion,softness:configs[i].softness,peripheral:configs[i].peripheral,gain:level/100,calibrated:false};
+ const t=Math.max(0,Math.min(1,(level-10)/80)),result={gain:Math.min(1,level/10),calibrated:true};
+ for(const k of keys)result[k]=p.low[k]+(p.high[k]-p.low[k])*t;
+ return result;
+}
+function tuneLight(i,key,value){
+ const p=calibrated[i];
+ if(!p){configs[i][key]=value;return}
+ const delta=value-calibratedLight(i)[key],bounds=key==='diffusion'?[0,200]:key==='softness'?[0,100]:[50,350];
+ for(const anchor of [p.low,p.high])anchor[key]=Math.max(bounds[0],Math.min(bounds[1],anchor[key]+delta));
+}
+function saveLightCalibration(){
+ try{
+  localStorage.setItem(CALIBRATION_STORAGE,JSON.stringify(calibrated));
+  localStorage.setItem(LEVELS_STORAGE,JSON.stringify(lampIntensities));
+ }catch(_){}
+}
+function resetLightCalibration(i){
+ calibrated[i]=CALIBRATION_10[i]?{low:profile(CALIBRATION_10[i]),high:profile(CALIBRATION_90[i])}:null;
+ lampIntensities[i]=90;
+}
+
+
 const DEFAULT_POS=[[.20,.28],[.48,.20],[.72,.32],[.55,.54],[.13,.69],[.76,.66],[.26,.84],[.77,.86]];
-let position=DEFAULT_POS.map(([x,y])=>({x,y,scale:100})),levels=Array(8).fill(1);
+let position=DEFAULT_POS.map(([x,y])=>({x,y,scale:100})),levels=lampIntensities.map(v=>v/100);
 try{
  const stored=JSON.parse(localStorage.getItem(LAYOUT_KEY));
  if(stored&&Array.isArray(stored.position)&&stored.position.length===8&&Array.isArray(stored.levels)&&stored.levels.length===8){
@@ -248,7 +300,13 @@ try{
   levels=stored.levels.map(v=>clamp(Number(v)||0,0,1));
  }
 }catch(_){}
-const saveLayout=()=>{try{localStorage.setItem(LAYOUT_KEY,JSON.stringify({position,levels}))}catch(_){}};
+// Apply the new shared intensities; keep the previous local layout and placements.
+for(let i=0;i<8;i++)levels[i]=lampIntensities[i]/100;
+const saveLayout=()=>{
+ for(let i=0;i<8;i++)lampIntensities[i]=Math.round(levels[i]*100);
+ try{localStorage.setItem(LAYOUT_KEY,JSON.stringify({position,levels}))}catch(_){}
+ saveLightCalibration();
+};
 let selected=0,placeMode=false,panelOpen=true,dragging=null,lastTapTime=0,lastTapModel=-1;
 const canvas=$('scene');
 const palettes=[
@@ -498,8 +556,9 @@ function draw(time){
   gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
   gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
   gl.uniform1f(u.model,i);
-  gl.uniform1f(u.glow,configs[i].diffusion/100*brightness*(i<4?1:reveal[i]));
-  gl.uniform1f(u.soft,configs[i].softness/100);gl.uniform1f(u.rim,configs[i].peripheral/100);
+  const calibratedValue=calibratedLight(i,brightness*100);
+  gl.uniform1f(u.glow,calibratedValue.diffusion/100*calibratedValue.gain*(i<4?1:reveal[i]));
+  gl.uniform1f(u.soft,calibratedValue.softness/100);gl.uniform1f(u.rim,calibratedValue.peripheral/100);
   gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
   for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,28,offset);
@@ -513,10 +572,14 @@ function draw(time){
 function sync(){
  $('selectedTitle').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
  document.querySelectorAll('[data-model]').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===selected)));
- const c=configs[selected];
+ const c=configs[selected],tuned=calibratedLight(selected,levels[selected]*100);
  for(const key of ['height','duration','diffusion','softness','peripheral']){
-  $(key).value=String(c[key]);$(key+'Out').textContent=key==='duration'?Number(c[key]).toFixed(1).replace('.',',')+' s':Math.round(c[key])+' %';
+  const value=['height','duration'].includes(key)?c[key]:tuned[key];
+  $(key).value=String(value);$(key+'Out').textContent=key==='duration'?Number(value).toFixed(1).replace('.',',')+' s':Math.round(value)+' %';
  }
+ $('calibrationInfo').textContent=selected===7
+  ? 'Lampe 08 : sans calibration définitive (valeurs provisoires).'
+  : 'Calibration active : diffusion '+Math.round(tuned.diffusion)+' % · périphérie '+Math.round(tuned.peripheral)+' %.';
  $('level').value=String(Math.round(levels[selected]*100));$('levelOut').textContent=Math.round(levels[selected]*100)+' %';
  $('scale').value=String(position[selected].scale);$('scaleOut').textContent=position[selected].scale+' %';
  $('dockName').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
@@ -526,9 +589,16 @@ function sync(){
 }
 document.querySelectorAll('[data-model]').forEach((b,i)=>b.addEventListener('click',()=>{selected=i;sync();redraw()}));
 for(const key of ['height','duration','diffusion','softness','peripheral']){
- $(key).addEventListener('input',()=>{configs[selected][key]=Number($(key).value);saveSettings();sync();redraw()});
+ $(key).addEventListener('input',()=>{
+  const value=Number($(key).value);
+  if(['diffusion','softness','peripheral'].includes(key))tuneLight(selected,key,value);
+  else configs[selected][key]=value;
+  saveSettings();sync();redraw();
+ });
 }
 $('level').addEventListener('input',()=>setLevel(selected,Number($('level').value)/100,false));
+$('intensity10').addEventListener('click',()=>setLevel(selected,.10,false));
+$('intensity90').addEventListener('click',()=>setLevel(selected,.90,false));
 $('dockIntensity').addEventListener('input',()=>setLevel(selected,Number($('dockIntensity').value)/100,false));
 $('scale').addEventListener('input',()=>{position[selected].scale=Number($('scale').value);saveLayout();sync();redraw()});
 $('on').addEventListener('click',()=>setLevel(selected,1,true));
@@ -576,8 +646,12 @@ canvas.addEventListener('pointerup',e=>{
  lastTapModel=i;lastTapTime=now;
 });
 function exportAll(){
- return {version:'DECK-E90-comparaison-3D-v3',source:'COMMANDES-002.glb',
-  currentModel:selected+1,lamps:modelNames.map((name,i)=>({number:i+1,name,...configs[i],...position[i],level:Math.round(levels[i]*100)}))};
+ return {version:'DECK-E90-comparaison-3D-v4',source:'COMMANDES-002.glb',
+  currentModel:selected+1,lamps:modelNames.map((name,i)=>({
+   number:i+1,name,height:configs[i].height,duration:configs[i].duration,
+   intensity:Math.round(levels[i]*100),...calibratedLight(i,levels[i]*100),
+   calibration10:calibrated[i]?.low||null,calibration90:calibrated[i]?.high||null,...position[i]
+  }))};
 }
 $('copyAll').addEventListener('click',async()=>{
  const text=JSON.stringify(exportAll(),null,2);
@@ -588,7 +662,26 @@ $('copyAll').addEventListener('click',async()=>{
  }catch(err){$('message').textContent='Impossible de copier : vérifier les autorisations du presse-papiers.';}
 });
 addEventListener('resize',resize);
-addEventListener('storage',e=>{if(e.key===SHARED_SETTINGS_KEY){try{let s=JSON.parse(e.newValue);for(let i=0;i<8;i++)if(s[i])Object.assign(configs[i],s[i]);sync();redraw()}catch(_){}}});
+addEventListener('storage',event=>{
+ try{
+  if(event.key===SHARED_SETTINGS_KEY){
+   const x=JSON.parse(event.newValue);
+   for(let i=0;i<8;i++)if(x[i])Object.assign(configs[i],x[i]);
+  }
+  if(event.key===CALIBRATION_STORAGE){
+   const x=JSON.parse(event.newValue);
+   for(let i=0;i<7;i++)if(x[i]?.low&&x[i]?.high)calibrated[i]=x[i];
+  }
+  if(event.key===LEVELS_STORAGE){
+   const x=JSON.parse(event.newValue);
+   if(Array.isArray(x)&&x.length===8)for(let i=0;i<8;i++){
+    lampIntensities[i]=x[i];levels[i]=Math.max(0,Math.min(1,x[i]/100));
+    reveal[i]=levels[i]>0?1:0;animation[i]=null;
+   }
+  }
+  sync();redraw();
+ }catch(_){}
+});
 sync();resize();
 })();
 </script>
