@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#c3d1df">
-<title>DECK · Comparaison 3D v5 — membrane unique</title>
+<title>DECK · Comparaison 3D v6 — membrane teintée continue</title>
 <style>
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
@@ -39,12 +39,12 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </head>
 <body>
 <canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
-<div id="top"><strong>DECK · 3D / COMMANDES-002 · v5</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<div id="top"><strong>DECK · 3D / COMMANDES-002 · v6</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
 <h2>DECK · Réglages des lampes 3D</h2>
-<div class="small">Huit formes 3D sur une seule membrane continue : plus de carrés opaques derrière les lampes. Les halos périphériques sont transparents et les reliefs restent indépendants et déplaçables. La scène 2D reste inchangée.</div>
+<div class="small">Les reliefs ont exactement la teinte de la membrane à leur position dans la fenêtre. Seules leurs courbures modèlent légèrement cette couleur, tandis que les halos restent diffus et les formes librement déplaçables. La scène 2D reste inchangée.</div>
 <div id="models">
 <button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
 <button type="button" data-model="1">02 · Plateau et raccord</button>
@@ -95,6 +95,7 @@ varying vec3 vNormal;
 varying vec2 vXY;
 varying float vIsPlane;
 uniform vec3 uPaletteA,uPaletteB;
+uniform vec2 uResolution;
 uniform float uDebug;
 uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost;
 uniform vec3 uRingLights;
@@ -189,9 +190,16 @@ float sourceGlow(vec2 p,float model,float softness){
 }
 void main(){
  vec3 n=normalize(vNormal);
- vec3 material=mix(uPaletteA,uPaletteB,clamp((vXY.y+1.82)/3.64,0.0,1.0)*.75);
+ // Reproduce the single CSS membrane gradient exactly at each SCREEN pixel:
+ // background is PaletteB at the top, PaletteA at the bottom.
+ // gl_FragCoord.y is measured from the bottom; using local vXY instead
+ // previously gave each symbol a different (often grey) base color.
+ float membraneY=clamp(gl_FragCoord.y/max(uResolution.y,1.0),0.0,1.0);
+ vec3 material=mix(uPaletteA,uPaletteB,membraneY);
  float direction=dot(n.xy,normalize(vec2(.70,-.71)));
- float shade=clamp(1.0-.33*(1.0-n.z)-.33*direction,.52,1.16);
+ // The flat surface has shade exactly 1, and the lifted faces differ only
+ // subtly from it: geometry is read as a fold, not a metallic object.
+ float shade=clamp(1.0-.09*(1.0-n.z)-.10*direction,.87,1.09);
  float soft=clamp(uGlowSoftness,0.0,1.0);
  float glow=sourceGlow(vXY,uModelId,soft);
  // The curved blue faces receive most light, with a subtle spill on the adjacent
@@ -676,7 +684,7 @@ canvas.addEventListener('pointerup',e=>{
  lastTapModel=i;lastTapTime=now;
 });
 function exportAll(){
- return {version:'DECK-E90-comparaison-3D-v5',source:'COMMANDES-002.glb',
+ return {version:'DECK-E90-comparaison-3D-v6',source:'COMMANDES-002.glb',
   currentModel:selected+1,lamps:modelNames.map((name,i)=>({
    number:i+1,name,height:configs[i].height,duration:configs[i].duration,
    intensity:Math.round(levels[i]*100),...calibratedLight(i,levels[i]*100),
