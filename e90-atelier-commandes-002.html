@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DECK / E90 v8 — Calibration 10/90 et halo progressif</title>
+<title>DECK / E90 v9 — halos étendus et diffus</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,7 +45,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 </style>
 </head>
 <body>
-<header id="top"><div><h1>DECK / E90 v8 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
+<header id="top"><div><h1>DECK / E90 v9 · ATELIER DES FORMES</h1><p>COMMANDES-002 · membrane bleue / diffusion rouge · <span id="phase">couleurs horaires</span></p></div><a href="./e90-comparaison-2d-3d.html?v=1">Comparer 2D / 3D</a></header>
 <main>
 <section id="artboard">
 <div id="stage"><canvas id="mesh" aria-label="Modèle de membrane 3D de la commande sélectionnée"></canvas><canvas id="glow" aria-hidden="true"></canvas></div>
@@ -75,6 +75,7 @@ main{max-width:1130px;margin:auto;padding:18px 14px 42px;display:grid;grid-templ
 <div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
 <div class="setting"><label for="diffusion">Diffusion de lumière</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
 <div class="setting"><label for="peripheral">Intensité lumineuse périphérique</label><output id="peripheralOut">210 %</output><input id="peripheral" type="range" min="50" max="350" step="5" value="210"></div>
+<div class="setting"><label for="spread">Étendue du halo lumineux</label><output id="spreadOut">220 %</output><input id="spread" type="range" min="75" max="400" step="5" value="220"></div>
 <div class="setting"><label for="softness">Douceur de diffusion lumineuse</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div id="actions"><button type="button" id="reset">Réinitialiser cette commande</button><button type="button" id="allReset">Réinitialiser l’atelier</button><button type="button" id="copySettings">Copier tous les réglages</button></div><div id="copyStatus" role="status" aria-live="polite" class="note" style="margin:7px 0 0"></div>
 </div>
@@ -106,7 +107,7 @@ varying vec3 vNormal;
 varying vec2 vXY;
 uniform vec3 uPaletteA,uPaletteB;
 uniform float uDebug;
-uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost;
+uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost,uGlowSpread;
 uniform vec3 uRingLights;
 
 float sdCircle(vec2 p,float radius){
@@ -122,11 +123,15 @@ float sideOfSegment(vec2 p,vec2 a,vec2 b){
  return (ab.x*(p.y-a.y)-ab.y*(p.x-a.x))/max(length(ab),.00001);
 }
 float outwardProfile(float distance,float softness){
- // Zero inside the cut, a gently rising glow just outside the knife-sharp lip.
+ // The cut remains sharp, while light fades over a far larger outdoor area.
+ // The calibrated brightness and softness values are not multiplied by spread.
  if(distance<=0.0)return 0.0;
- float peak=mix(.011,.033,softness);
- float reach=mix(.085,.335,softness);
- return smoothstep(0.0,peak,distance)*(1.0-smoothstep(peak,reach,distance));
+ float spread=clamp(uGlowSpread,.75,4.0);
+ float peak=mix(.014,.060,softness)*sqrt(spread);
+ float reach=mix(.14,.44,softness)*spread;
+ float rise=smoothstep(0.0,peak,distance);
+ float fall=1.0-smoothstep(peak,reach,distance);
+ return rise*fall;
 }
 float ringOutGlow(vec2 p,float radius,float softness){
  // Signed radius prevents any diffusion into the circle.
@@ -247,10 +252,10 @@ const sourceNotes=[
  'Essai d’angle biais : déformation géométrique du même tracé. Ce biais n’est pas un nouveau maillage identifiable dans le fichier.'
 ];
 // Red-face radii are now read from sourceRedRadii, derived from COMMANDES-002.
-const defaults=()=>({height:100,duration:2,diffusion:100,softness:35,peripheral:210});
+const defaults=()=>({height:100,duration:2,diffusion:100,softness:35,peripheral:210,spread:220});
 const configs=Array.from({length:8},defaults);
 const STORAGE='deck-e90-atelier-commandes002-v1';
-try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness','peripheral'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
+try{const previous=JSON.parse(localStorage.getItem(STORAGE));if(Array.isArray(previous)&&previous.length===8){for(let i=0;i<8;i++){for(const k of ['height','duration','diffusion','softness','peripheral','spread'])if(Number.isFinite(previous[i]?.[k]))configs[i][k]=previous[i][k]}}}catch(_){}
 const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(configs))}catch(_){}saveLightCalibration();};
 // Real luminance references supplied for the first seven lamps.
 const CALIBRATION_10=[
@@ -412,7 +417,7 @@ function initGL(){
  u={progress:gl.getUniformLocation(program,'uProgress'),height:gl.getUniformLocation(program,'uHeight'),
  a:gl.getUniformLocation(program,'uPaletteA'),b:gl.getUniformLocation(program,'uPaletteB'),
  debug:gl.getUniformLocation(program,'uDebug'),
- glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),rimBoost:gl.getUniformLocation(program,'uRimBoost'),ringGeometry:gl.getUniformLocation(program,'uRingGeometry'),ringLights:gl.getUniformLocation(program,'uRingLights'),
+ glowAmount:gl.getUniformLocation(program,'uGlowAmount'),glowSoftness:gl.getUniformLocation(program,'uGlowSoftness'),modelId:gl.getUniformLocation(program,'uModelId'),rimBoost:gl.getUniformLocation(program,'uRimBoost'),glowSpread:gl.getUniformLocation(program,'uGlowSpread'),ringGeometry:gl.getUniformLocation(program,'uRingGeometry'),ringLights:gl.getUniformLocation(program,'uRingLights'),
  xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad'),stage:gl.getAttribLocation(program,'aStage')};
  buffer=gl.createBuffer();indexBuffer=gl.createBuffer();gl.disable(gl.DEPTH_TEST);
 }
@@ -587,6 +592,7 @@ function draw(time){
   gl.uniform1f(u.glowSoftness,light.softness/100);
   gl.uniform1f(u.modelId,selected);
   gl.uniform1f(u.rimBoost,light.peripheral/100);
+  gl.uniform1f(u.glowSpread,configs[selected].spread/100);
   gl.uniform3fv(u.a,new Float32Array(paletteNow.a));
   gl.uniform3fv(u.b,new Float32Array(paletteNow.b));
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
@@ -611,8 +617,8 @@ function sync(){
  $('currentNumber').textContent=String(selected+1).padStart(2,'0');
  $('sourceNote').textContent=sourceNotes[selected];
  const tuned=calibratedLight(selected);
- for(const field of ['height','duration','diffusion','softness','peripheral']){
-  const val=['height','duration'].includes(field)?configs[selected][field]:tuned[field];$(field).value=String(val);
+ for(const field of ['height','duration','diffusion','softness','peripheral','spread']){
+  const val=['height','duration','spread'].includes(field)?configs[selected][field]:tuned[field];$(field).value=String(val);
   $(field+'Out').textContent=field==='duration'?Number(val).toFixed(1).replace('.',',')+' s':Math.round(val)+' %';
  }
  $('deployment').value=String(Math.round(progress*100));
@@ -627,7 +633,7 @@ function choose(i){
  selected=i;progress=0;anim=null;meshDirty=true;sync();animate(1,0);
 }
 buttons.forEach((b,i)=>b.addEventListener('click',()=>choose(i)));
-for(const field of ['height','duration','diffusion','softness','peripheral']){
+for(const field of ['height','duration','diffusion','softness','peripheral','spread']){
  $(field).addEventListener('input',()=>{
   const val=Number($(field).value);
   if(['diffusion','softness','peripheral'].includes(field))tuneLight(selected,field,val);
@@ -646,11 +652,11 @@ $('intensity10').addEventListener('click',()=>setIntensity(10));
 $('intensity90').addEventListener('click',()=>setIntensity(90));
 function exportAllSettings(){
  return {
-  version:'E90-v8',source:'COMMANDES-002.glb',date:new Date().toISOString(),
+  version:'E90-v9',source:'COMMANDES-002.glb',date:new Date().toISOString(),
   selectedModel:selected+1,selectedName:modelNames[selected],deployment:Math.round(progress*100),
   debugSources:debug,lamps:modelNames.map((name,i)=>({
    index:i+1,name,height:configs[i].height,duration:configs[i].duration,
-   intensity:lampIntensities[i],...calibratedLight(i),
+   intensity:lampIntensities[i],spread:configs[i].spread,...calibratedLight(i),
    calibration10:calibrated[i]?.low||null,calibration90:calibrated[i]?.high||null
   }))
  };
@@ -679,7 +685,7 @@ $('allReset').addEventListener('click',()=>{for(let i=0;i<8;i++){configs[i]=defa
 addEventListener('resize',sizeCanvas);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestDraw()});
 setInterval(()=>requestDraw(),60000);
-try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v8 · calibrages 10 % / 90 % et halo progressif'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
+try{initGL();sync();sizeCanvas();animate(1,0);$('status').textContent='Atelier E90 v9 · halos larges et diffus, portée réglable'}catch(e){$('status').textContent='Erreur : '+e.message;$('status').style.color='#ffe4cc'}
 })();
 </script>
 </body>
