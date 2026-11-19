@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#c3d1df">
-<title>DECK · Comparaison 3D v4 — calibrations 10/90</title>
+<title>DECK · Comparaison 3D v5 — membrane unique</title>
 <style>
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
@@ -39,12 +39,12 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </head>
 <body>
 <canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
-<div id="top"><strong>DECK · 3D / COMMANDES-002 · v4</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<div id="top"><strong>DECK · 3D / COMMANDES-002 · v5</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
 <h2>DECK · Réglages des lampes 3D</h2>
-<div class="small">Copie de l’interface de réglages : huit formes 3D sur une membrane commune. Les rondes se forment une à une sans lumière, puis les halos s’allument successivement. La scène 2D reste inchangée.</div>
+<div class="small">Huit formes 3D sur une seule membrane continue : plus de carrés opaques derrière les lampes. Les halos périphériques sont transparents et les reliefs restent indépendants et déplaçables. La scène 2D reste inchangée.</div>
 <div id="models">
 <button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
 <button type="button" data-model="1">02 · Plateau et raccord</button>
@@ -65,7 +65,7 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 <div class="setting"><label for="softness">Douceur de diffusion</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
 <div class="setting"><label for="peripheral">Lumière périphérique</label><output id="peripheralOut">210 %</output><input id="peripheral" type="range" min="50" max="350" step="5" value="210"></div>
 <div class="setting"><label for="scale">Taille à l’écran</label><output id="scaleOut">100 %</output><input id="scale" type="range" min="60" max="145" step="1" value="100"></div>
-<div id="actions"><button type="button" id="on">Allumer</button><button type="button" id="replay">Rejouer</button><button type="button" id="off">Éteindre</button><button type="button" id="allOn">Tout ON</button><button type="button" id="allOff">Tout OFF</button><button type="button" id="copyAll">Copier tous les réglages</button></div>
+<div id="actions"><button type="button" id="on">Allumer</button><button type="button" id="replay">Rejouer</button><button type="button" id="off">Éteindre</button><button type="button" id="allOn">Tout ON</button><button type="button" id="allOff">Tout OFF</button><button type="button" id="copyAll">Copier tous les réglages</button><button type="button" id="reflow">Répartir les lampes</button></div>
 <div id="message" role="status" aria-live="polite"></div>
 <div class="small">Tap : sélectionner · Double-tap : allumer/éteindre · « Placer » : glisser une forme. Les réglages de matière sont partagés avec l’atelier E90 ; la disposition 3D possède sa propre sauvegarde.</div>
 </section>
@@ -203,8 +203,17 @@ void main(){
  vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
  vec3 color=base+emission;
  if(uDebug>.5)color=vec3(.03,.24,.92)*shade;
- float fade=1.0-smoothstep(1.53,1.83,max(abs(vXY.x),abs(vXY.y)));
- gl_FragColor=vec4(clamp(color,0.0,1.0),mix(1.0,fade,vIsPlane));
+ // The square behind each lamp is ONLY a transparent carrier for emitted
+ // light. It must never paint its own base material: that created opaque,
+ // overlapping rectangular tiles on the supposedly continuous membrane.
+ if(vIsPlane>.5){
+  float fade=1.0-smoothstep(1.50,1.83,max(abs(vXY.x),abs(vXY.y)));
+  float alpha=clamp(glow*faceMask*uGlowAmount*.85,0.0,.88)*fade;
+  vec3 lightTint=mix(glowColor,vec3(1.0),.28);
+  gl_FragColor=vec4(clamp(lightTint,0.0,1.0),alpha);
+ }else{
+  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+ }
 }</script>
 <script>
 (function(){
@@ -291,12 +300,23 @@ function resetLightCalibration(i){
 }
 
 
-const DEFAULT_POS=[[.20,.28],[.48,.20],[.72,.32],[.55,.54],[.13,.69],[.76,.66],[.26,.84],[.77,.86]];
+const LEGACY_POS=[[.20,.28],[.48,.20],[.72,.32],[.55,.54],[.13,.69],[.76,.66],[.26,.84],[.77,.86]];
+// An airy 2-column layout for portrait phones and the 3D comparison pane.
+const DEFAULT_POS=[[.26,.19],[.74,.19],[.26,.37],[.74,.37],[.26,.55],[.74,.55],[.26,.73],[.74,.73]];
 let position=DEFAULT_POS.map(([x,y])=>({x,y,scale:100})),levels=lampIntensities.map(v=>v/100);
 try{
  const stored=JSON.parse(localStorage.getItem(LAYOUT_KEY));
  if(stored&&Array.isArray(stored.position)&&stored.position.length===8&&Array.isArray(stored.levels)&&stored.levels.length===8){
-  position=stored.position.map((p,i)=>({x:clamp(Number(p.x)||DEFAULT_POS[i][0],.05,.95),y:clamp(Number(p.y)||DEFAULT_POS[i][1],.06,.94),scale:clamp(Number(p.scale)||100,60,145)}));
+  const untouched=stored.position.every((p,i)=>
+   Math.abs(Number(p.x)-LEGACY_POS[i][0])<.000001&&
+   Math.abs(Number(p.y)-LEGACY_POS[i][1])<.000001&&
+   Math.abs(Number(p.scale||100)-100)<.000001);
+  // Migrate only the old untouched starting positions; never overwrite manual placement.
+  position=stored.position.map((p,i)=>({
+   x:untouched?DEFAULT_POS[i][0]:clamp(Number(p.x)||DEFAULT_POS[i][0],.05,.95),
+   y:untouched?DEFAULT_POS[i][1]:clamp(Number(p.y)||DEFAULT_POS[i][1],.06,.94),
+   scale:clamp(Number(p.scale)||100,60,145)
+  }));
   levels=stored.levels.map(v=>clamp(Number(v)||0,0,1));
  }
 }catch(_){}
@@ -508,7 +528,7 @@ try{
 let requested=false,lastTime=0,animation=Array(8).fill(null);
 let reveal=levels.map(v=>v>0?1:0);
 function redraw(){if(!requested){requested=true;requestAnimationFrame(draw)}}
-function screen(){return {w:canvas.clientWidth,h:canvas.clientHeight,dpr:canvas.width/Math.max(1,canvas.clientWidth),unit:Math.min(canvas.clientWidth,canvas.clientHeight)*.103}}
+function screen(){const w=canvas.clientWidth,h=canvas.clientHeight;return {w,h,dpr:canvas.width/Math.max(1,w),unit:Math.min(w,h)*(w<600?.09:.103)}}
 function resize(){
  const dpr=Math.min(devicePixelRatio||1,2);
  canvas.width=Math.max(1,Math.round(innerWidth*dpr));canvas.height=Math.max(1,Math.round(innerHeight*dpr));
@@ -547,24 +567,29 @@ function draw(time){
  gl.uniform2f(u.resolution,canvas.width,canvas.height);
  gl.uniform3fv(u.palA,new Float32Array(p.a));gl.uniform3fv(u.palB,new Float32Array(p.b));gl.uniform1f(u.debug,0);
  const order=Array.from({length:8},(_,i)=>i).filter(i=>i!==selected).concat([selected]);
- for(const i of order){
-  const unit=s.unit*s.dpr*position[i].scale/100;
-  gl.uniform2f(u.center,position[i].x*canvas.width,position[i].y*canvas.height);
-  const phases=i<4?sequentialRings(i,reveal[i]):null;
-  const brightness=animation[i]&&animation[i].to===0?animation[i].brightnessStart:levels[i];
-  gl.uniform1f(u.unit,unit);gl.uniform1f(u.level,reveal[i]);gl.uniform1f(u.height,configs[i].height/100);
-  gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
-  gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
-  gl.uniform1f(u.model,i);
-  const calibratedValue=calibratedLight(i,brightness*100);
-  gl.uniform1f(u.glow,calibratedValue.diffusion/100*calibratedValue.gain*(i<4?1:reveal[i]));
-  gl.uniform1f(u.soft,calibratedValue.softness/100);gl.uniform1f(u.rim,calibratedValue.peripheral/100);
-  gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
-  for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
-   gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,28,offset);
+ // Render all transparent light carriers FIRST, then all actual sculpted faces.
+ // With one common CSS membrane, no later light-plane can paint over another lamp.
+ for(let pass=0;pass<2;pass++){
+  for(const i of order){
+   const unit=s.unit*s.dpr*position[i].scale/100;
+   gl.uniform2f(u.center,position[i].x*canvas.width,position[i].y*canvas.height);
+   const phases=i<4?sequentialRings(i,reveal[i]):null;
+   const brightness=animation[i]&&animation[i].to===0?animation[i].brightnessStart:levels[i];
+   const calibratedValue=calibratedLight(i,brightness*100);
+   gl.uniform1f(u.unit,unit);gl.uniform1f(u.level,reveal[i]);gl.uniform1f(u.height,configs[i].height/100);
+   gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
+   gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
+   gl.uniform1f(u.model,i);
+   gl.uniform1f(u.glow,calibratedValue.diffusion/100*calibratedValue.gain*(i<4?1:reveal[i]));
+   gl.uniform1f(u.soft,calibratedValue.softness/100);gl.uniform1f(u.rim,calibratedValue.peripheral/100);
+   gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
+   for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
+    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,28,offset);
+   }
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,meshes[i].indices);
+   const count=pass===0?6:meshes[i].count-6;
+   if(count>0)gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,pass===0?0:12);
   }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,meshes[i].indices);
-  gl.drawElements(gl.TRIANGLES,meshes[i].count,gl.UNSIGNED_SHORT,0);
  }
  const error=gl.getError();if(error!==gl.NO_ERROR)$('message').textContent='Erreur WebGL : '+error;
  if(moving)redraw();
@@ -610,6 +635,11 @@ $('togglePanel').addEventListener('click',()=>{
  panelOpen=!panelOpen;$('panel').hidden=!panelOpen;$('togglePanel').textContent=panelOpen?'Fermer les réglages':'Réglages';
  sync();redraw();
 });
+$('reflow').addEventListener('click',()=>{
+ position=DEFAULT_POS.map(([x,y],i)=>({x,y,scale:position[i].scale}));
+ saveLayout();redraw();
+ $('message').textContent='Disposition aérée appliquée ; le déplacement libre reste disponible.';
+});
 $('place').addEventListener('click',()=>{
  placeMode=!placeMode;$('place').setAttribute('aria-pressed',String(placeMode));
  $('place').textContent=placeMode?'Terminer':'Placer';
@@ -646,7 +676,7 @@ canvas.addEventListener('pointerup',e=>{
  lastTapModel=i;lastTapTime=now;
 });
 function exportAll(){
- return {version:'DECK-E90-comparaison-3D-v4',source:'COMMANDES-002.glb',
+ return {version:'DECK-E90-comparaison-3D-v5',source:'COMMANDES-002.glb',
   currentModel:selected+1,lamps:modelNames.map((name,i)=>({
    number:i+1,name,height:configs[i].height,duration:configs[i].duration,
    intensity:Math.round(levels[i]*100),...calibratedLight(i,levels[i]*100),
