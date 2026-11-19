@@ -506,7 +506,7 @@ function geometryFor(model){
  }
  return {packed,indices:new Uint16Array(indices)};
 }
-const gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:false});
+const gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:true});
 if(!gl){$('message').textContent='WebGL non disponible sur cet appareil.';return}
 function compile(type,source){const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Shader invalide');return sh}
 let program,meshes=[],u,a;
