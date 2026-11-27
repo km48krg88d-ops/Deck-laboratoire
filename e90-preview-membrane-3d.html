@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#c3d1df">
-<title>DECK · Comparaison 3D v7 — halos très diffus</title>
+<title>DECK · Comparaison hybride v8 — reliefs 3D / lumière 2D</title>
 <style>
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
-#scene{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#scene{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block;z-index:0}
+#lineOverlay{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;display:block;z-index:1}
 #top{position:fixed;z-index:20;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 13px) 13px 11px;display:flex;align-items:center;justify-content:space-between;gap:6px;pointer-events:none}
 #top>*{pointer-events:auto}
 #top strong{font-size:12px;letter-spacing:.08em;color:#f8fdff;text-shadow:0 1px 8px #263d5b}
@@ -38,13 +39,14 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 </style>
 </head>
 <body>
-<canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
-<div id="top"><strong>DECK · 3D / COMMANDES-002 · v7</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<canvas id="scene" aria-label="Membrane bicolore avec quatre reliefs ronds 3D et quatre tracés lumineux 2D"></canvas>
+<canvas id="lineOverlay" aria-hidden="true"></canvas>
+<div id="top"><strong>DECK · HYBRIDE 2D / 3D · v8</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
 <h2>DECK · Réglages des lampes 3D</h2>
-<div class="small">Les reliefs ont exactement la teinte de la membrane à leur position dans la fenêtre. Seules leurs courbures modèlent légèrement cette couleur, tandis que les halos restent diffus et les formes librement déplaçables. La scène 2D reste inchangée.</div>
+<div class="small">Reliefs 01 à 04 en 3D, mais lumière douce issue de la palette bicolore de la 2D : plus d’éclairage directionnel ni d’émission blanche sur la matière. Les lignes et angles 05 à 08 retrouvent leur tracé lumineux 2D. Positionnement et calibrages conservés.</div>
 <div id="models">
 <button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
 <button type="button" data-model="1">02 · Plateau et raccord</button>
@@ -114,15 +116,14 @@ float sideOfSegment(vec2 p,vec2 a,vec2 b){
  return (ab.x*(p.y-a.y)-ab.y*(p.x-a.x))/max(length(ab),.00001);
 }
 float outwardProfile(float distance,float softness){
- // The cut remains sharp, while light fades over a far larger outdoor area.
- // The calibrated brightness and softness values are not multiplied by spread.
+ // Exact family of 2D DECK soft radial stops, mapped to the signed
+ // OUTSIDE distance from the physical 3D cut. No extra light source.
  if(distance<=0.0)return 0.0;
- float spread=clamp(uGlowSpread,.75,4.0);
- float peak=mix(.014,.060,softness)*sqrt(spread);
- float reach=mix(.14,.44,softness)*spread;
- float rise=smoothstep(0.0,peak,distance);
- float fall=1.0-smoothstep(peak,reach,distance);
- return rise*fall;
+ float reach=mix(.14,.44,softness)*clamp(uGlowSpread,.75,4.0);
+ float t=clamp(distance/max(reach,.001),0.0,1.0);
+ if(t<.20)return mix(.46,.26,smoothstep(0.0,.20,t));
+ if(t<.55)return mix(.26,.06,smoothstep(.20,.55,t));
+ return mix(.06,0.0,smoothstep(.55,1.0,t));
 }
 float ringOutGlow(vec2 p,float radius,float softness){
  // Signed radius prevents any diffusion into the circle.
@@ -194,38 +195,33 @@ float sourceGlow(vec2 p,float model,float softness){
  return h;
 }
 void main(){
+ // A raised surface always inherits the EXACT background pigment underneath.
+ // Two palette colors alone provide its contrast; no directional spotlight,
+ // no grey shading, no additive RGB-white emitted onto the material.
  vec3 n=normalize(vNormal);
- // Reproduce the single CSS membrane gradient exactly at each SCREEN pixel:
- // background is PaletteB at the top, PaletteA at the bottom.
- // gl_FragCoord.y is measured from the bottom; using local vXY instead
- // previously gave each symbol a different (often grey) base color.
  float membraneY=clamp(gl_FragCoord.y/max(uResolution.y,1.0),0.0,1.0);
- vec3 material=mix(uPaletteA,uPaletteB,membraneY);
- float direction=dot(n.xy,normalize(vec2(.70,-.71)));
- // The flat surface has shade exactly 1, and the lifted faces differ only
- // subtly from it: geometry is read as a fold, not a metallic object.
- float shade=clamp(1.0-.09*(1.0-n.z)-.10*direction,.87,1.09);
- float soft=clamp(uGlowSoftness,0.0,1.0);
- float glow=sourceGlow(vXY,uModelId,soft);
- // The curved blue faces receive most light, with a subtle spill on the adjacent
- // flat membrane outside the outermost rings or on the outward side of a line.
- float faceMask=mix(.36,1.0,smoothstep(.025,.24,length(n.xy)));
- // The mesh itself defines the cut. No artificial grey stroke at its edge.
- vec3 base=material*shade;
- vec3 glowColor=mix(material,vec3(1.0),.44);
- vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
- vec3 color=base+emission;
- if(uDebug>.5)color=vec3(.03,.24,.92)*shade;
- // The square behind each lamp is ONLY a transparent carrier for emitted
- // light. It must never paint its own base material: that created opaque,
- // overlapping rectangular tiles on the supposedly continuous membrane.
+ float fold=clamp((n.x*.55-n.y*.40)*.075,-.075,.075);
+ vec3 base=mix(uPaletteA,uPaletteB,clamp(membraneY+fold,0.0,1.0));
+ float luminanceA=dot(uPaletteA,vec3(.2126,.7152,.0722));
+ float luminanceB=dot(uPaletteB,vec3(.2126,.7152,.0722));
+ vec3 lightPigment=luminanceA>=luminanceB?uPaletteA:uPaletteB;
+
+ float glow=sourceGlow(vXY,uModelId,clamp(uGlowSoftness,0.0,1.0));
+ float strength=clamp(glow*uGlowAmount,0.0,1.0);
+ if(uDebug>.5){
+  gl_FragColor=vec4(vec3(.03,.24,.92),1.0);
+  return;
+ }
  if(vIsPlane>.5){
+  // The carrier remains transparent; only a very soft tint of the second
+  // EXISTING palette color reaches the common membrane outside each cut.
   float fade=1.0-smoothstep(3.20,3.50,max(abs(vXY.x),abs(vXY.y)));
-  float alpha=clamp(glow*faceMask*uGlowAmount*.85,0.0,.88)*fade;
-  vec3 lightTint=mix(glowColor,vec3(1.0),.28);
-  gl_FragColor=vec4(clamp(lightTint,0.0,1.0),alpha);
+  gl_FragColor=vec4(lightPigment,clamp(strength*.75,0.0,.75)*fade);
  }else{
-  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+  // 3D shape is preserved, yet the 2D light is a palette interpolation,
+  // not a separate physically shaded object or an extra white lamp.
+  vec3 color=mix(base,lightPigment,clamp(strength*.72,0.0,.72));
+  gl_FragColor=vec4(color,1.0);
  }
 }</script>
 <script>
@@ -341,7 +337,7 @@ const saveLayout=()=>{
  saveLightCalibration();
 };
 let selected=0,placeMode=false,panelOpen=true,dragging=null,lastTapTime=0,lastTapModel=-1;
-const canvas=$('scene');
+const canvas=$('scene'),lineOverlay=$('lineOverlay'),lineCtx=lineOverlay.getContext('2d',{alpha:true});
 const palettes=[
  [0,'Nuit profonde','#182C50','#849BC5'],[3,'Nuit calme','#182C50','#849BC5'],
  [6,'Fin de nuit','#182C50','#849BC5'],[7,'Aube rose','#7C91AA','#DEA0B2'],
@@ -545,6 +541,7 @@ function screen(){const w=canvas.clientWidth,h=canvas.clientHeight;return {w,h,d
 function resize(){
  const dpr=Math.min(devicePixelRatio||1,2);
  canvas.width=Math.max(1,Math.round(innerWidth*dpr));canvas.height=Math.max(1,Math.round(innerHeight*dpr));
+ lineOverlay.width=canvas.width;lineOverlay.height=canvas.height;
  redraw();
 }
 function setLevel(i,target,animate=false){
@@ -584,6 +581,7 @@ function draw(time){
  // With one common CSS membrane, no later light-plane can paint over another lamp.
  for(let pass=0;pass<2;pass++){
   for(const i of order){
+   if(i>=4)continue; // Lines and angles now have their original 2D treatment.
    const unit=s.unit*s.dpr*position[i].scale/100;
    gl.uniform2f(u.center,position[i].x*canvas.width,position[i].y*canvas.height);
    const phases=i<4?sequentialRings(i,reveal[i]):null;
@@ -604,6 +602,7 @@ function draw(time){
    if(count>0)gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,pass===0?0:12);
   }
  }
+ drawFlatLines(p,s);
  const error=gl.getError();if(error!==gl.NO_ERROR)$('message').textContent='Erreur WebGL : '+error;
  if(moving)redraw();
 }
@@ -689,7 +688,7 @@ canvas.addEventListener('pointerup',e=>{
  lastTapModel=i;lastTapTime=now;
 });
 function exportAll(){
- return {version:'DECK-E90-comparaison-3D-v7',source:'COMMANDES-002.glb',
+ return {version:'DECK-E90-hybride-2D-3D-v8',source:'COMMANDES-002.glb',
   currentModel:selected+1,lamps:modelNames.map((name,i)=>({
    number:i+1,name,height:configs[i].height,duration:configs[i].duration,
    intensity:Math.round(levels[i]*100),spread:configs[i].spread,...calibratedLight(i,levels[i]*100),
