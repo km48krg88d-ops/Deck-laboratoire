@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#c3d1df">
+<title>DECK · Comparaison 3D v7 — halos très diffus</title>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#f2f4f7;background:#708eac}
+#scene{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#top{position:fixed;z-index:20;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 13px) 13px 11px;display:flex;align-items:center;justify-content:space-between;gap:6px;pointer-events:none}
+#top>*{pointer-events:auto}
+#top strong{font-size:12px;letter-spacing:.08em;color:#f8fdff;text-shadow:0 1px 8px #263d5b}
+button{font:11px -apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#f1f4fb;border:1px solid #cce2f485;background:#213d59e8;padding:9px 10px;border-radius:11px;cursor:pointer;touch-action:manipulation}
+button[aria-pressed=true]{background:#f7cda650;border-color:#f7d6b4}
+#toolbar{display:flex;gap:5px}
+#panel{position:fixed;z-index:30;top:calc(env(safe-area-inset-top) + 62px);bottom:calc(env(safe-area-inset-bottom) + 12px);right:12px;width:min(350px,calc(100vw - 24px));padding:15px;overflow-y:auto;overscroll-behavior:contain;background:#12243be9;backdrop-filter:blur(20px);border:1px solid #d9eaf15c;border-radius:20px;box-shadow:0 15px 35px #091a2966}
+#panel[hidden]{display:none}
+h2{margin:0 0 8px;font-size:14px;font-weight:600}
+#models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0 17px}
+#models button{text-align:left;padding:10px 8px;min-height:41px}
+#models button[aria-pressed=true]{background:#e6c8a037;border-color:#e8c99a}
+.small{font-size:10px;line-height:1.5;color:#cad8e6;margin:4px 0 11px}
+.setting{display:grid;grid-template-columns:1fr auto;gap:4px 8px;margin:11px 0}
+.setting label,.setting output{font-size:11px}
+.setting output{color:#fbd8ad;font-variant-numeric:tabular-nums}
+.setting input{grid-column:1/-1;width:100%;height:22px;accent-color:#f2b180;touch-action:pan-x}
+#actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+#message{min-height:16px;font-size:10px;color:#ffdfa9}
+#selectionDock{position:fixed;z-index:15;left:50%;bottom:calc(env(safe-area-inset-bottom) + 15px);transform:translateX(-50%);padding:8px 13px;display:flex;gap:8px;align-items:center;background:#1a344fe0;border:1px solid #b6d3eb80;border-radius:14px;backdrop-filter:blur(10px)}
+#selectionDock[hidden]{display:none}
+#selectionDock strong{font-size:11px;white-space:nowrap}
+#selectionDock input{width:115px;accent-color:#ffd1a0}
+#placementNote{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top) + 65px);transform:translateX(-50%);background:#172d47e5;padding:8px 12px;border-radius:12px;font-size:11px;pointer-events:none}
+#placementNote[hidden]{display:none}
+@media(max-width:600px){#panel{top:calc(env(safe-area-inset-top) + 58px);bottom:calc(env(safe-area-inset-bottom) + 7px);right:7px;left:7px;width:auto}#top strong{font-size:10px}#toolbar button{padding:8px}}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Membrane 3D avec huit symboles provenant de COMMANDES-002"></canvas>
+<div id="top"><strong>DECK · 3D / COMMANDES-002 · v7</strong><div id="toolbar"><button type="button" id="place" aria-pressed="false">Placer</button><button type="button" id="togglePanel">Fermer les réglages</button></div></div>
+<div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
+<div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
+<section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
+<h2>DECK · Réglages des lampes 3D</h2>
+<div class="small">Les reliefs ont exactement la teinte de la membrane à leur position dans la fenêtre. Seules leurs courbures modèlent légèrement cette couleur, tandis que les halos restent diffus et les formes librement déplaçables. La scène 2D reste inchangée.</div>
+<div id="models">
+<button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
+<button type="button" data-model="1">02 · Plateau et raccord</button>
+<button type="button" data-model="2">03 · Couronne</button>
+<button type="button" data-model="3">04 · Grand plateau</button>
+<button type="button" data-model="4">05 · Ligne verticale</button>
+<button type="button" data-model="5">06 · Ligne horizontale</button>
+<button type="button" data-model="6">07 · Angle droit</button>
+<button type="button" data-model="7">08 · Angle biais</button>
+</div>
+<h2 id="selectedTitle">01 · Trois reliefs</h2>
+<div class="setting"><label for="level">Intensité lumineuse</label><output id="levelOut">100 %</output><input id="level" type="range" min="0" max="100" step="1" value="100"></div>
+<div style="display:flex;gap:7px;margin:2px 0 9px"><button type="button" id="intensity10">Calibration 10 %</button><button type="button" id="intensity90">Calibration 90 %</button></div>
+<div id="calibrationInfo" class="small"></div>
+<div class="setting"><label for="height">Hauteur</label><output id="heightOut">100 %</output><input id="height" type="range" min="0" max="160" step="1" value="100"></div>
+<div class="setting"><label for="duration">Durée d’apparition</label><output id="durationOut">2,0 s</output><input id="duration" type="range" min="0.4" max="6" step="0.1" value="2"></div>
+<div class="setting"><label for="diffusion">Diffusion lumineuse</label><output id="diffusionOut">100 %</output><input id="diffusion" type="range" min="0" max="200" step="1" value="100"></div>
+<div class="setting"><label for="spread">Étendue du halo lumineux</label><output id="spreadOut">220 %</output><input id="spread" type="range" min="75" max="400" step="5" value="220"></div>
+<div class="setting"><label for="softness">Douceur de diffusion</label><output id="softnessOut">35 %</output><input id="softness" type="range" min="0" max="100" step="1" value="35"></div>
+<div class="setting"><label for="peripheral">Lumière périphérique</label><output id="peripheralOut">210 %</output><input id="peripheral" type="range" min="50" max="350" step="5" value="210"></div>
+<div class="setting"><label for="scale">Taille à l’écran</label><output id="scaleOut">100 %</output><input id="scale" type="range" min="60" max="145" step="1" value="100"></div>
+<div id="actions"><button type="button" id="on">Allumer</button><button type="button" id="replay">Rejouer</button><button type="button" id="off">Éteindre</button><button type="button" id="allOn">Tout ON</button><button type="button" id="allOff">Tout OFF</button><button type="button" id="copyAll">Copier tous les réglages</button><button type="button" id="reflow">Répartir les lampes</button></div>
+<div id="message" role="status" aria-live="polite"></div>
+<div class="small">Tap : sélectionner · Double-tap : allumer/éteindre · « Placer » : glisser une forme. Les réglages de matière sont partagés avec l’atelier E90 ; la disposition 3D possède sa propre sauvegarde.</div>
+</section>
+<script id="vert" type="x-shader/x-vertex">attribute vec2 aXY;
+attribute float aZ;
+attribute vec2 aGrad;
+attribute float aIsPlane;
+attribute float aStage;
+uniform vec2 uResolution,uCenter;
+uniform float uUnit,uLevel,uHeight;
+uniform vec3 uRingGeometry;
+varying vec3 vNormal;
+varying vec2 vXY;
+varying float vIsPlane;
+void main(){
+ float reveal=aStage<-.5?uLevel:(aStage<.5?uRingGeometry.x:(aStage<1.5?uRingGeometry.y:uRingGeometry.z));
+ float depth=aZ*uHeight*reveal;
+ vec2 gradient=aGrad*uHeight*reveal;
+ vNormal=normalize(vec3(-gradient.x,-gradient.y,1.0));
+ vXY=aXY;
+ vIsPlane=aIsPlane;
+ vec2 screenPixel=uCenter+vec2(aXY.x,-aXY.y)*uUnit;
+ gl_Position=vec4(2.0*screenPixel.x/uResolution.x-1.0,1.0-2.0*screenPixel.y/uResolution.y,-depth*.01,1.0);
+}</script>
+<script id="frag" type="x-shader/x-fragment">precision highp float;
+varying vec3 vNormal;
+varying vec2 vXY;
+varying float vIsPlane;
+uniform vec3 uPaletteA,uPaletteB;
+uniform vec2 uResolution;
+uniform float uDebug;
+uniform float uGlowAmount,uGlowSoftness,uModelId,uRimBoost,uGlowSpread;
+uniform vec3 uRingLights;
+
+float sdCircle(vec2 p,float radius){
+ return abs(length(p)-radius);
+}
+float sdSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ float t=clamp(dot(p-a,ab)/max(dot(ab,ab),0.000001),0.0,1.0);
+ return length(p-a-ab*t);
+}
+float sideOfSegment(vec2 p,vec2 a,vec2 b){
+ vec2 ab=b-a;
+ return (ab.x*(p.y-a.y)-ab.y*(p.x-a.x))/max(length(ab),.00001);
+}
+float outwardProfile(float distance,float softness){
+ // The cut remains sharp, while light fades over a far larger outdoor area.
+ // The calibrated brightness and softness values are not multiplied by spread.
+ if(distance<=0.0)return 0.0;
+ float spread=clamp(uGlowSpread,.75,4.0);
+ float peak=mix(.014,.060,softness)*sqrt(spread);
+ float reach=mix(.14,.44,softness)*spread;
+ float rise=smoothstep(0.0,peak,distance);
+ float fall=1.0-smoothstep(peak,reach,distance);
+ return rise*fall;
+}
+float ringOutGlow(vec2 p,float radius,float softness){
+ // Signed radius prevents any diffusion into the circle.
+ return outwardProfile(length(p)-radius,softness);
+}
+float segmentOutGlow(vec2 p,vec2 a,vec2 b,float direction,float softness){
+ // Finite segment, with a single emitting side. No infinite stripe beyond endpoints.
+ float side=direction*sideOfSegment(p,a,b);
+ if(side<=0.0)return 0.0;
+ return outwardProfile(sdSegment(p,a,b),softness);
+}
+float sourceDistance(vec2 p,float model){
+ float d=100.0;
+ if(model<0.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.25934/.40021));
+  d=min(d,sdCircle(p,1.45));
+ }else if(model<1.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45));
+ }else if(model<2.5){
+  d=sdCircle(p,1.45);
+ }else if(model<3.5){
+  d=min(sdCircle(p,1.45*.11842/.40021),sdCircle(p,1.45*.40019/.40021));
+ }else if(model<4.5){
+  d=sdSegment(p,vec2(0.0,-1.22),vec2(0.0,1.22));
+ }else if(model<5.5){
+  d=sdSegment(p,vec2(-1.22,0.0),vec2(1.22,0.0));
+ }else if(model<6.5){
+  d=min(sdSegment(p,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(p,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  d=min(sdSegment(q,vec2(.32,-.83),vec2(.32,.83)),
+        sdSegment(q,vec2(-1.33,-.83),vec2(.32,-.83)));
+ }
+ return d;
+}
+float glowRamp(float intensity){
+ return clamp(intensity,0.0,1.0);
+}
+float sourceGlow(vec2 p,float model,float softness){
+ float h=0.0;
+ if(model<0.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45*.25934/.40021,softness)*glowRamp(uRingLights.y));
+  h=max(h,ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.z));
+ }else if(model<1.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.y));
+ }else if(model<2.5){
+  h=ringOutGlow(p,1.45,softness)*uRimBoost*glowRamp(uRingLights.x);
+ }else if(model<3.5){
+  h=max(ringOutGlow(p,1.45*.11842/.40021,softness)*glowRamp(uRingLights.x),
+        ringOutGlow(p,1.45*.40019/.40021,softness)*uRimBoost*glowRamp(uRingLights.y));
+ }else if(model<4.5){
+  // Left of the red vertical cut.
+  h=segmentOutGlow(p,vec2(0.0,-1.22),vec2(0.0,1.22),1.0,softness);
+ }else if(model<5.5){
+  // Above the red horizontal cut.
+  h=segmentOutGlow(p,vec2(-1.22,0.0),vec2(1.22,0.0),1.0,softness);
+ }else if(model<6.5){
+  // Outside of the two cut faces making the right angle.
+  h=max(segmentOutGlow(p,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(p,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }else{
+  vec2 q=vec2(p.x-.45*p.y,p.y);
+  h=max(segmentOutGlow(q,vec2(.32,-.83),vec2(.32,.83),1.0,softness),
+        segmentOutGlow(q,vec2(-1.33,-.83),vec2(.32,-.83),1.0,softness));
+ }
+ return h;
+}
+void main(){
+ vec3 n=normalize(vNormal);
+ // Reproduce the single CSS membrane gradient exactly at each SCREEN pixel:
+ // background is PaletteB at the top, PaletteA at the bottom.
+ // gl_FragCoord.y is measured from the bottom; using local vXY instead
+ // previously gave each symbol a different (often grey) base color.
+ float membraneY=clamp(gl_FragCoord.y/max(uResolution.y,1.0),0.0,1.0);
+ vec3 material=mix(uPaletteA,uPaletteB,membraneY);
+ float direction=dot(n.xy,normalize(vec2(.70,-.71)));
+ // The flat surface has shade exactly 1, and the lifted faces differ only
+ // subtly from it: geometry is read as a fold, not a metallic object.
+ float shade=clamp(1.0-.09*(1.0-n.z)-.10*direction,.87,1.09);
+ float soft=clamp(uGlowSoftness,0.0,1.0);
+ float glow=sourceGlow(vXY,uModelId,soft);
+ // The curved blue faces receive most light, with a subtle spill on the adjacent
+ // flat membrane outside the outermost rings or on the outward side of a line.
+ float faceMask=mix(.36,1.0,smoothstep(.025,.24,length(n.xy)));
+ // The mesh itself defines the cut. No artificial grey stroke at its edge.
+ vec3 base=material*shade;
+ vec3 glowColor=mix(material,vec3(1.0),.44);
+ vec3 emission=glowColor*glow*faceMask*uGlowAmount*.72;
+ vec3 color=base+emission;
+ if(uDebug>.5)color=vec3(.03,.24,.92)*shade;
+ // The square behind each lamp is ONLY a transparent carrier for emitted
+ // light. It must never paint its own base material: that created opaque,
+ // overlapping rectangular tiles on the supposedly continuous membrane.
+ if(vIsPlane>.5){
+  float fade=1.0-smoothstep(3.20,3.50,max(abs(vXY.x),abs(vXY.y)));
+  float alpha=clamp(glow*faceMask*uGlowAmount*.85,0.0,.88)*fade;
+  vec3 lightTint=mix(glowColor,vec3(1.0),.28);
+  gl_FragColor=vec4(clamp(lightTint,0.0,1.0),alpha);
+ }else{
+  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
+ }
+}</script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+const modelNames=['Trois reliefs','Plateau et raccord','Couronne','Grand plateau','Ligne verticale','Ligne horizontale','Angle droit','Angle biais'];
+const RING_COUNTS=[3,2,1,2];
+// The glow stays dark until every curved blue ring has formed.
+// First all blue rings form, then clearly visible, overlapping gentle light fades.
+function glowEase(t){return ease(clamp(t,0,1))}
+function sequentialRings(model,progress){
+ const count=RING_COUNTS[model]||1,t=clamp(progress,0,1);
+ const geometry=[],lights=[],geometryEnd=.40;
+ const stagger=count===3?.13:count===2?.20:0;
+ const lightLength=1-geometryEnd-stagger*(count-1);
+ for(let j=0;j<3;j++){
+  geometry.push(j<count?ease(clamp(t/geometryEnd*count-j,0,1)):1);
+  lights.push(j<count?glowEase((t-geometryEnd-j*stagger)/lightLength):0);
+ }
+ return {geometry,lights};
+}
+const SHARED_SETTINGS_KEY='deck-e90-atelier-commandes002-v1';
+const LAYOUT_KEY='deck-e90-preview-3d-layout-v1';
+const defaults=()=>({height:100,duration:2,diffusion:100,softness:35,peripheral:210,spread:220});
+const configs=Array.from({length:8},defaults);
+try{
+ const saved=JSON.parse(localStorage.getItem(SHARED_SETTINGS_KEY));
+ if(Array.isArray(saved)&&saved.length===8)for(let i=0;i<8;i++)
+  for(const key of Object.keys(defaults()))if(Number.isFinite(saved[i]?.[key]))configs[i][key]=saved[i][key];
+}catch(_){}
+const saveSettings=()=>{try{localStorage.setItem(SHARED_SETTINGS_KEY,JSON.stringify(configs))}catch(_){}saveLightCalibration();};
+// Real luminance references supplied for the first seven lamps.
+const CALIBRATION_10=[
+ [18,100,265],[20,97,220],[37,100,95],[58,100,120],
+ [63,100,130],[58,100,155],[59,100,130],null
+];
+const CALIBRATION_90=[
+ [54,100,305],[52,97,220],[118,100,95],[112,100,120],
+ [120,100,130],[120,100,155],[113,100,130],null
+];
+const CALIBRATION_STORAGE='deck-e90-calibrations-v8';
+const LEVELS_STORAGE='deck-e90-lamp-intensities-v8';
+const keys=['diffusion','softness','peripheral'];
+const profile=a=>Object.fromEntries(keys.map((k,j)=>[k,a[j]]));
+let calibrated=CALIBRATION_10.map((a,i)=>a?{low:profile(a),high:profile(CALIBRATION_90[i])}:null);
+try{
+ const saved=JSON.parse(localStorage.getItem(CALIBRATION_STORAGE));
+ if(Array.isArray(saved)&&saved.length===8)for(let i=0;i<7;i++){
+  const x=saved[i];
+  if(x?.low&&x?.high&&keys.every(k=>Number.isFinite(x.low[k])&&Number.isFinite(x.high[k])))
+   calibrated[i]={low:{...x.low},high:{...x.high}};
+ }
+}catch(_){}
+const lampIntensities=Array(8).fill(90);
+try{
+ const old=JSON.parse(localStorage.getItem(LEVELS_STORAGE));
+ if(Array.isArray(old)&&old.length===8)for(let i=0;i<8;i++)if(Number.isFinite(old[i]))
+  lampIntensities[i]=Math.max(0,Math.min(100,old[i]));
+}catch(_){}
+function calibratedLight(i,intensity=lampIntensities[i]){
+ const level=Math.max(0,Math.min(100,intensity)),p=calibrated[i];
+ if(!p)return {diffusion:configs[i].diffusion,softness:configs[i].softness,peripheral:configs[i].peripheral,gain:level/100,calibrated:false};
+ const t=Math.max(0,Math.min(1,(level-10)/80)),result={gain:Math.min(1,level/10),calibrated:true};
+ for(const k of keys)result[k]=p.low[k]+(p.high[k]-p.low[k])*t;
+ return result;
+}
+function tuneLight(i,key,value){
+ const p=calibrated[i];
+ if(!p){configs[i][key]=value;return}
+ const delta=value-calibratedLight(i)[key],bounds=key==='diffusion'?[0,200]:key==='softness'?[0,100]:[50,350];
+ for(const anchor of [p.low,p.high])anchor[key]=Math.max(bounds[0],Math.min(bounds[1],anchor[key]+delta));
+}
+function saveLightCalibration(){
+ try{
+  localStorage.setItem(CALIBRATION_STORAGE,JSON.stringify(calibrated));
+  localStorage.setItem(LEVELS_STORAGE,JSON.stringify(lampIntensities));
+ }catch(_){}
+}
+function resetLightCalibration(i){
+ calibrated[i]=CALIBRATION_10[i]?{low:profile(CALIBRATION_10[i]),high:profile(CALIBRATION_90[i])}:null;
+ lampIntensities[i]=90;
+}
+
+
+const LEGACY_POS=[[.20,.28],[.48,.20],[.72,.32],[.55,.54],[.13,.69],[.76,.66],[.26,.84],[.77,.86]];
+// An airy 2-column layout for portrait phones and the 3D comparison pane.
+const DEFAULT_POS=[[.26,.19],[.74,.19],[.26,.37],[.74,.37],[.26,.55],[.74,.55],[.26,.73],[.74,.73]];
+let position=DEFAULT_POS.map(([x,y])=>({x,y,scale:100})),levels=lampIntensities.map(v=>v/100);
+try{
+ const stored=JSON.parse(localStorage.getItem(LAYOUT_KEY));
+ if(stored&&Array.isArray(stored.position)&&stored.position.length===8&&Array.isArray(stored.levels)&&stored.levels.length===8){
+  const untouched=stored.position.every((p,i)=>
+   Math.abs(Number(p.x)-LEGACY_POS[i][0])<.000001&&
+   Math.abs(Number(p.y)-LEGACY_POS[i][1])<.000001&&
+   Math.abs(Number(p.scale||100)-100)<.000001);
+  // Migrate only the old untouched starting positions; never overwrite manual placement.
+  position=stored.position.map((p,i)=>({
+   x:untouched?DEFAULT_POS[i][0]:clamp(Number(p.x)||DEFAULT_POS[i][0],.05,.95),
+   y:untouched?DEFAULT_POS[i][1]:clamp(Number(p.y)||DEFAULT_POS[i][1],.06,.94),
+   scale:clamp(Number(p.scale)||100,60,145)
+  }));
+  levels=stored.levels.map(v=>clamp(Number(v)||0,0,1));
+ }
+}catch(_){}
+// Apply the new shared intensities; keep the previous local layout and placements.
+for(let i=0;i<8;i++)levels[i]=lampIntensities[i]/100;
+const saveLayout=()=>{
+ for(let i=0;i<8;i++)lampIntensities[i]=Math.round(levels[i]*100);
+ try{localStorage.setItem(LAYOUT_KEY,JSON.stringify({position,levels}))}catch(_){}
+ saveLightCalibration();
+};
+let selected=0,placeMode=false,panelOpen=true,dragging=null,lastTapTime=0,lastTapModel=-1;
+const canvas=$('scene');
+const palettes=[
+ [0,'Nuit profonde','#182C50','#849BC5'],[3,'Nuit calme','#182C50','#849BC5'],
+ [6,'Fin de nuit','#182C50','#849BC5'],[7,'Aube rose','#7C91AA','#DEA0B2'],
+ [9,'Matinée orange','#9CAEB1','#F2AA76'],[11,'Journée','#FFF4D7','#E8BC79'],
+ [13,'Après-midi','#C0D1DF','#FAFAF4'],[15,'Après-midi lumineux','#B7CDDF','#F9FAF5'],
+ [17,'Fin d’après-midi','#B1C4D7','#F4F6F4'],[19,'Soir orangé','#526B91','#E3A17F'],
+ [21,'Soir bleu','#2F486D','#A18FB8'],[23,'Retour à la nuit','#182C50','#849BC5']
+];
+function rgb(s){return [1,3,5].map(i=>parseInt(s.slice(i,i+2),16)/255)}
+function palette(){
+ const now=new Date(),hour=now.getHours()+now.getMinutes()/60;let k=0;
+ for(let i=1;i<12;i++)if(hour>=palettes[i][0])k=i;
+ const a=palettes[k],b=palettes[(k+1)%12],end=k===11?24:b[0],t=ease((hour-a[0])/(end-a[0]));
+ const aa=rgb(a[2]),bb=rgb(b[2]),cc=rgb(a[3]),dd=rgb(b[3]);
+ const lerp=(x,y)=>x.map((v,i)=>v+(y[i]-v)*t);
+ return {name:a[1],a:lerp(aa,bb),b:lerp(cc,dd)};
+}
+
+
+const SOURCE_BASE=.065796,SOURCE_DEPTH=.063044,SOURCE_RADIUS=.40021,DISPLAY_RADIUS=1.45;
+// World-space radial sections measured from the four BLUE profiles of COMMANDES-002.glb.
+const blueInner=[[.00837,.023004],[.01319,.023152],[.01843,.023316],[.02846,.024248],[.03840,.025797],[.04824,.027958],[.05792,.030722],[.06741,.034079],[.07668,.038015],[.08568,.042517],[.09439,.047566],[.10277,.053143],[.11079,.059228],[.11842,.065796]];
+const blueMiddle=[[.01833,.012877],[.02889,.013059],[.04037,.013261],[.06232,.014414],[.08410,.016330],[.10564,.019002],[.12684,.022421],[.14762,.026572],[.16792,.031440],[.18764,.037007],[.20671,.043251],[.22506,.050149],[.24263,.057673],[.25934,.065796]];
+const blueOuter=[[.02828,.002752],[.04458,.002969],[.06229,.003210],[.09617,.004584],[.12979,.006866],[.16302,.010050],[.19574,.014122],[.22781,.019068],[.25913,.024867],[.28956,.031499],[.31899,.038938],[.34732,.047155],[.37443,.056119],[.40021,.065796]];
+const blueCrown=[[.34944,.023004],[.35530,.023526],[.36103,.025080],[.36649,.027628],[.37154,.031111],[.37607,.035446],[.38042,.040908],[.38476,.046371],[.40019,.065796]];
+// Each band ends at a RED vertical face. A separate band begins on the other side:
+// these boundaries retain their true sharp elevation changes (no cross-edge smoothing).
+const radialBands=[
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.25934,trace:blueMiddle},{a:.25934,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,trace:blueInner},{a:.11842,b:.40021,trace:blueOuter}],
+ [{a:0,b:.40021,trace:blueOuter}],
+ [{a:0,b:.11842,flat:.065796},{a:.11842,b:.34944,flat:.023004},{a:.34944,b:.40019,trace:blueCrown}]
+];
+const sourceRedRadii=[[.11842,.25934,.40021],[.11842,.40021],[.40021],[.11842,.40019]];
+// Measured across BLUE strip GLTF_32, from the RED cut to the flat membrane.
+const blueLine=[[0,.065796],[.0228,.037197],[.0292,.029155],[.0356,.021114],[.0423,.014730],[.0497,.009603],[.0577,.005851],[.0662,.003564],[.0748,.002796]];
+// Shape-preserving Hermite interpolation: every section point is reached exactly,
+// and no oscillation is added between the imported concentric contours.
+function traceY(trace,r){
+ if(r<=trace[0][0])return trace[0][1];
+ const last=trace.length-1;
+ if(r>=trace[last][0])return trace[last][1];
+ let j=0;while(j<last-1&&r>trace[j+1][0])j++;
+ const sec=i=>(trace[i+1][1]-trace[i][1])/(trace[i+1][0]-trace[i][0]);
+ const tangent=i=>{
+  if(i===0)return sec(0);
+  if(i===last)return sec(last-1);
+  const p=sec(i-1),q=sec(i);
+  if(p*q<=0)return 0;
+  const a=trace[i][0]-trace[i-1][0],b=trace[i+1][0]-trace[i][0],wa=2*b+a,wb=b+2*a;
+  return (wa+wb)/(wa/p+wb/q);
+ };
+ const [x0,y0]=trace[j],[x1,y1]=trace[j+1],dx=x1-x0,t=(r-x0)/dx;
+ return (2*t*t*t-3*t*t+1)*y0+(t*t*t-2*t*t+t)*dx*tangent(j)+(-2*t*t*t+3*t*t)*y1+(t*t*t-t*t)*dx*tangent(j+1);
+}
+function ringYAndGradient(model,r,band){
+ const y=band.trace?traceY(band.trace,r):band.flat;
+ const eps=.00005,l=Math.max(band.a,r-eps),h=Math.min(band.b,r+eps);
+ const derivative=band.trace&&h>l?(traceY(band.trace,h)-traceY(band.trace,l))/(h-l):0;
+ return [(y-SOURCE_BASE)/SOURCE_DEPTH,derivative*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH];
+}
+function lineRamp(worldDist){
+ const d=worldDist*SOURCE_RADIUS/DISPLAY_RADIUS;
+ if(d<0||d>.0748)return 0;
+ return (traceY(blueLine,d)-.002796)/SOURCE_DEPTH;
+}
+function heightAt(x,y){
+ if(selected<4){
+  const r=Math.hypot(x,y)*SOURCE_RADIUS/DISPLAY_RADIUS;
+  const bands=radialBands[selected];
+  const band=bands.find(b=>r<=b.b)||null;
+  return band?ringYAndGradient(selected,r,band)[0]:0;
+ }
+ // 05: original straight vertical BLUE strip with the RED vertical edge at x=0.
+ if(selected===4)return y>=-1.22&&y<=1.22?lineRamp(x):0;
+ // 06: rotated original straight strip, not an independently authored GLB object.
+ if(selected===5)return x>=-1.22&&x<=1.22?lineRamp(-y):0;
+ // 07: source L corner assembled from blue GLTF_34 and GLTF_36.
+ // 08: exploratory bias of that exact source L; labelled as such in the UI.
+ let xx=x,yy=y;
+ if(selected===7)xx=x-.45*y;
+ const v=(yy>=-.83&&yy<=.83)?lineRamp(xx-.32):0;
+ const hz=(xx>=-1.33&&xx<=.32)?lineRamp(-(yy+.83)):0;
+ return Math.max(v,hz);
+}
+
+function geometryFor(model){
+ selected=model;
+ const data=[],indices=[],stages=[];
+ 
+ // Sample each source-defined blue band independently: seams retain their
+ // discontinuous normals, and red faces are never rounded by the triangulation.
+ // This perfectly flat backing surface is part of the SAME WebGL membrane.
+ // It receives light outside the outermost circle and on the outside of the
+ // line cuts; previously there were no fragments there to light up.
+ // It matches the CSS time-of-day background color exactly.
+ const planeStart=data.length/5,extent=3.5;
+ data.push(-extent,-extent,0,0,0, extent,-extent,0,0,0,
+           -extent,extent,0,0,0, extent,extent,0,0,0);
+ indices.push(planeStart,planeStart+1,planeStart+2,
+              planeStart+1,planeStart+3,planeStart+2);
+ stages.push(-1,-1,-1,-1);
+ function addBand(band,stageId){
+  const knots=[band.a,...(band.trace||[]).map(p=>p[0]).filter(r=>r>band.a+1e-6&&r<band.b-1e-6),band.b];
+  const radii=[];
+  for(let j=0;j<knots.length-1;j++)
+   for(let t=0;t<3;t++)radii.push(knots[j]+(knots[j+1]-knots[j])*t/3);
+  radii.push(band.b);
+  const ANGLES=320,stride=ANGLES+1,offset=data.length/5;
+  for(const radius of radii){
+   const [depth,radialSlope]=ringYAndGradient(selected,radius,band);
+   const rr=radius/SOURCE_RADIUS*DISPLAY_RADIUS;
+   for(let i=0;i<=ANGLES;i++){
+    const a=2*Math.PI*i/ANGLES,c=Math.cos(a),sn=Math.sin(a);
+    data.push(rr*c,rr*sn,depth,radialSlope*c,radialSlope*sn);
+    stages.push(stageId);
+   }
+  }
+  for(let j=0;j<radii.length-1;j++)for(let i=0;i<ANGLES;i++){
+   const a=offset+j*stride+i,b=a+stride;
+   indices.push(a,a+1,b,a+1,b+1,b);
+  }
+ }
+ if(selected<4){
+  radialBands[selected].forEach((band,j)=>addBand(band,selected===3?Math.min(j,1):j));
+ }else{
+  // Lines and angles use strips aligned with the ORIGINAL blue section and red cut.
+  // No square-grid interpolation means no triangular teeth along their edges.
+  const SHEAR=selected===7?.45:0;
+  function addStrip(ax,ay,bx,by){
+   const dx=bx-ax,dy=by-ay,length=Math.hypot(dx,dy);
+   const nx=dy/length,ny=-dx/length; // the BLUE surface lies on the right of the red edge
+   const N=256,stride=N+1,offset=data.length/5;
+   const sourceKnots=blueLine.map(row=>row[0]);
+   const dList=[];
+   for(let i=0;i<sourceKnots.length-1;i++)
+    for(let k=0;k<3;k++)dList.push(sourceKnots[i]+(sourceKnots[i+1]-sourceKnots[i])*k/3);
+   dList.push(sourceKnots.at(-1));
+   for(const d of dList){
+    const e=.00005,left=Math.max(0,d-e),right=Math.min(.0748,d+e);
+    const yy=traceY(blueLine,d);
+    const slope=right>left?(traceY(blueLine,right)-traceY(blueLine,left))/(right-left):0;
+    const depth=(yy-.002796)/SOURCE_DEPTH;
+    const gradient=slope*SOURCE_RADIUS/DISPLAY_RADIUS/SOURCE_DEPTH;
+    const across=d*DISPLAY_RADIUS/SOURCE_RADIUS;
+    for(let i=0;i<=N;i++){
+     const t=i/N;
+     const x=ax+dx*t+nx*across,y=ay+dy*t+ny*across;
+     const gx=gradient*nx,gy=gradient*ny;
+     data.push(x+SHEAR*y,y,depth,gx,gy-SHEAR*gx);
+     stages.push(-1);
+    }
+   }
+   for(let j=0;j<dList.length-1;j++)for(let i=0;i<N;i++){
+    const a=offset+j*stride+i,b=a+stride;
+    indices.push(a,a+1,b,a+1,b+1,b);
+   }
+  }
+  if(selected===4)addStrip(0,-1.22,0,1.22);
+  else if(selected===5)addStrip(-1.22,0,1.22,0);
+  else{
+   addStrip(.32,-.83,.32,.83);
+   addStrip(-1.33,-.83,.32,-.83);
+  }
+ }
+
+ const count=data.length/5;
+ if(count>65535)throw Error('Trop de sommets pour WebGL 1');
+ if(stages.length!==count)throw Error('Étapes des cercles incomplètes');
+ const packed=new Float32Array(count*7);
+ for(let i=0;i<count;i++){
+  for(let k=0;k<5;k++)packed[i*7+k]=data[i*5+k];
+  packed[i*7+5]=i<4?1:0;
+  packed[i*7+6]=stages[i];
+ }
+ return {packed,indices:new Uint16Array(indices)};
+}
+const gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:true});
+if(!gl){$('message').textContent='WebGL non disponible sur cet appareil.';return}
+function compile(type,source){const sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh)||'Shader invalide');return sh}
+let program,meshes=[],u,a;
+try{
+ program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,$('vert').textContent));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,$('frag').textContent));gl.linkProgram(program);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||'Programme WebGL invalide');
+ gl.useProgram(program);gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+ u={resolution:gl.getUniformLocation(program,'uResolution'),center:gl.getUniformLocation(program,'uCenter'),unit:gl.getUniformLocation(program,'uUnit'),level:gl.getUniformLocation(program,'uLevel'),height:gl.getUniformLocation(program,'uHeight'),
+ palA:gl.getUniformLocation(program,'uPaletteA'),palB:gl.getUniformLocation(program,'uPaletteB'),model:gl.getUniformLocation(program,'uModelId'),glow:gl.getUniformLocation(program,'uGlowAmount'),soft:gl.getUniformLocation(program,'uGlowSoftness'),rim:gl.getUniformLocation(program,'uRimBoost'),spread:gl.getUniformLocation(program,'uGlowSpread'),ringGeometry:gl.getUniformLocation(program,'uRingGeometry'),ringLights:gl.getUniformLocation(program,'uRingLights'),debug:gl.getUniformLocation(program,'uDebug')};
+ a={xy:gl.getAttribLocation(program,'aXY'),z:gl.getAttribLocation(program,'aZ'),grad:gl.getAttribLocation(program,'aGrad'),base:gl.getAttribLocation(program,'aIsPlane'),stage:gl.getAttribLocation(program,'aStage')};
+ for(let i=0;i<8;i++){
+  const g=geometryFor(i),vertex=gl.createBuffer(),indices=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,vertex);gl.bufferData(gl.ARRAY_BUFFER,g.packed,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,g.indices,gl.STATIC_DRAW);
+  meshes.push({vertex,indices,count:g.indices.length});
+ }
+ selected=0;
+}catch(err){$('message').textContent='Erreur du moteur 3D : '+err.message;return}
+let requested=false,lastTime=0,animation=Array(8).fill(null);
+let reveal=levels.map(v=>v>0?1:0);
+function redraw(){if(!requested){requested=true;requestAnimationFrame(draw)}}
+function screen(){const w=canvas.clientWidth,h=canvas.clientHeight;return {w,h,dpr:canvas.width/Math.max(1,w),unit:Math.min(w,h)*(w<600?.09:.103)}}
+function resize(){
+ const dpr=Math.min(devicePixelRatio||1,2);
+ canvas.width=Math.max(1,Math.round(innerWidth*dpr));canvas.height=Math.max(1,Math.round(innerHeight*dpr));
+ redraw();
+}
+function setLevel(i,target,animate=false){
+ target=clamp(target,0,1);
+ const previous=levels[i];
+ if(animate){
+  // ON replays all geometry before any light. OFF reverses: halos disappear first.
+  const to=target>0?1:0;
+  animation[i]={from:to?0:(reveal[i]>0?reveal[i]:1),to,start:null,
+    duration:Math.max(400,configs[i].duration*1000),brightnessStart:previous};
+  if(to)reveal[i]=0;
+ }else{
+  animation[i]=null;
+  reveal[i]=target>0?1:0;
+ }
+ levels[i]=target;
+ saveLayout();sync();redraw();
+}
+function draw(time){
+ requested=false;
+ let moving=false;
+ for(let i=0;i<8;i++){
+  const an=animation[i];if(!an)continue;
+  moving=true;if(an.start===null)an.start=time;
+  const t=clamp((time-an.start)/an.duration,0,1);
+  reveal[i]=an.from+(an.to-an.from)*(i<4?t:ease(t));
+  if(t>=1){reveal[i]=an.to;animation[i]=null;saveLayout();}
+ }
+ const p=palette(),s=screen();
+ const toCSS=a=>'rgb('+a.map(v=>Math.round(v*255)).join(',')+')';
+ canvas.style.background='linear-gradient(180deg,'+toCSS(p.b)+','+toCSS(p.a)+')';
+ gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(program);
+ gl.uniform2f(u.resolution,canvas.width,canvas.height);
+ gl.uniform3fv(u.palA,new Float32Array(p.a));gl.uniform3fv(u.palB,new Float32Array(p.b));gl.uniform1f(u.debug,0);
+ const order=Array.from({length:8},(_,i)=>i).filter(i=>i!==selected).concat([selected]);
+ // Render all transparent light carriers FIRST, then all actual sculpted faces.
+ // With one common CSS membrane, no later light-plane can paint over another lamp.
+ for(let pass=0;pass<2;pass++){
+  for(const i of order){
+   const unit=s.unit*s.dpr*position[i].scale/100;
+   gl.uniform2f(u.center,position[i].x*canvas.width,position[i].y*canvas.height);
+   const phases=i<4?sequentialRings(i,reveal[i]):null;
+   const brightness=animation[i]&&animation[i].to===0?animation[i].brightnessStart:levels[i];
+   const calibratedValue=calibratedLight(i,brightness*100);
+   gl.uniform1f(u.unit,unit);gl.uniform1f(u.level,reveal[i]);gl.uniform1f(u.height,configs[i].height/100);
+   gl.uniform3f(u.ringGeometry,...(phases?phases.geometry:[1,1,1]));
+   gl.uniform3f(u.ringLights,...(phases?phases.lights:[1,1,1]));
+   gl.uniform1f(u.model,i);
+   gl.uniform1f(u.glow,calibratedValue.diffusion/100*calibratedValue.gain*(i<4?1:reveal[i]));
+   gl.uniform1f(u.soft,calibratedValue.softness/100);gl.uniform1f(u.rim,calibratedValue.peripheral/100);gl.uniform1f(u.spread,configs[i].spread/100);
+   gl.bindBuffer(gl.ARRAY_BUFFER,meshes[i].vertex);
+   for(const [loc,size,offset] of [[a.xy,2,0],[a.z,1,8],[a.grad,2,12],[a.base,1,20],[a.stage,1,24]]){
+    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,28,offset);
+   }
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,meshes[i].indices);
+   const count=pass===0?6:meshes[i].count-6;
+   if(count>0)gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,pass===0?0:12);
+  }
+ }
+ const error=gl.getError();if(error!==gl.NO_ERROR)$('message').textContent='Erreur WebGL : '+error;
+ if(moving)redraw();
+}
+function sync(){
+ $('selectedTitle').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
+ document.querySelectorAll('[data-model]').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===selected)));
+ const c=configs[selected],tuned=calibratedLight(selected,levels[selected]*100);
+ for(const key of ['height','duration','diffusion','softness','peripheral','spread']){
+  const value=['height','duration','spread'].includes(key)?c[key]:tuned[key];
+  $(key).value=String(value);$(key+'Out').textContent=key==='duration'?Number(value).toFixed(1).replace('.',',')+' s':Math.round(value)+' %';
+ }
+ $('calibrationInfo').textContent=selected===7
+  ? 'Lampe 08 : sans calibration définitive (valeurs provisoires).'
+  : 'Calibration active : diffusion '+Math.round(tuned.diffusion)+' % · périphérie '+Math.round(tuned.peripheral)+' %.';
+ $('level').value=String(Math.round(levels[selected]*100));$('levelOut').textContent=Math.round(levels[selected]*100)+' %';
+ $('scale').value=String(position[selected].scale);$('scaleOut').textContent=position[selected].scale+' %';
+ $('dockName').textContent=String(selected+1).padStart(2,'0')+' · '+modelNames[selected];
+ $('dockIntensity').value=String(Math.round(levels[selected]*100));
+ $('dockValue').textContent=Math.round(levels[selected]*100)+' %';
+ $('selectionDock').hidden=panelOpen||placeMode;
+}
+document.querySelectorAll('[data-model]').forEach((b,i)=>b.addEventListener('click',()=>{selected=i;sync();redraw()}));
+for(const key of ['height','duration','diffusion','softness','peripheral','spread']){
+ $(key).addEventListener('input',()=>{
+  const value=Number($(key).value);
+  if(['diffusion','softness','peripheral'].includes(key))tuneLight(selected,key,value);
+  else configs[selected][key]=value;
+  saveSettings();sync();redraw();
+ });
+}
+$('level').addEventListener('input',()=>setLevel(selected,Number($('level').value)/100,false));
+$('intensity10').addEventListener('click',()=>setLevel(selected,.10,false));
+$('intensity90').addEventListener('click',()=>setLevel(selected,.90,false));
+$('dockIntensity').addEventListener('input',()=>setLevel(selected,Number($('dockIntensity').value)/100,false));
+$('scale').addEventListener('input',()=>{position[selected].scale=Number($('scale').value);saveLayout();sync();redraw()});
+$('on').addEventListener('click',()=>setLevel(selected,1,true));
+$('replay').addEventListener('click',()=>setLevel(selected,levels[selected]>0?levels[selected]:1,true));
+$('off').addEventListener('click',()=>setLevel(selected,0,true));
+$('allOn').addEventListener('click',()=>{for(let i=0;i<8;i++)setLevel(i,1,true)});
+$('allOff').addEventListener('click',()=>{for(let i=0;i<8;i++)setLevel(i,0,true)});
+$('togglePanel').addEventListener('click',()=>{
+ panelOpen=!panelOpen;$('panel').hidden=!panelOpen;$('togglePanel').textContent=panelOpen?'Fermer les réglages':'Réglages';
+ sync();redraw();
+});
+$('reflow').addEventListener('click',()=>{
+ position=DEFAULT_POS.map(([x,y],i)=>({x,y,scale:position[i].scale}));
+ saveLayout();redraw();
+ $('message').textContent='Disposition aérée appliquée ; le déplacement libre reste disponible.';
+});
+$('place').addEventListener('click',()=>{
+ placeMode=!placeMode;$('place').setAttribute('aria-pressed',String(placeMode));
+ $('place').textContent=placeMode?'Terminer':'Placer';
+ $('placementNote').hidden=!placeMode;
+ if(placeMode){panelOpen=false;$('panel').hidden=true;$('togglePanel').textContent='Réglages';}
+ sync();
+});
+function coords(e){const b=canvas.getBoundingClientRect();return {x:(e.clientX-b.left)/b.width,y:(e.clientY-b.top)/b.height}}
+function closest(p){
+ const s=screen();let best=-1,dMin=1e10;
+ for(let i=0;i<8;i++){
+  const d=Math.hypot((p.x-position[i].x)*s.w,(p.y-position[i].y)*s.h);
+  if(d<1.75*s.unit*position[i].scale/100&&d<dMin){best=i;dMin=d;}
+ }
+ return best;
+}
+canvas.addEventListener('pointerdown',e=>{
+ const p=coords(e),i=closest(p);if(i<0)return;
+ selected=i;dragging=placeMode?{id:e.pointerId,index:i}:null;
+ if(dragging)canvas.setPointerCapture?.(e.pointerId);
+ sync();redraw();
+});
+canvas.addEventListener('pointermove',e=>{
+ if(!dragging||e.pointerId!==dragging.id)return;
+ const p=coords(e);position[dragging.index].x=clamp(p.x,.04,.96);position[dragging.index].y=clamp(p.y,.05,.95);
+ saveLayout();redraw();
+});
+canvas.addEventListener('pointerup',e=>{
+ if(dragging&&e.pointerId===dragging.id){dragging=null;return}
+ const i=closest(coords(e));
+ if(i<0)return;
+ const now=performance.now();
+ if(i===lastTapModel&&now-lastTapTime<350)setLevel(i,levels[i]>.01?0:1,true);
+ lastTapModel=i;lastTapTime=now;
+});
+function exportAll(){
+ return {version:'DECK-E90-comparaison-3D-v7',source:'COMMANDES-002.glb',
+  currentModel:selected+1,lamps:modelNames.map((name,i)=>({
+   number:i+1,name,height:configs[i].height,duration:configs[i].duration,
+   intensity:Math.round(levels[i]*100),spread:configs[i].spread,...calibratedLight(i,levels[i]*100),
+   calibration10:calibrated[i]?.low||null,calibration90:calibrated[i]?.high||null,...position[i]
+  }))};
+}
+$('copyAll').addEventListener('click',async()=>{
+ const text=JSON.stringify(exportAll(),null,2);
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+  else{const e=document.createElement('textarea');e.value=text;document.body.appendChild(e);e.select();const success=document.execCommand('copy');e.remove();if(!success)throw Error('Copie refusée');}
+  $('message').textContent='Réglages et positions des 8 lampes copiés.';
+ }catch(err){$('message').textContent='Impossible de copier : vérifier les autorisations du presse-papiers.';}
+});
+addEventListener('resize',resize);
+addEventListener('storage',event=>{
+ try{
+  if(event.key===SHARED_SETTINGS_KEY){
+   const x=JSON.parse(event.newValue);
+   for(let i=0;i<8;i++)if(x[i])Object.assign(configs[i],x[i]);
+  }
+  if(event.key===CALIBRATION_STORAGE){
+   const x=JSON.parse(event.newValue);
+   for(let i=0;i<7;i++)if(x[i]?.low&&x[i]?.high)calibrated[i]=x[i];
+  }
+  if(event.key===LEVELS_STORAGE){
+   const x=JSON.parse(event.newValue);
+   if(Array.isArray(x)&&x.length===8)for(let i=0;i<8;i++){
+    lampIntensities[i]=x[i];levels[i]=Math.max(0,Math.min(1,x[i]/100));
+    reveal[i]=levels[i]>0?1:0;animation[i]=null;
+   }
+  }
+  sync();redraw();
+ }catch(_){}
+});
+sync();resize();
+})();
+</script>
+</body></html>
