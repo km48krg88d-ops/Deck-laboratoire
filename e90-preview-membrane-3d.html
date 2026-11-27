@@ -45,7 +45,7 @@ h2{margin:0 0 8px;font-size:14px;font-weight:600}
 <div id="placementNote" hidden>Déplace les formes librement, puis termine le placement.</div>
 <div id="selectionDock" hidden><strong id="dockName"></strong><input id="dockIntensity" type="range" min="0" max="100" value="100"><output id="dockValue">100 %</output></div>
 <section id="panel" aria-label="Copie des réglages DECK pour les formes 3D">
-<h2>DECK · Réglages des lampes 3D</h2>
+<h2>DECK · 4 reliefs 3D + 4 lignes 2D</h2>
 <div class="small">Reliefs 01 à 04 en 3D, mais lumière douce issue de la palette bicolore de la 2D : plus d’éclairage directionnel ni d’émission blanche sur la matière. Les lignes et angles 05 à 08 retrouvent leur tracé lumineux 2D. Positionnement et calibrages conservés.</div>
 <div id="models">
 <button type="button" data-model="0" aria-pressed="true">01 · Trois reliefs</button>
@@ -559,6 +559,51 @@ function setLevel(i,target,animate=false){
  }
  levels[i]=target;
  saveLayout();sync();redraw();
+}
+// Hybrid lighting: 05-08 are the original kind of 2D strokes with
+// outward-only soft spill. They never receive 3D directional lighting.
+function drawFlatLines(p,screenInfo){
+ const ctx=lineCtx;if(!ctx)return;
+ const {w,h,dpr}=screenInfo;
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const paths=[
+  [[[0,-1.22],[0,1.22]]],
+  [[[-1.22,0],[1.22,0]]],
+  [[[.32,-.83],[.32,.83]],[[-1.33,-.83],[.32,-.83]]],
+  [[[.32,-.83],[.32,.83]],[[-1.33,-.83],[.32,-.83]]]
+ ];
+ for(let i=4;i<8;i++){
+  const b=animation[i]?.to===0?animation[i].brightnessStart:levels[i];
+  const calibrated=calibratedLight(i,b*100);
+  const t=clamp(reveal[i],0,1);
+  const power=clamp(calibrated.diffusion/100*calibrated.gain*.84,0,1)*t;
+  if(power<.001)continue;
+  const unit=screenInfo.unit*position[i].scale/100;
+  const reach=Math.max(9,unit*(.14+.44*calibrated.softness/100)*clamp(configs[i].spread/100,.75,4));
+  const shear=i===7?.45:0;
+  const toScreen=([x,y])=>({x:position[i].x*w+(x+shear*y)*unit,y:position[i].y*h-y*unit});
+  ctx.save();ctx.lineWidth=Math.max(.85,unit*.029);ctx.lineJoin='miter';ctx.lineCap='butt';
+  for(const [a0,b0] of paths[i-4]){
+   const A=toScreen(a0),end=toScreen(b0),B={x:A.x+(end.x-A.x)*t,y:A.y+(end.y-A.y)*t};
+   if(Math.hypot(B.x-A.x,B.y-A.y)<.1)continue;
+   const sourceLength=Math.hypot(b0[0]-a0[0],b0[1]-a0[1]);
+   const nx=-(b0[1]-a0[1])/sourceLength,ny=-(b0[0]-a0[0])/sourceLength;
+   const dx=(nx-shear*ny)*reach,dy=ny*reach;
+   const g=ctx.createLinearGradient(A.x,A.y,A.x+dx,A.y+dy);
+   const alpha=Math.min(1,power*calibrated.peripheral/180);
+   for(const [stop,amount]of [[0,.34],[.2,.22],[.55,.048],[1,0]])
+    g.addColorStop(stop,'rgba(248,249,255,'+(alpha*amount)+')');
+   ctx.save();ctx.filter='blur('+Math.max(1.5,Math.min(7,reach*.11))+'px)';
+   ctx.fillStyle=g;ctx.beginPath();
+   ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);
+   ctx.lineTo(B.x+dx,B.y+dy);ctx.lineTo(A.x+dx,A.y+dy);
+   ctx.closePath();ctx.fill();ctx.restore();
+   ctx.globalAlpha=Math.min(1,power*.86);
+   ctx.strokeStyle='rgb(247,247,243)';
+   ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.globalAlpha=1;
+  }
+  ctx.restore();
+ }
 }
 function draw(time){
  requested=false;
